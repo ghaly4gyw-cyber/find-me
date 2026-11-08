@@ -88,4 +88,7 @@
     <string name="physical_signal_hint">دون حاجة إلى هاتف أو شبكة: يُومض الفلاش ويُصدر صفارة من السماعة بشفرة مورس SOS، في حال كان أحد قريبًا يمكنه رؤيتك أو سماعك.</string>
     <string name="physical_signal_start">بدء إشارة الضوء والصوت</string>
     <string name="physical_signal_stop">إيقاف الإشارة</string>
+
+    <string name="location_services_needed">يجب تفعيل خدمة الموقع (GPS) من إعدادات الهاتف، لا يكفي منح الإذن للتطبيق فقط، ليتمكن أندرويد من العثور على الهواتف القريبة عبر البلوتوث أو واي فاي. هذا يختلف عن إذن الموقع المذكور أعلاه.</string>
+    <string name="enable_location">تفعيل الموقع</string>
 </resources>

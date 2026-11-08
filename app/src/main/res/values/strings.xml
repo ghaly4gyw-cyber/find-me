@@ -91,4 +91,7 @@
     <string name="physical_signal_hint">No phone or mesh needed: blink the flashlight and beep the speaker in Morse SOS, in case someone can see or hear you nearby.</string>
     <string name="physical_signal_start">Start light &amp; sound signal</string>
     <string name="physical_signal_stop">Stop signal</string>
+
+    <string name="location_services_needed">Location services (GPS) must be turned ON — not just granted to the app — for Android to find nearby phones over Bluetooth/Wi-Fi. This is different from the location permission above.</string>
+    <string name="enable_location">Turn on Location</string>
 </resources>

@@ -12,12 +12,14 @@ import com.ghaly.findme.repo.InactivityRepository
 import com.ghaly.findme.repo.PeerRepository
 import com.ghaly.findme.repo.ProfileRepository
 import com.ghaly.findme.repo.SosRepository
+import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.AdvertisingOptions
 import com.google.android.gms.nearby.connection.ConnectionInfo
 import com.google.android.gms.nearby.connection.ConnectionLifecycleCallback
 import com.google.android.gms.nearby.connection.ConnectionResolution
 import com.google.android.gms.nearby.connection.ConnectionsClient
+import com.google.android.gms.nearby.connection.ConnectionsStatusCodes
 import com.google.android.gms.nearby.connection.DiscoveredEndpointInfo
 import com.google.android.gms.nearby.connection.DiscoveryOptions
 import com.google.android.gms.nearby.connection.EndpointDiscoveryCallback
@@ -78,11 +80,53 @@ class MeshManager(private val context: Context) {
     var running = false
         private set
 
+    /** Fires with a short human-readable status/error string at every meaningful
+     *  step (advertising/discovery started or failed, an endpoint found,
+     *  connection succeeded/failed) — the UI shows this directly so a failure
+     *  that would otherwise only exist in Logcat is actually visible on the
+     *  phone during a real test. */
+    var onStatusChanged: ((String) -> Unit)? = null
+
     fun start() {
         if (running) return
         running = true
+        report("Starting mesh…")
         startAdvertising()
         startDiscovery()
+    }
+
+    private fun report(message: String) {
+        Log.d(TAG, message)
+        onStatusChanged?.invoke(message)
+    }
+
+    private fun errorText(e: Exception): String {
+        val code = (e as? ApiException)?.statusCode
+        return if (code != null) statusText(code) else (e.message ?: e.javaClass.simpleName)
+    }
+
+    /** Turns a Nearby Connections status code into something a non-Android-developer
+     *  can actually act on — this is the whole point of surfacing it in the UI.
+     *  Only maps codes that are actually documented/named constants, rather than
+     *  guessing at raw numbers — an unrecognized code still shows its number so
+     *  it can be looked up precisely instead of being silently swallowed. */
+    @Suppress("DEPRECATION")
+    private fun statusText(code: Int): String = when (code) {
+        ConnectionsStatusCodes.STATUS_RADIO_ERROR ->
+            "Bluetooth/Wi-Fi radio error (code $code) — try turning Bluetooth and Wi-Fi off and back on"
+        ConnectionsStatusCodes.STATUS_BLUETOOTH_ERROR -> "Bluetooth error on this phone (code $code)"
+        ConnectionsStatusCodes.STATUS_ERROR -> "Nearby Connections error (code $code)"
+        ConnectionsStatusCodes.STATUS_OUT_OF_ORDER_API_CALL -> "Internal timing error (code $code)"
+        ConnectionsStatusCodes.STATUS_ALREADY_ADVERTISING -> "Already advertising (code $code)"
+        ConnectionsStatusCodes.STATUS_ALREADY_DISCOVERING -> "Already searching (code $code)"
+        ConnectionsStatusCodes.STATUS_ALREADY_CONNECTED_TO_ENDPOINT -> "Already connected to that phone (code $code)"
+        ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED -> "Connection rejected by the other phone (code $code)"
+        ConnectionsStatusCodes.STATUS_NOT_CONNECTED_TO_ENDPOINT -> "Not connected to that phone (code $code)"
+        ConnectionsStatusCodes.STATUS_ENDPOINT_IO_ERROR ->
+            "Lost the connection (code $code) — likely moved out of range or a flaky radio"
+        ConnectionsStatusCodes.MISSING_PERMISSION_ACCESS_COARSE_LOCATION ->
+            "Missing location permission (code $code) — also check that Location services (GPS) are turned ON in system settings, not just granted to the app"
+        else -> "Nearby Connections error, code $code — likely Bluetooth, Wi-Fi, or Location turned off, or Google Play Services needs an update"
     }
 
     fun stop() {
@@ -100,7 +144,12 @@ class MeshManager(private val context: Context) {
         val options = AdvertisingOptions.Builder().setStrategy(STRATEGY).build()
         connectionsClient.startAdvertising(
             myName, SERVICE_ID, connectionLifecycleCallback, options
-        ).addOnFailureListener { e -> Log.w(TAG, "startAdvertising failed", e) }
+        ).addOnSuccessListener {
+            report("Advertising as \"$myName\" — waiting to be found…")
+        }.addOnFailureListener { e ->
+            Log.w(TAG, "startAdvertising failed", e)
+            report("Advertising FAILED: ${errorText(e)}")
+        }
     }
 
     // ------------------------------------------------------------------ discovery
@@ -109,13 +158,22 @@ class MeshManager(private val context: Context) {
         val options = DiscoveryOptions.Builder().setStrategy(STRATEGY).build()
         connectionsClient.startDiscovery(
             SERVICE_ID, endpointDiscoveryCallback, options
-        ).addOnFailureListener { e -> Log.w(TAG, "startDiscovery failed", e) }
+        ).addOnSuccessListener {
+            report("Searching for nearby phones…")
+        }.addOnFailureListener { e ->
+            Log.w(TAG, "startDiscovery failed", e)
+            report("Search FAILED: ${errorText(e)}")
+        }
     }
 
     private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
+            report("Found a nearby phone (${info.endpointName}) — connecting…")
             connectionsClient.requestConnection(myName, endpointId, connectionLifecycleCallback)
-                .addOnFailureListener { e -> Log.w(TAG, "requestConnection failed", e) }
+                .addOnFailureListener { e ->
+                    Log.w(TAG, "requestConnection failed", e)
+                    report("Connect to ${info.endpointName} FAILED: ${errorText(e)}")
+                }
         }
 
         override fun onEndpointLost(endpointId: String) {
@@ -128,14 +186,17 @@ class MeshManager(private val context: Context) {
     private val connectionLifecycleCallback = object : ConnectionLifecycleCallback() {
         override fun onConnectionInitiated(endpointId: String, info: ConnectionInfo) {
             // MVP: trust anyone running the app, accept automatically.
+            report("Connection offered by ${info.endpointName} — accepting…")
             connectionsClient.acceptConnection(endpointId, payloadCallback)
         }
 
         override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
             if (!result.status.isSuccess) {
                 Log.d(TAG, "connection to $endpointId failed: ${result.status}")
+                report("Connection FAILED: ${statusText(result.status.statusCode)}")
                 return
             }
+            report("Connected! Exchanging position/profile…")
             connectedEndpoints.add(endpointId)
             // Introduce ourselves so the other side can map endpointId -> deviceId,
             // and so it immediately has our last known position and profile.

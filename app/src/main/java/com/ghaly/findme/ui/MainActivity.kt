@@ -37,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var meshStatus: TextView
     private lateinit var permissionBar: android.view.View
     private lateinit var batteryBar: android.view.View
+    private lateinit var locationServicesBar: android.view.View
     private lateinit var tabButtons: List<Button>
     private var selectedTabIndex = 0
 
@@ -50,6 +51,11 @@ class MainActivity : AppCompatActivity() {
             mesh = binder.getMesh()
             bound = true
             meshStatus.text = getString(R.string.mesh_status_on)
+            // Surface every advertising/discovery/connection step (and any failure)
+            // right in the header — this is what actually told us what's wrong
+            // the first time two real phones couldn't find each other, instead of
+            // that only existing in Logcat where nobody could see it.
+            mesh?.onStatusChanged = { text -> runOnUiThread { meshStatus.text = text } }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -76,11 +82,19 @@ class MainActivity : AppCompatActivity() {
         meshStatus = findViewById(R.id.meshStatus)
         permissionBar = findViewById(R.id.permissionBar)
         batteryBar = findViewById(R.id.batteryBar)
+        locationServicesBar = findViewById(R.id.locationServicesBar)
         findViewById<Button>(R.id.grantPermissionsButton).setOnClickListener {
             permissionLauncher.launch(Permissions.required())
         }
         findViewById<Button>(R.id.allowBatteryButton).setOnClickListener {
             requestIgnoreBatteryOptimizations()
+        }
+        findViewById<Button>(R.id.enableLocationButton).setOnClickListener {
+            try {
+                startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            } catch (e: Exception) {
+                // some OEM skins don't have this exact settings screen
+            }
         }
 
         val nameButton = findViewById<TextView>(R.id.myNameButton)
@@ -115,6 +129,7 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         refreshPermissionState()
         refreshBatteryState()
+        refreshLocationServicesState()
         if (Permissions.allGranted(this)) {
             startMesh()
         }
@@ -141,6 +156,20 @@ class MainActivity : AppCompatActivity() {
         val powerManager = getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
         val ignoring = powerManager?.isIgnoringBatteryOptimizations(packageName) ?: true
         batteryBar.visibility = if (ignoring) android.view.View.GONE else android.view.View.VISIBLE
+    }
+
+    /** Android's system Location toggle is a DIFFERENT thing from the
+     *  ACCESS_FINE_LOCATION permission above — on most phones, Nearby
+     *  Connections' Bluetooth/Wi-Fi scanning silently finds nothing at all if
+     *  this system toggle is off, even with the permission fully granted. This
+     *  is exactly the kind of failure that's invisible unless called out
+     *  directly, so it gets its own banner like the other two checks. */
+    private fun refreshLocationServicesState() {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager
+        val enabled = locationManager?.let {
+            androidx.core.location.LocationManagerCompat.isLocationEnabled(it)
+        } ?: true
+        locationServicesBar.visibility = if (enabled) android.view.View.GONE else android.view.View.VISIBLE
     }
 
     private fun requestIgnoreBatteryOptimizations() {

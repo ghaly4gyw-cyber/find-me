@@ -76,6 +76,31 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/locationServicesBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@color/night_panel"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/location_services_needed"
+            android:textColor="@color/white" />
+
+        <Button
+            android:id="@+id/enableLocationButton"
+            style="@style/FindMe.Button.Pill"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="20dp"
+            android:layout_marginTop="12dp"
+            android:text="@string/enable_location" />
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/batteryBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

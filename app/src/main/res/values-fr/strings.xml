@@ -88,4 +88,7 @@
     <string name="physical_signal_hint">Sans téléphone ni réseau : fait clignoter la lampe et biper le haut-parleur en SOS Morse, si quelqu\'un peut vous voir ou vous entendre à proximité.</string>
     <string name="physical_signal_start">Démarrer le signal lumière et son</string>
     <string name="physical_signal_stop">Arrêter le signal</string>
+
+    <string name="location_services_needed">La localisation (GPS) doit être ACTIVÉE — pas seulement autorisée pour l\'application — pour qu\'Android puisse trouver les téléphones proches via Bluetooth/Wi-Fi. C\'est différent de la permission de localisation ci-dessus.</string>
+    <string name="enable_location">Activer la localisation</string>
 </resources>
