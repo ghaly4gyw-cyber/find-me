@@ -73,7 +73,16 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                     spinnerAdapter.addAll(newTargets.map { it.second })
                     spinnerAdapter.notifyDataSetChanged()
                     val restoredIndex = newTargets.indexOfFirst { it.first == previousSelection }
-                    if (restoredIndex >= 0) spinner.setSelection(restoredIndex)
+                    if (restoredIndex >= 0) {
+                        spinner.setSelection(restoredIndex)
+                    } else if (previousSelection != null) {
+                        // the peer we were DMing went out of range and dropped out of
+                        // the target list — fall back to "Everyone" instead of leaving
+                        // the spinner showing a now-meaningless position.
+                        selectedTargetId = null
+                        spinner.setSelection(0)
+                        refreshList()
+                    }
                 }
             }
         }

@@ -125,8 +125,16 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.VH>() {
         val m = items[position]
         holder.sender.text = if (m.isMine) holder.row.context.getString(R.string.you_label) else m.senderName
         holder.text.text = m.text
-        holder.row.layoutDirection =
-            if (m.isMine) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
+        // Bubble side (mine = right, theirs = left) is a pure layout question,
+        // so it's set with absolute Gravity on the row — NOT layoutDirection.
+        // Forcing layoutDirection here used to also flip how the message text
+        // itself gets laid out/aligned inside the bubble, which fought with
+        // real right-to-left text (Arabic is one of this app's shipped
+        // locales) and could make "their" Arabic messages render left-aligned
+        // and look broken. Gravity only moves the bubble; it never touches
+        // the text's own direction or alignment.
+        (holder.row as android.widget.LinearLayout).gravity =
+            if (m.isMine) android.view.Gravity.RIGHT else android.view.Gravity.LEFT
     }
 }
 

@@ -70,14 +70,19 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
                 return@setOnClickListener
             }
             if (!sosActive) {
-                sendSos(mesh)
-                sosActive = true
-                button.setText(R.string.cancel_sos)
-                startPulse(button)
-                // Best-effort: if this phone happens to have real signal right now,
-                // get the status out immediately rather than waiting for the next
-                // watchdog tick — SOS is exactly the case worth bypassing the throttle for.
-                SmsBridge.sendNow(requireContext(), bypassThrottle = true)
+                // Only flip the button into its "active/pulsing" state if an SOS
+                // actually went out. It used to always flip, even when sendSos()
+                // bailed out for missing location permission — which left the
+                // button claiming "Cancel SOS" while nothing had been sent at all.
+                if (sendSos(mesh)) {
+                    sosActive = true
+                    button.setText(R.string.cancel_sos)
+                    startPulse(button)
+                    // Best-effort: if this phone happens to have real signal right now,
+                    // get the status out immediately rather than waiting for the next
+                    // watchdog tick — SOS is exactly the case worth bypassing the throttle for.
+                    SmsBridge.sendNow(requireContext(), bypassThrottle = true)
+                }
             } else {
                 mesh.clearSos()
                 sosActive = false
@@ -201,15 +206,18 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
         Toast.makeText(requireContext(), messageRes, Toast.LENGTH_SHORT).show()
     }
 
+    /** Returns true once an SOS send has actually been kicked off (permission
+     *  was there, so the mesh broadcast will go out — synchronously or in the
+     *  location callback below); false if nothing was sent at all. */
     @SuppressLint("MissingPermission")
-    private fun sendSos(mesh: com.ghaly.findme.mesh.MeshManager) {
+    private fun sendSos(mesh: com.ghaly.findme.mesh.MeshManager): Boolean {
         val hasPermission = ContextCompat.checkSelfPermission(
             requireContext(), android.Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
 
         if (!hasPermission) {
             Toast.makeText(requireContext(), getString(R.string.permissions_needed), Toast.LENGTH_LONG).show()
-            return
+            return false
         }
 
         LocationServices.getFusedLocationProviderClient(requireContext())
@@ -223,5 +231,6 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
             .addOnFailureListener {
                 mesh.sendSos(0.0, 0.0)
             }
+        return true
     }
 }

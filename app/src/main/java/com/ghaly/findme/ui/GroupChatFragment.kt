@@ -57,4 +57,12 @@ class GroupChatFragment : Fragment(R.layout.fragment_group_chat) {
             }
         }
     }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // We swapped the activity's title to the group name on the way in — put
+        // it back, or every other screen keeps showing the group's name in the
+        // app bar after you leave this chat.
+        requireActivity().title = getString(R.string.app_name)
+    }
 }
