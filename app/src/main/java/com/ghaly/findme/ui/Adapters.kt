@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.ghaly.findme.R
 import com.ghaly.findme.model.ChatMessage
+import com.ghaly.findme.model.Group
 import com.ghaly.findme.model.InactivityAlert
 import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.model.Post
@@ -212,6 +213,37 @@ class PostAdapter(private val onClick: (Post) -> Unit) : RecyclerView.Adapter<Po
         val count = commentCounts[p.id] ?: 0
         holder.commentCount.text = if (count == 0) "No replies yet — tap to reply" else "$count repl${if (count == 1) "y" else "ies"} — tap to view"
         holder.root.setOnClickListener { onClick(p) }
+    }
+}
+
+class GroupAdapter(
+    private val onOpen: (Group) -> Unit,
+    private val onShare: (Group) -> Unit
+) : RecyclerView.Adapter<GroupAdapter.VH>() {
+    var items: List<Group> = emptyList()
+        set(value) {
+            field = value.sortedBy { it.name }
+            notifyDataSetChanged()
+        }
+
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val root: View = v
+        val name: android.widget.TextView = v.findViewById(R.id.groupName)
+        val share: android.widget.TextView = v.findViewById(R.id.groupShareButton)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_group, parent, false)
+        return VH(v)
+    }
+
+    override fun getItemCount() = items.size
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val g = items[position]
+        holder.name.text = g.name
+        holder.root.setOnClickListener { onOpen(g) }
+        holder.share.setOnClickListener { onShare(g) }
     }
 }
 

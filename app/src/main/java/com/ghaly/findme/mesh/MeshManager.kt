@@ -267,6 +267,30 @@ class MeshManager(private val context: Context) {
                     )
                 )
             }
+            MsgType.GROUP_CHAT -> {
+                val obj = JSONObject(envelope.payload)
+                val groupId = obj.optString("groupId", "")
+                val ct = obj.optString("ct", "")
+                val group = GroupRepository.findById(context, groupId)
+                if (group != null) {
+                    val plaintext = Crypto.decrypt(ct, group.keyBase64)
+                    if (plaintext != null) {
+                        com.ghaly.findme.repo.GroupChatRepository.add(
+                            groupId,
+                            ChatMessage(
+                                id = envelope.id,
+                                senderId = envelope.originId,
+                                senderName = envelope.originName,
+                                text = plaintext,
+                                ts = envelope.ts,
+                                isMine = false
+                            )
+                        )
+                    }
+                }
+                // if we're not in this group, we simply can't read it — but we still
+                // relay the (still-encrypted) envelope below like anything else.
+            }
             MsgType.POST_COMMENT -> {
                 val obj = JSONObject(envelope.payload)
                 com.ghaly.findme.repo.PostRepository.addComment(
@@ -350,6 +374,32 @@ class MeshManager(private val context: Context) {
             isMine = true,
             targetId = targetId
         )
+    }
+
+    fun sendGroupMessage(groupId: String, text: String): ChatMessage? {
+        val group = GroupRepository.findById(context, groupId) ?: return null
+        val ct = Crypto.encrypt(text, group.keyBase64)
+        val envelope = Envelope(
+            id = UUID.randomUUID().toString(),
+            type = MsgType.GROUP_CHAT,
+            originId = myId,
+            originName = myName,
+            hop = 0,
+            ts = System.currentTimeMillis(),
+            payload = JSONObject().put("groupId", groupId).put("ct", ct).toString()
+        )
+        seenIds.add(envelope.id)
+        broadcast(envelope)
+        val mine = ChatMessage(
+            id = envelope.id,
+            senderId = myId,
+            senderName = myName,
+            text = text,
+            ts = envelope.ts,
+            isMine = true
+        )
+        com.ghaly.findme.repo.GroupChatRepository.add(groupId, mine)
+        return mine
     }
 
     fun sendPost(text: String) {

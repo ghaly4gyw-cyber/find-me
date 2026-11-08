@@ -66,6 +66,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.tabChat).setOnClickListener { showFragment(ChatFragment()) }
         findViewById<Button>(R.id.tabSos).setOnClickListener { showFragment(SosFragment()) }
         findViewById<Button>(R.id.tabPosts).setOnClickListener { showFragment(PostsFragment()) }
+        findViewById<Button>(R.id.tabGroups).setOnClickListener { showFragment(GroupsFragment()) }
 
         if (savedInstanceState == null) {
             showFragment(PeersFragment())

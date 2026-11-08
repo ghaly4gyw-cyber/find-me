@@ -71,6 +71,22 @@ object InactivityRepository {
     }
 }
 
+object GroupChatRepository {
+    private val _messages = MutableStateFlow<Map<String, List<ChatMessage>>>(emptyMap())
+    val messages: StateFlow<Map<String, List<ChatMessage>>> = _messages
+
+    private val seenIds = mutableSetOf<String>()
+
+    fun add(groupId: String, message: ChatMessage) {
+        if (!seenIds.add(message.id)) return
+        _messages.update { map ->
+            map + (groupId to (map[groupId].orEmpty() + message))
+        }
+    }
+
+    fun forGroup(groupId: String): List<ChatMessage> = _messages.value[groupId].orEmpty()
+}
+
 object PostRepository {
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
     val posts: StateFlow<List<Post>> = _posts

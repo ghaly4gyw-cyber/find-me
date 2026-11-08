@@ -24,4 +24,14 @@
     <string name="inactive_alert">%1$s hasn\'t responded in a while</string>
     <string name="voice_hold_to_talk">Hold to talk</string>
     <string name="voice_in_range_only">Voice only works with phones in direct range (no multi-hop)</string>
+    <string name="tab_groups">Groups</string>
+    <string name="create_group">Create group</string>
+    <string name="join_group">Join group</string>
+    <string name="no_groups">No groups yet. Create one, or join one with a code from a teammate.</string>
+    <string name="group_name_hint">Group name</string>
+    <string name="join_code_hint">Paste join code</string>
+    <string name="share_this_code">Share this code with your teammates so they can join:</string>
+    <string name="copy_code">Copy code</string>
+    <string name="share_code_short">Share code</string>
+    <string name="code_copied">Join code copied</string>
 </resources>
