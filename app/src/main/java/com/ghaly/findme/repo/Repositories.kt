@@ -396,7 +396,19 @@ object GroupChatRepository {
     fun forGroup(groupId: String): List<ChatMessage> = _messages.value[groupId].orEmpty()
 }
 
+/** Community posts/comments, disk-cached the same way everything else here is —
+ *  these were memory-only until this pass, which meant a service restart (the
+ *  OS killing the app in the background, say) silently wiped the whole board.
+ *  Capped to the most recent [MAX_POSTS]/[MAX_COMMENTS_PER_POST] so the cache
+ *  can't grow without bound over a weeks-long deployment. */
 object PostRepository {
+    private const val PREFS = "find_me_posts_cache"
+    private const val KEY_POSTS = "posts_json"
+    private const val KEY_COMMENTS = "comments_json"
+    private const val MAX_POSTS = 200
+    private const val MAX_COMMENTS_PER_POST = 200
+
+    private var appContext: Context? = null
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
     val posts: StateFlow<List<Post>> = _posts
 
@@ -406,20 +418,113 @@ object PostRepository {
     private val seenPostIds = mutableSetOf<String>()
     private val seenCommentIds = mutableSetOf<String>()
 
+    fun init(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        loadFromDisk()
+    }
+
     fun addPost(post: Post) {
         if (!seenPostIds.add(post.id)) return
-        _posts.update { it + post }
+        _posts.update { (it + post).takeLast(MAX_POSTS) }
+        saveToDisk()
     }
 
     fun addComment(comment: PostComment) {
         if (!seenCommentIds.add(comment.id)) return
         _comments.update { map ->
-            val list = map[comment.postId].orEmpty() + comment
+            val list = (map[comment.postId].orEmpty() + comment).takeLast(MAX_COMMENTS_PER_POST)
             map + (comment.postId to list)
         }
+        saveToDisk()
     }
 
     fun commentsFor(postId: String): List<PostComment> = _comments.value[postId].orEmpty()
+
+    private fun loadFromDisk() {
+        val ctx = appContext ?: return
+        try {
+            val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            prefs.getString(KEY_POSTS, null)?.let { json ->
+                val arr = JSONArray(json)
+                val loaded = mutableListOf<Post>()
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    loaded += Post(
+                        id = o.getString("id"),
+                        authorId = o.getString("authorId"),
+                        authorName = o.getString("authorName"),
+                        text = o.getString("text"),
+                        ts = o.getLong("ts")
+                    )
+                }
+                _posts.value = loaded
+                seenPostIds.addAll(loaded.map { it.id })
+            }
+            prefs.getString(KEY_COMMENTS, null)?.let { json ->
+                val obj = JSONObject(json)
+                val loaded = mutableMapOf<String, List<PostComment>>()
+                for (postId in obj.keys()) {
+                    val arr = obj.getJSONArray(postId)
+                    val list = mutableListOf<PostComment>()
+                    for (i in 0 until arr.length()) {
+                        val o = arr.getJSONObject(i)
+                        list += PostComment(
+                            id = o.getString("id"),
+                            postId = postId,
+                            authorId = o.getString("authorId"),
+                            authorName = o.getString("authorName"),
+                            text = o.getString("text"),
+                            ts = o.getLong("ts")
+                        )
+                    }
+                    loaded[postId] = list
+                    seenCommentIds.addAll(list.map { it.id })
+                }
+                _comments.value = loaded
+            }
+        } catch (e: Exception) {
+            // corrupted/old cache format — just start empty, nothing to recover
+        }
+    }
+
+    private fun saveToDisk() {
+        val ctx = appContext ?: return
+        try {
+            val postsArr = JSONArray()
+            for (p in _posts.value) {
+                postsArr.put(
+                    JSONObject()
+                        .put("id", p.id)
+                        .put("authorId", p.authorId)
+                        .put("authorName", p.authorName)
+                        .put("text", p.text)
+                        .put("ts", p.ts)
+                )
+            }
+            val commentsObj = JSONObject()
+            for ((postId, list) in _comments.value) {
+                val arr = JSONArray()
+                for (c in list) {
+                    arr.put(
+                        JSONObject()
+                            .put("id", c.id)
+                            .put("authorId", c.authorId)
+                            .put("authorName", c.authorName)
+                            .put("text", c.text)
+                            .put("ts", c.ts)
+                    )
+                }
+                commentsObj.put(postId, arr)
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY_POSTS, postsArr.toString())
+                .putString(KEY_COMMENTS, commentsObj.toString())
+                .apply()
+        } catch (e: Exception) {
+            // best-effort cache
+        }
+    }
 }
 
 /** Places the user marked on this one phone — their own current spot, a

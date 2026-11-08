@@ -21,6 +21,10 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Harmless no-op if the mesh service already initialized this — same
+        // belt-and-suspenders pattern as SavedPlaceRepository in the map tab.
+        PostRepository.init(requireContext())
+
         adapter = PostAdapter { post ->
             parentFragmentManager.beginTransaction()
                 .replace(R.id.contentContainer, PostCommentsFragment.newInstance(post.id, post.text))
