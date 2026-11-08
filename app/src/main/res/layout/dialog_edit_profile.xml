@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <ImageView
+        android:id="@+id/profilePhoto"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@color/sand_700"
+        android:scaleType="centerCrop"
+        android:contentDescription="@string/profile_photo" />
+
+    <TextView
+        android:id="@+id/choosePhotoText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="6dp"
+        android:text="@string/choose_photo"
+        android:textColor="@color/amber_500" />
+
+    <EditText
+        android:id="@+id/profileNameInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="@string/profile_name_hint"
+        android:inputType="text" />
+
+    <EditText
+        android:id="@+id/profilePhoneInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="@string/profile_phone_hint"
+        android:inputType="phone" />
+
+    <EditText
+        android:id="@+id/profileDescriptionInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="@string/profile_description_hint"
+        android:inputType="textMultiLine"
+        android:maxLines="3" />
+
+</LinearLayout>

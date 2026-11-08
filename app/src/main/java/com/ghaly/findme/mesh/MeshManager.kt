@@ -136,8 +136,9 @@ class MeshManager(private val context: Context) {
             }
             connectedEndpoints.add(endpointId)
             // Introduce ourselves so the other side can map endpointId -> deviceId,
-            // and so it immediately has our last known position.
+            // and so it immediately has our last known position and profile.
             sendEnvelopeTo(endpointId, buildPositionEnvelope(lastLat, lastLon))
+            sendEnvelopeTo(endpointId, buildProfileEnvelope())
         }
 
         override fun onDisconnected(endpointId: String) {
@@ -299,6 +300,19 @@ class MeshManager(private val context: Context) {
                 }
                 // if we're not in this group, we simply can't read it — but we still
                 // relay the (still-encrypted) envelope below like anything else.
+            }
+            MsgType.PROFILE -> {
+                val obj = JSONObject(envelope.payload)
+                com.ghaly.findme.repo.ProfileRepository.upsert(
+                    com.ghaly.findme.model.Profile(
+                        deviceId = envelope.originId,
+                        name = envelope.originName,
+                        phone = obj.optString("phone", "").ifEmpty { null },
+                        description = obj.optString("description", "").ifEmpty { null },
+                        photoBase64 = obj.optString("photo", "").ifEmpty { null },
+                        ts = envelope.ts
+                    )
+                )
             }
             MsgType.POST_COMMENT -> {
                 val obj = JSONObject(envelope.payload)
@@ -523,6 +537,28 @@ class MeshManager(private val context: Context) {
         seenIds.add(envelope.id)
         broadcast(envelope)
         SosRepository.clear(myId)
+    }
+
+    /** Call after the user edits their profile, so connected peers get the update. */
+    fun sendProfile() {
+        broadcast(buildProfileEnvelope())
+    }
+
+    private fun buildProfileEnvelope(): Envelope {
+        val profile = ProfileStore.get(context)
+        val payload = JSONObject()
+            .put("phone", profile.phone ?: "")
+            .put("description", profile.description ?: "")
+            .put("photo", profile.photoBase64 ?: "")
+        return Envelope(
+            id = UUID.randomUUID().toString(),
+            type = MsgType.PROFILE,
+            originId = myId,
+            originName = myName,
+            hop = 0,
+            ts = System.currentTimeMillis(),
+            payload = payload.toString()
+        )
     }
 
     private fun buildPositionEnvelope(lat: Double, lon: Double) = Envelope(

@@ -41,7 +41,7 @@ private fun distanceLabel(meters: Float): String = when {
     else -> String.format(Locale.US, "%.1f km", meters / 1000f)
 }
 
-class PeerAdapter : RecyclerView.Adapter<PeerAdapter.VH>() {
+class PeerAdapter(private val onClick: (PeerPosition) -> Unit = {}) : RecyclerView.Adapter<PeerAdapter.VH>() {
     var items: List<PeerPosition> = emptyList()
         set(value) {
             field = value.sortedByDescending { it.ts }
@@ -56,6 +56,7 @@ class PeerAdapter : RecyclerView.Adapter<PeerAdapter.VH>() {
         }
 
     class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val root: View = v
         val name: android.widget.TextView = v.findViewById(R.id.peerName)
         val direction: android.widget.TextView = v.findViewById(R.id.peerDirection)
         val status: android.widget.TextView = v.findViewById(R.id.peerStatus)
@@ -91,6 +92,7 @@ class PeerAdapter : RecyclerView.Adapter<PeerAdapter.VH>() {
         }
 
         holder.age.text = "last seen ${timeAgo(p.ts)}"
+        holder.root.setOnClickListener { onClick(p) }
     }
 }
 

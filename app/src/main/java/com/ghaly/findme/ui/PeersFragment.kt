@@ -21,7 +21,9 @@ import kotlinx.coroutines.launch
 
 class PeersFragment : Fragment(R.layout.fragment_peers) {
 
-    private val adapter = PeerAdapter()
+    private val adapter = PeerAdapter(onClick = { peer ->
+        showPeerProfileDialog(peer, (requireActivity() as? MainActivity)?.mesh?.myLocation())
+    })
     private var recorder: VoiceRecorder? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

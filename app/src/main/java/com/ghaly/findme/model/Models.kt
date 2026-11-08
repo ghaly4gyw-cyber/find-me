@@ -1,7 +1,7 @@
 package com.ghaly.findme.model
 
 /** Kinds of message that travel over the mesh. */
-enum class MsgType { POSITION, CHAT, SOS, SOS_CLEAR, INACTIVE, INACTIVE_CLEAR, POST, POST_COMMENT, GROUP_CHAT }
+enum class MsgType { POSITION, CHAT, SOS, SOS_CLEAR, INACTIVE, INACTIVE_CLEAR, POST, POST_COMMENT, GROUP_CHAT, PROFILE }
 
 /**
  * Envelope every mesh message is wrapped in, so any device can relay it

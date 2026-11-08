@@ -5,6 +5,7 @@ import com.ghaly.findme.model.InactivityAlert
 import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.model.Post
 import com.ghaly.findme.model.PostComment
+import com.ghaly.findme.model.Profile
 import com.ghaly.findme.model.SosAlert
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,6 +70,17 @@ object InactivityRepository {
             map + (senderId to existing.copy(active = false))
         }
     }
+}
+
+object ProfileRepository {
+    private val _profiles = MutableStateFlow<Map<String, Profile>>(emptyMap())
+    val profiles: StateFlow<Map<String, Profile>> = _profiles
+
+    fun upsert(profile: Profile) {
+        _profiles.update { it + (profile.deviceId to profile) }
+    }
+
+    fun get(deviceId: String): Profile? = _profiles.value[deviceId]
 }
 
 object GroupChatRepository {

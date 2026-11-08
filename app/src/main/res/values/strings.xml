@@ -34,4 +34,15 @@
     <string name="copy_code">Copy code</string>
     <string name="share_code_short">Share code</string>
     <string name="code_copied">Join code copied</string>
+    <string name="profile_photo">Profile photo</string>
+    <string name="choose_photo">Choose photo</string>
+    <string name="profile_name_hint">Your name</string>
+    <string name="profile_phone_hint">Phone number (optional)</string>
+    <string name="profile_description_hint">Short description (optional)</string>
+    <string name="call">Call</string>
+    <string name="whatsapp">WhatsApp</string>
+    <string name="no_phone_shared">No phone number shared</string>
+    <string name="edit_profile">Edit profile</string>
+    <string name="tab_map">Map</string>
+    <string name="map_center_you">You</string>
 </resources>

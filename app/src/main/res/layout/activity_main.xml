@@ -78,63 +78,74 @@
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <LinearLayout
+    <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:background="@color/sand_700"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp">
+        android:scrollbars="none"
+        android:overScrollMode="ifContentScrolls">
 
-        <Button
-            android:id="@+id/tabPeers"
-            style="?android:attr/borderlessButtonStyle"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@color/amber_500"
-            android:textSize="11sp"
-            android:text="@string/tab_peers" />
+            android:orientation="horizontal"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
 
-        <Button
-            android:id="@+id/tabChat"
-            style="?android:attr/borderlessButtonStyle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@color/sand_300"
-            android:textSize="11sp"
-            android:text="@string/tab_chat" />
+            <Button
+                android:id="@+id/tabPeers"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:textColor="@color/amber_500"
+                android:textSize="11sp"
+                android:text="@string/tab_peers" />
 
-        <Button
-            android:id="@+id/tabSos"
-            style="?android:attr/borderlessButtonStyle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@color/sos_red"
-            android:textSize="11sp"
-            android:text="@string/tab_sos" />
+            <Button
+                android:id="@+id/tabMap"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:textColor="@color/sand_300"
+                android:textSize="11sp"
+                android:text="@string/tab_map" />
 
-        <Button
-            android:id="@+id/tabPosts"
-            style="?android:attr/borderlessButtonStyle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@color/sand_300"
-            android:textSize="11sp"
-            android:text="@string/tab_posts" />
+            <Button
+                android:id="@+id/tabChat"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:textColor="@color/sand_300"
+                android:textSize="11sp"
+                android:text="@string/tab_chat" />
 
-        <Button
-            android:id="@+id/tabGroups"
-            style="?android:attr/borderlessButtonStyle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@color/sand_300"
-            android:textSize="11sp"
-            android:text="@string/tab_groups" />
-    </LinearLayout>
+            <Button
+                android:id="@+id/tabSos"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:textColor="@color/sos_red"
+                android:textSize="11sp"
+                android:text="@string/tab_sos" />
+
+            <Button
+                android:id="@+id/tabPosts"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:textColor="@color/sand_300"
+                android:textSize="11sp"
+                android:text="@string/tab_posts" />
+
+            <Button
+                android:id="@+id/tabGroups"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:textColor="@color/sand_300"
+                android:textSize="11sp"
+                android:text="@string/tab_groups" />
+        </LinearLayout>
+    </HorizontalScrollView>
 
 </LinearLayout>
