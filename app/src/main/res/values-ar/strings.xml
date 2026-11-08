@@ -46,6 +46,11 @@
     <string name="edit_profile">تعديل الملف الشخصي</string>
     <string name="tab_map">الخريطة</string>
     <string name="map_center_you">أنت</string>
+    <string name="peer_action_view_profile">عرض الملف الشخصي</string>
+    <string name="peer_action_follow">تتبّع (خط يوضح الاتجاه)</string>
+    <string name="peer_action_stop_following">إيقاف التتبّع</string>
+    <string name="now_following_fmt">يتم تتبّع %s</string>
+    <string name="stopped_following_fmt">تم إيقاف تتبّع %s</string>
 
     <string name="status_in_range">في المدى</string>
     <string name="status_last_known">آخر موقع معروف</string>

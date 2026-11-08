@@ -46,6 +46,11 @@
     <string name="edit_profile">Edit profile</string>
     <string name="tab_map">Map</string>
     <string name="map_center_you">You</string>
+    <string name="peer_action_view_profile">View profile</string>
+    <string name="peer_action_follow">Follow (show direction line)</string>
+    <string name="peer_action_stop_following">Stop following</string>
+    <string name="now_following_fmt">Following %s</string>
+    <string name="stopped_following_fmt">Stopped following %s</string>
 
     <!-- Added during the localization pass: strings that used to be hardcoded
          English literals in the Kotlin code, now routed through resources so

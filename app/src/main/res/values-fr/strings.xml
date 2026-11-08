@@ -46,6 +46,11 @@
     <string name="edit_profile">Modifier le profil</string>
     <string name="tab_map">Carte</string>
     <string name="map_center_you">Vous</string>
+    <string name="peer_action_view_profile">Voir le profil</string>
+    <string name="peer_action_follow">Suivre (ligne de direction)</string>
+    <string name="peer_action_stop_following">Arrêter de suivre</string>
+    <string name="now_following_fmt">Suivi de %s</string>
+    <string name="stopped_following_fmt">Suivi de %s arrêté</string>
 
     <string name="status_in_range">à portée</string>
     <string name="status_last_known">dernière position connue</string>

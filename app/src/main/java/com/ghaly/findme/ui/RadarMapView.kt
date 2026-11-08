@@ -9,10 +9,13 @@ import android.location.Location
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
+import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 import com.ghaly.findme.model.PeerPosition
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -42,7 +45,24 @@ class RadarMapView @JvmOverloads constructor(
 
     var onPeerTap: ((PeerPosition) -> Unit)? = null
 
+    /** Device id of the peer currently being "followed" — a live line is drawn
+     *  from you to them for as long as they're in the last-known peer list.
+     *  Set/cleared by the fragment from the tap menu. */
+    var followedDeviceId: String? = null
+        set(value) {
+            field = value
+            invalidate()
+        }
+
     var maxRangeMeters: Float = 2000f
+
+    // Pinch-to-zoom + one-finger pan. This is still a bearing/distance radar
+    // (there's no offline map tile data to show out in the desert), but it's
+    // no longer a fixed scale — zoom in to spread out a crowded cluster,
+    // pan to look past the edge, double-tap to snap back to center.
+    private var scaleFactor = 1f
+    private var panX = 0f
+    private var panY = 0f
 
     /** Returns the bearing (degrees, 0 = north) a peer was last seen moving in,
      *  or null if unknown/not enough data — wired up by the fragment. Only
@@ -94,10 +114,38 @@ class RadarMapView @JvmOverloads constructor(
     private val sweepPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
+    private val followLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#F2A541")
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        pathEffect = android.graphics.DashPathEffect(floatArrayOf(18f, 14f), 0f)
+    }
 
     /** last drawn dot positions, for hit testing on tap */
     private data class DotHit(val peer: PeerPosition, val cx: Float, val cy: Float)
     private var lastDots: List<DotHit> = emptyList()
+
+    private val scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScale(detector: ScaleGestureDetector): Boolean {
+            scaleFactor = (scaleFactor * detector.scaleFactor).coerceIn(0.5f, 8f)
+            invalidate()
+            return true
+        }
+    })
+    private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+        override fun onDoubleTap(e: MotionEvent): Boolean {
+            scaleFactor = 1f
+            panX = 0f
+            panY = 0f
+            invalidate()
+            return true
+        }
+    })
+    private var lastTouchX = 0f
+    private var lastTouchY = 0f
+    private var downX = 0f
+    private var downY = 0f
+    private var isDragging = false
 
     // Slowly rotating radar sweep + a gentle pulse on live peer dots — the
     // only "animation" cost here is a periodic invalidate while the view is
@@ -130,36 +178,38 @@ class RadarMapView @JvmOverloads constructor(
         val h = height.toFloat()
         val cx = w / 2f
         val cy = h / 2f
-        val radius = min(w, h) / 2f - 40f
-        if (radius <= 0) return
+        val baseRadius = min(w, h) / 2f - 40f
+        if (baseRadius <= 0) return
+
+        // "me" is the anchor of the whole view: pan moves it around the screen,
+        // zoom stretches every peer's distance from it.
+        val ccx = cx + panX
+        val ccy = cy + panY
+        val radius = baseRadius * scaleFactor
 
         // range rings
         for (i in 1..3) {
-            canvas.drawCircle(cx, cy, radius * i / 3f, ringPaint)
+            canvas.drawCircle(ccx, ccy, radius * i / 3f, ringPaint)
         }
 
         // rotating radar sweep — a soft teal wedge spinning around the center,
         // purely decorative, gives the "live" feel the radar concept wants
         sweepPaint.shader = SweepGradient(
-            cx, cy,
+            ccx, ccy,
             intArrayOf(Color.TRANSPARENT, Color.parseColor("#2639C5BB"), Color.TRANSPARENT),
             floatArrayOf(0f, 0.04f, 0.18f)
         )
         canvas.save()
-        canvas.rotate(sweepAngle, cx, cy)
-        canvas.drawCircle(cx, cy, radius, sweepPaint)
+        canvas.rotate(sweepAngle, ccx, ccy)
+        canvas.drawCircle(ccx, ccy, radius, sweepPaint)
         canvas.restore()
 
-        canvas.drawText("N", cx, cy - radius - 12f, northPaint)
-
-        // me, in the middle — a soft breathing glow behind a solid dot
-        val centerPulse = 1f + 0.25f * (0.5f + 0.5f * sin(pulsePhase.toDouble()).toFloat())
-        canvas.drawCircle(cx, cy, 14f * centerPulse + 8f, centerGlowPaint)
-        canvas.drawCircle(cx, cy, 14f, centerPaint)
-        canvas.drawText(context.getString(com.ghaly.findme.R.string.map_center_you), cx, cy + 34f, labelPaint)
+        canvas.drawText("N", ccx, ccy - radius - 12f, northPaint)
 
         val mine = myLocation
         val dots = mutableListOf<DotHit>()
+        var followPx: Float? = null
+        var followPy: Float? = null
         if (mine != null) {
             for (p in peers) {
                 if (p.lat == 0.0 && p.lon == 0.0) continue
@@ -172,8 +222,8 @@ class RadarMapView @JvmOverloads constructor(
                 val angleRad = Math.toRadians((bearingDeg - 90).toDouble()) // -90 so 0deg(N) draws upward
                 val dx = (r * cos(angleRad)).toFloat()
                 val dy = (r * sin(angleRad)).toFloat()
-                val px = cx + dx
-                val py = cy + dy
+                val px = ccx + dx
+                val py = ccy + dy
                 val paint = if (p.connected) peerPaint else peerStalePaint
                 if (p.connected) {
                     val peerPulse = 1f + 0.3f * (0.5f + 0.5f * sin((pulsePhase + px).toDouble()).toFloat())
@@ -186,9 +236,24 @@ class RadarMapView @JvmOverloads constructor(
                 }
                 canvas.drawText(p.name, px, py + 30f, labelPaint)
                 dots += DotHit(p, px, py)
+                if (p.deviceId == followedDeviceId) {
+                    followPx = px
+                    followPy = py
+                }
             }
         }
         lastDots = dots
+
+        // the "follow" line — drawn before the center dot so the dot sits on top of it
+        if (followPx != null && followPy != null) {
+            canvas.drawLine(ccx, ccy, followPx, followPy, followLinePaint)
+        }
+
+        // me, in the middle — a soft breathing glow behind a solid dot
+        val centerPulse = 1f + 0.25f * (0.5f + 0.5f * sin(pulsePhase.toDouble()).toFloat())
+        canvas.drawCircle(ccx, ccy, 14f * centerPulse + 8f, centerGlowPaint)
+        canvas.drawCircle(ccx, ccy, 14f, centerPaint)
+        canvas.drawText(context.getString(com.ghaly.findme.R.string.map_center_you), ccx, ccy + 34f, labelPaint)
     }
 
     /** Draws a short arrow out of a stale peer's dot, pointing the direction they
@@ -214,17 +279,44 @@ class RadarMapView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_UP) {
-            val x = event.x
-            val y = event.y
-            val hit = lastDots.minByOrNull { dist(it.cx, it.cy, x, y) }
-            if (hit != null && dist(hit.cx, hit.cy, x, y) < 60f) {
-                onPeerTap?.invoke(hit.peer)
-                performClick()
-                return true
+        scaleDetector.onTouchEvent(event)
+        gestureDetector.onTouchEvent(event)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                lastTouchX = event.x
+                lastTouchY = event.y
+                downX = event.x
+                downY = event.y
+                isDragging = false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (event.pointerCount == 1 && !scaleDetector.isInProgress) {
+                    val dx = event.x - lastTouchX
+                    val dy = event.y - lastTouchY
+                    if (!isDragging && dist(downX, downY, event.x, event.y) > 16f) isDragging = true
+                    if (isDragging) {
+                        panX += dx
+                        panY += dy
+                        invalidate()
+                    }
+                    lastTouchX = event.x
+                    lastTouchY = event.y
+                }
+            }
+            MotionEvent.ACTION_UP -> {
+                if (!isDragging) {
+                    val x = event.x
+                    val y = event.y
+                    val hit = lastDots.minByOrNull { dist(it.cx, it.cy, x, y) }
+                    if (hit != null && dist(hit.cx, hit.cy, x, y) < max(60f, 60f * scaleFactor)) {
+                        onPeerTap?.invoke(hit.peer)
+                        performClick()
+                    }
+                }
+                isDragging = false
             }
         }
-        return super.onTouchEvent(event)
+        return true
     }
 
     override fun performClick(): Boolean {
