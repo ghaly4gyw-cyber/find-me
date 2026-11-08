@@ -32,11 +32,14 @@
     <string name="join_group">Join group</string>
     <string name="no_groups">No groups yet. Create one, or join one with a code from a teammate.</string>
     <string name="group_name_hint">Group name</string>
-    <string name="join_code_hint">Paste join code</string>
+    <string name="join_code_hint">6-character code (e.g. 4K2-9P7)</string>
     <string name="share_this_code">Share this code with your teammates so they can join:</string>
     <string name="copy_code">Copy code</string>
     <string name="share_code_short">Share code</string>
     <string name="code_copied">Join code copied</string>
+    <string name="group_placeholder_name_fmt">Group %s</string>
+    <string name="rename_group_dialog_title">Rename this group</string>
+    <string name="joined_group_fmt">Joined \"%s\" — long-press it to rename</string>
     <string name="profile_photo">Profile photo</string>
     <string name="choose_photo">Choose photo</string>
     <string name="profile_name_hint">Your name</string>

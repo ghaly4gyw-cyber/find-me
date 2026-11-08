@@ -7,17 +7,34 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.UUID
+import java.security.MessageDigest
+import java.security.SecureRandom
 
 /**
  * Groups the user has created or joined, persisted to disk so they survive app
- * restarts. The "join code" is just the group's id+name+key base64-encoded
- * together — meant to be read aloud or typed in by someone standing right there,
- * since there's no internet to send an invite link over.
+ * restarts. The "join code" is a short, sayable string — 6 characters, no
+ * ambiguous letters/digits (no 0/O, no 1/I) — meant to be read aloud over the
+ * radio or typed in standing right there, since there's no internet to send an
+ * invite link over. A long base64 blob was never something a human could
+ * actually relay; this is.
+ *
+ * The group's id and its AES key are both derived deterministically from the
+ * code (via SHA-256) rather than carried inside it, so a 6-character code is
+ * enough on its own to join — no round trip needed. The trade-off: the code
+ * can't also carry the group's name or who the admin is, so a device joining
+ * fresh (not already in [_groups]) gets a placeholder name built from the code
+ * itself, renameable afterwards with the existing "Rename" action. The keyspace
+ * (32^6, about 1 billion) is small by cryptography standards, but the threat
+ * model here is "keep a stranger's phone from reading our group chat", not a
+ * bank — anyone who has the code was meant to have it, same trust level as a
+ * Wi-Fi password read aloud.
  */
 object GroupRepository {
     private const val PREFS = "find_me_groups"
     private const val KEY_GROUPS = "groups_json"
+
+    private const val CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+    private const val CODE_LENGTH = 6
 
     private val _groups = MutableStateFlow<List<Group>>(emptyList())
     val groups: StateFlow<List<Group>> = _groups
@@ -33,12 +50,14 @@ object GroupRepository {
         val list = mutableListOf<Group>()
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
+            val code = o.optString("code", "").ifEmpty { "——————" }
             list += Group(
                 id = o.getString("id"),
                 name = o.getString("name"),
                 keyBase64 = o.getString("key"),
                 adminId = o.getString("admin"),
-                createdTs = o.optLong("ts", System.currentTimeMillis())
+                createdTs = o.optLong("ts", System.currentTimeMillis()),
+                code = code
             )
         }
         _groups.value = list
@@ -54,6 +73,7 @@ object GroupRepository {
                     .put("key", g.keyBase64)
                     .put("admin", g.adminId)
                     .put("ts", g.createdTs)
+                    .put("code", g.code)
             )
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -72,47 +92,79 @@ object GroupRepository {
 
     fun create(context: Context, name: String): Group {
         ensureLoaded(context)
+        var code: String
+        do {
+            code = randomCode()
+        } while (_groups.value.any { it.code == code })
         val group = Group(
-            id = UUID.randomUUID().toString().take(8),
+            id = idForCode(code),
             name = name,
-            keyBase64 = Crypto.newKeyBase64(),
+            keyBase64 = keyForCode(code),
             adminId = DeviceIdentity.id(context),
-            createdTs = System.currentTimeMillis()
+            createdTs = System.currentTimeMillis(),
+            code = code
         )
         _groups.value = _groups.value + group
         persist(context)
         return group
     }
 
-    /** Returns null if the code is malformed. */
-    fun joinFromCode(context: Context, code: String): Group? {
+    /** Returns null if the code is malformed (wrong length / bad characters). */
+    fun joinFromCode(context: Context, rawCode: String): Group? {
         ensureLoaded(context)
-        return try {
-            val decoded = String(Base64.decode(code.trim(), Base64.NO_WRAP), Charsets.UTF_8)
-            val o = JSONObject(decoded)
-            val group = Group(
-                id = o.getString("id"),
-                name = o.getString("name"),
-                keyBase64 = o.getString("key"),
-                adminId = o.getString("admin"),
-                createdTs = System.currentTimeMillis()
-            )
-            if (_groups.value.none { it.id == group.id }) {
-                _groups.value = _groups.value + group
-                persist(context)
-            }
-            group
-        } catch (e: Exception) {
-            null
-        }
+        val code = normalizeCode(rawCode) ?: return null
+        val id = idForCode(code)
+        val existing = _groups.value.firstOrNull { it.id == id }
+        if (existing != null) return existing
+        val group = Group(
+            id = id,
+            // The code can't carry a name, so this starts as a placeholder —
+            // "Rename" (already in the group's action menu) fixes it up once,
+            // same as any other saved place/profile edit in this app.
+            name = context.getString(com.ghaly.findme.R.string.group_placeholder_name_fmt, code),
+            keyBase64 = keyForCode(code),
+            adminId = "", // unknown until learned some other way — not needed to use the group
+            createdTs = System.currentTimeMillis(),
+            code = code
+        )
+        _groups.value = _groups.value + group
+        persist(context)
+        return group
     }
 
-    fun codeFor(group: Group): String {
-        val o = JSONObject()
-            .put("id", group.id)
-            .put("name", group.name)
-            .put("key", group.keyBase64)
-            .put("admin", group.adminId)
-        return Base64.encodeToString(o.toString().toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+    fun rename(context: Context, groupId: String, newName: String) {
+        ensureLoaded(context)
+        _groups.value = _groups.value.map { if (it.id == groupId) it.copy(name = newName) else it }
+        persist(context)
+    }
+
+    /** Formatted for display/sharing, e.g. "4K2-9P7". */
+    fun formattedCode(group: Group): String {
+        val c = group.code
+        return if (c.length == CODE_LENGTH) "${c.substring(0, 3)}-${c.substring(3)}" else c
+    }
+
+    private fun randomCode(): String {
+        val random = SecureRandom()
+        return (1..CODE_LENGTH).map { CODE_ALPHABET[random.nextInt(CODE_ALPHABET.length)] }.joinToString("")
+    }
+
+    /** Strips spaces/dashes, uppercases, and validates against the alphabet —
+     *  accepts whatever casing/spacing a person typed it in with. */
+    private fun normalizeCode(input: String): String? {
+        val cleaned = input.trim().uppercase().replace("-", "").replace(" ", "")
+        if (cleaned.length != CODE_LENGTH) return null
+        if (cleaned.any { it !in CODE_ALPHABET }) return null
+        return cleaned
+    }
+
+    private fun idForCode(code: String): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(code.toByteArray(Charsets.UTF_8))
+        return Base64.encodeToString(digest, Base64.NO_WRAP or Base64.URL_SAFE).take(12)
+    }
+
+    private fun keyForCode(code: String): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(("find-me-group-key:$code").toByteArray(Charsets.UTF_8))
+        return Base64.encodeToString(digest, Base64.NO_WRAP) // 32 bytes -> AES-256, matches Crypto.newKeyBase64()
     }
 }

@@ -34,7 +34,8 @@ class GroupsFragment : Fragment(R.layout.fragment_groups) {
                     .addToBackStack(null)
                     .commit()
             },
-            onShare = { group -> showShareDialog(group) }
+            onShare = { group -> showShareDialog(group) },
+            onRename = { group -> showRenameGroupDialog(group) }
         )
 
         val list = view.findViewById<RecyclerView>(R.id.groupsList)
@@ -87,6 +88,8 @@ class GroupsFragment : Fragment(R.layout.fragment_groups) {
                     val group = GroupRepository.joinFromCode(requireContext(), code)
                     if (group == null) {
                         Toast.makeText(requireContext(), R.string.invalid_group_code, Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(requireContext(), getString(R.string.joined_group_fmt, group.name), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -95,7 +98,7 @@ class GroupsFragment : Fragment(R.layout.fragment_groups) {
     }
 
     private fun showShareDialog(group: Group) {
-        val code = GroupRepository.codeFor(group)
+        val code = GroupRepository.formattedCode(group)
         AlertDialog.Builder(requireContext())
             .setTitle(group.name)
             .setMessage(getString(R.string.share_this_code) + "\n\n" + code)
@@ -105,6 +108,20 @@ class GroupsFragment : Fragment(R.layout.fragment_groups) {
                 Toast.makeText(requireContext(), R.string.code_copied, Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(android.R.string.ok, null)
+            .show()
+    }
+
+    private fun showRenameGroupDialog(group: Group) {
+        val input = EditText(requireContext())
+        input.setText(group.name)
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.rename_group_dialog_title)
+            .setView(input)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val name = input.text?.toString()?.trim().orEmpty()
+                if (name.isNotEmpty()) GroupRepository.rename(requireContext(), group.id, name)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 }

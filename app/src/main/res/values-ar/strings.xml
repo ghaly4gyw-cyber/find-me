@@ -32,11 +32,14 @@
     <string name="join_group">الانضمام إلى مجموعة</string>
     <string name="no_groups">لا توجد مجموعات حتى الآن. أنشئ واحدة أو انضم بواسطة رمز من زميل.</string>
     <string name="group_name_hint">اسم المجموعة</string>
-    <string name="join_code_hint">ألصق رمز الانضمام</string>
+    <string name="join_code_hint">رمز من 6 خانات (مثال: 4K2-9P7)</string>
     <string name="share_this_code">شارك هذا الرمز مع زملائك حتى ينضموا:</string>
     <string name="copy_code">نسخ الرمز</string>
     <string name="share_code_short">مشاركة الرمز</string>
     <string name="code_copied">تم نسخ رمز الانضمام</string>
+    <string name="group_placeholder_name_fmt">مجموعة %s</string>
+    <string name="rename_group_dialog_title">إعادة تسمية هذه المجموعة</string>
+    <string name="joined_group_fmt">تم الانضمام إلى \"%s\" — اضغط مطولاً لإعادة التسمية</string>
     <string name="profile_photo">صورة الملف الشخصي</string>
     <string name="choose_photo">اختيار صورة</string>
     <string name="profile_name_hint">اسمك</string>

@@ -241,7 +241,11 @@ class PostAdapter(private val onClick: (Post) -> Unit) : RecyclerView.Adapter<Po
 
 class GroupAdapter(
     private val onOpen: (Group) -> Unit,
-    private val onShare: (Group) -> Unit
+    private val onShare: (Group) -> Unit,
+    /** Long-press a group to rename it — needed in particular for a group
+     *  joined by code, which starts out with a placeholder name built from
+     *  the code itself since the code can't carry a name on its own. */
+    private val onRename: (Group) -> Unit
 ) : RecyclerView.Adapter<GroupAdapter.VH>() {
     var items: List<Group> = emptyList()
         set(value) {
@@ -266,6 +270,7 @@ class GroupAdapter(
         val g = items[position]
         holder.name.text = g.name
         holder.root.setOnClickListener { onOpen(g) }
+        holder.root.setOnLongClickListener { onRename(g); true }
         holder.share.setOnClickListener { onShare(g) }
     }
 }
