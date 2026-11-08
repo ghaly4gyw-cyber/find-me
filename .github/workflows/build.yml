@@ -22,8 +22,15 @@ jobs:
 
       - name: Install Android SDK packages
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          SDKMANAGER=$(find "$ANDROID_HOME" -maxdepth 4 -name sdkmanager -type f 2>/dev/null | sort -V | tail -1)
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found under ANDROID_HOME=$ANDROID_HOME" >&2
+            find "$ANDROID_HOME" -maxdepth 3 >&2 || true
+            exit 1
+          fi
+          echo "Using $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
