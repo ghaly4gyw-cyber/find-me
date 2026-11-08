@@ -148,12 +148,28 @@ object ChatRepository {
     }
 }
 
+/** SOS alerts — disk-cached like the peer/profile rosters. In-memory-only was
+ *  an oversight: if the service restarts (OOM-kill, a phone reboot) while a
+ *  real SOS is still active, the alert isn't actually resolved — losing it
+ *  from memory would make it silently vanish from everyone's screen with
+ *  nothing about the underlying emergency having changed. */
 object SosRepository {
+    private const val PREFS = "find_me_sos_cache"
+    private const val KEY_DATA = "sos_json"
+
+    private var appContext: Context? = null
     private val _alerts = MutableStateFlow<Map<String, SosAlert>>(emptyMap())
     val alerts: StateFlow<Map<String, SosAlert>> = _alerts
 
+    fun init(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        loadFromDisk()
+    }
+
     fun upsert(alert: SosAlert) {
         _alerts.update { it + (alert.senderId to alert) }
+        saveToDisk()
     }
 
     fun clear(senderId: String) {
@@ -161,21 +177,134 @@ object SosRepository {
             val existing = map[senderId] ?: return@update map
             map + (senderId to existing.copy(active = false))
         }
+        saveToDisk()
+    }
+
+    private fun loadFromDisk() {
+        val ctx = appContext ?: return
+        try {
+            val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(KEY_DATA, null) ?: return
+            val arr = JSONArray(json)
+            val loaded = mutableMapOf<String, SosAlert>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val id = o.getString("senderId")
+                loaded[id] = SosAlert(
+                    id = o.getString("id"),
+                    senderId = id,
+                    senderName = o.getString("senderName"),
+                    lat = o.getDouble("lat"),
+                    lon = o.getDouble("lon"),
+                    ts = o.getLong("ts"),
+                    active = o.getBoolean("active")
+                )
+            }
+            if (loaded.isNotEmpty()) _alerts.value = loaded
+        } catch (e: Exception) {
+            // corrupted/old cache format — just start empty, nothing to recover
+        }
+    }
+
+    private fun saveToDisk() {
+        val ctx = appContext ?: return
+        try {
+            val arr = JSONArray()
+            for (a in _alerts.value.values) {
+                arr.put(
+                    JSONObject()
+                        .put("id", a.id)
+                        .put("senderId", a.senderId)
+                        .put("senderName", a.senderName)
+                        .put("lat", a.lat)
+                        .put("lon", a.lon)
+                        .put("ts", a.ts)
+                        .put("active", a.active)
+                )
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY_DATA, arr.toString())
+                .apply()
+        } catch (e: Exception) {
+            // best-effort cache
+        }
     }
 }
 
+/** Same reasoning and pattern as [SosRepository] — an active inactivity alert
+ *  surviving a service restart matters just as much as an SOS does. */
 object InactivityRepository {
+    private const val PREFS = "find_me_inactivity_cache"
+    private const val KEY_DATA = "inactivity_json"
+
+    private var appContext: Context? = null
     private val _alerts = MutableStateFlow<Map<String, InactivityAlert>>(emptyMap())
     val alerts: StateFlow<Map<String, InactivityAlert>> = _alerts
 
+    fun init(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        loadFromDisk()
+    }
+
     fun upsert(alert: InactivityAlert) {
         _alerts.update { it + (alert.senderId to alert) }
+        saveToDisk()
     }
 
     fun clear(senderId: String) {
         _alerts.update { map ->
             val existing = map[senderId] ?: return@update map
             map + (senderId to existing.copy(active = false))
+        }
+        saveToDisk()
+    }
+
+    private fun loadFromDisk() {
+        val ctx = appContext ?: return
+        try {
+            val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(KEY_DATA, null) ?: return
+            val arr = JSONArray(json)
+            val loaded = mutableMapOf<String, InactivityAlert>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val id = o.getString("senderId")
+                loaded[id] = InactivityAlert(
+                    senderId = id,
+                    senderName = o.getString("senderName"),
+                    lat = o.getDouble("lat"),
+                    lon = o.getDouble("lon"),
+                    ts = o.getLong("ts"),
+                    active = o.getBoolean("active")
+                )
+            }
+            if (loaded.isNotEmpty()) _alerts.value = loaded
+        } catch (e: Exception) {
+            // corrupted/old cache format — just start empty, nothing to recover
+        }
+    }
+
+    private fun saveToDisk() {
+        val ctx = appContext ?: return
+        try {
+            val arr = JSONArray()
+            for (a in _alerts.value.values) {
+                arr.put(
+                    JSONObject()
+                        .put("senderId", a.senderId)
+                        .put("senderName", a.senderName)
+                        .put("lat", a.lat)
+                        .put("lon", a.lon)
+                        .put("ts", a.ts)
+                        .put("active", a.active)
+                )
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY_DATA, arr.toString())
+                .apply()
+        } catch (e: Exception) {
+            // best-effort cache
         }
     }
 }

@@ -67,6 +67,8 @@ class MeshForegroundService : Service() {
         com.ghaly.findme.repo.PeerRepository.init(applicationContext)
         com.ghaly.findme.repo.ProfileRepository.init(applicationContext)
         com.ghaly.findme.repo.SavedPlaceRepository.init(applicationContext)
+        com.ghaly.findme.repo.SosRepository.init(applicationContext)
+        com.ghaly.findme.repo.InactivityRepository.init(applicationContext)
         mesh = MeshManager(applicationContext)
         mesh.onVoiceClip = { bytes -> VoicePlayer.play(applicationContext, bytes) }
         locationTracker = LocationTracker(applicationContext) { lat, lon ->
