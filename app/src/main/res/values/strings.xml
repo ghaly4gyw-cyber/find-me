@@ -24,6 +24,7 @@
     <string name="inactive_alert">%1$s hasn\'t responded in a while</string>
     <string name="voice_hold_to_talk">Hold to talk</string>
     <string name="voice_in_range_only">Voice only works with phones in direct range (no multi-hop)</string>
+    <string name="voice_sent">Sent to %d nearby phone(s)</string>
     <string name="tab_groups">Groups</string>
     <string name="create_group">Create group</string>
     <string name="join_group">Join group</string>

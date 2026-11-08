@@ -24,6 +24,7 @@
     <string name="inactive_alert">%1$s n\'a pas répondu depuis un moment</string>
     <string name="voice_hold_to_talk">Maintenir pour parler</string>
     <string name="voice_in_range_only">La voix fonctionne uniquement avec les téléphones à portée directe (pas de relais multi-saut)</string>
+    <string name="voice_sent">Envoyé à %d téléphone(s) à proximité</string>
     <string name="tab_groups">Groupes</string>
     <string name="create_group">Créer un groupe</string>
     <string name="join_group">Rejoindre un groupe</string>

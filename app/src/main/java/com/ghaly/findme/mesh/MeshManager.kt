@@ -249,6 +249,7 @@ class MeshManager(private val context: Context) {
                     Log.w(TAG, "bad payload from $endpointId", e)
                 }
             } else {
+                report("Voice clip received (${bytes.size} bytes) — playing…")
                 onVoiceClip?.invoke(bytes)
             }
         }
@@ -494,11 +495,16 @@ class MeshManager(private val context: Context) {
      *  NOT flood-relayed like other message types, so it never travels past direct
      *  Bluetooth/Wi-Fi range. Returns false if there's nobody directly in range. */
     fun sendVoiceClip(bytes: ByteArray): Boolean {
-        if (connectedEndpoints.isEmpty()) return false
+        val targets = connectedEndpoints.toList()
+        if (targets.isEmpty()) {
+            report("No phone directly in range — voice clip not sent.")
+            return false
+        }
         val payload = Payload.fromBytes(bytes)
-        for (endpointId in connectedEndpoints) {
+        for (endpointId in targets) {
             connectionsClient.sendPayload(endpointId, payload)
         }
+        report("Voice clip (${bytes.size} bytes) sent to ${targets.size} nearby phone(s).")
         return true
     }
 

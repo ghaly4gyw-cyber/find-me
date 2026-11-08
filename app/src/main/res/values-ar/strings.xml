@@ -24,6 +24,7 @@
     <string name="inactive_alert">%1$s لم يستجب منذ وقت</string>
     <string name="voice_hold_to_talk">اضغط للتحدث</string>
     <string name="voice_in_range_only">الصوت يعمل فقط مع الهواتف القريبة مباشرة (بدون ترحيل متعدد)</string>
+    <string name="voice_sent">تم الإرسال إلى %d هاتف قريب</string>
     <string name="tab_groups">المجموعات</string>
     <string name="create_group">إنشاء مجموعة</string>
     <string name="join_group">الانضمام إلى مجموعة</string>

@@ -14,10 +14,15 @@ object VoicePlayer {
             val player = MediaPlayer()
             player.setAudioAttributes(
                 AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    // USAGE_MEDIA (not USAGE_VOICE_COMMUNICATION) so playback goes out the
+                    // main loudspeaker on the media volume stream. VOICE_COMMUNICATION is
+                    // meant for an active phone call and can get routed quietly to the
+                    // earpiece, which made clips sound like they never arrived.
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build()
             )
+            player.setVolume(1.0f, 1.0f)
             player.setDataSource(file.absolutePath)
             player.setOnCompletionListener {
                 it.release()

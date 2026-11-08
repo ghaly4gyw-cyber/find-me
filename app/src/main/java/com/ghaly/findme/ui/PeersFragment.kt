@@ -95,7 +95,13 @@ class PeersFragment : Fragment(R.layout.fragment_peers) {
         button.setText(R.string.voice_hold_to_talk)
         val bytes = recorder?.stop() ?: return
         val mesh = (requireActivity() as? MainActivity)?.mesh ?: return
-        mesh.sendVoiceClip(bytes)
+        val sent = mesh.sendVoiceClip(bytes)
+        val message = if (sent) {
+            getString(R.string.voice_sent, mesh.directPeerCount())
+        } else {
+            getString(R.string.voice_in_range_only)
+        }
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
     }
 
     override fun onDestroyView() {
