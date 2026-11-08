@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- simple location-pin glyph, amber on transparent, centred in the 72dp safe zone -->
+    <path
+        android:fillColor="#E4A64B"
+        android:pathData="M54,24c-11.6,0 -21,9.4 -21,21c0,15.8 21,39 21,39s21,-23.2 21,-39C75,33.4 65.6,24 54,24z" />
+    <path
+        android:fillColor="#1C1510"
+        android:pathData="M54,36c-5,0 -9,4 -9,9s4,9 9,9s9,-4 9,-9S59,36 54,36z" />
+</vector>

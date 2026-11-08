@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.FindMe" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/amber_500</item>
+        <item name="colorPrimaryDark">@color/sand_900</item>
+        <item name="colorAccent">@color/sos_red</item>
+        <item name="android:statusBarColor" tools:targetApi="21">@color/sand_900</item>
+    </style>
+</resources>

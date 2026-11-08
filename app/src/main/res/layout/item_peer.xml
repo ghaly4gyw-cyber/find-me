@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/sand_700"
+    android:padding="12dp"
+    android:layout_marginBottom="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/peerName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            tools:text="Miner-3F2A" />
+
+        <TextView
+            android:id="@+id/peerStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            tools:text="in range" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/peerCoords"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/sand_300"
+        android:textSize="13sp"
+        android:layout_marginTop="2dp"
+        tools:text="23.4512, -10.1234" />
+
+    <TextView
+        android:id="@+id/peerAge"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/sand_300"
+        android:textSize="12sp"
+        tools:text="last seen 2 min ago" />
+
+</LinearLayout>

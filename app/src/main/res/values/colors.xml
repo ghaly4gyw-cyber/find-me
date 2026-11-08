@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="sand_900">#1C1510</color>
+    <color name="sand_700">#3A2E24</color>
+    <color name="sand_300">#D8C3A5</color>
+    <color name="amber_500">#E4A64B</color>
+    <color name="sos_red">#D7263D</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+</resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Find Me</string>
+    <string name="tab_peers">Peers</string>
+    <string name="tab_chat">Chat</string>
+    <string name="tab_sos">SOS</string>
+    <string name="sos_button">SEND SOS</string>
+    <string name="sos_sent">SOS sent to everyone in range</string>
+    <string name="chat_hint">Type a message…</string>
+    <string name="send">Send</string>
+    <string name="no_peers">No one in range yet. Keep Bluetooth and Wi-Fi on.</string>
+    <string name="permissions_needed">Find Me needs location and Bluetooth permissions to connect to nearby phones.</string>
+    <string name="grant_permissions">Grant permissions</string>
+    <string name="mesh_status_on">Mesh active — looking for nearby phones</string>
+    <string name="mesh_status_off">Mesh stopped</string>
+</resources>
