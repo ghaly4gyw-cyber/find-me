@@ -81,7 +81,7 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
                     // Best-effort: if this phone happens to have real signal right now,
                     // get the status out immediately rather than waiting for the next
                     // watchdog tick — SOS is exactly the case worth bypassing the throttle for.
-                    SmsBridge.sendNow(requireContext(), bypassThrottle = true)
+                    SmsBridge.sendNow(requireContext(), mesh.myLocation())
                 }
             } else {
                 mesh.clearSos()
@@ -201,7 +201,8 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
     }
 
     private fun attemptSmsSend() {
-        val sent = SmsBridge.sendNow(requireContext(), bypassThrottle = true)
+        val myLocation = (requireActivity() as? MainActivity)?.mesh?.myLocation()
+        val sent = SmsBridge.sendNow(requireContext(), myLocation)
         val messageRes = if (sent) R.string.sms_bridge_sent else R.string.sms_bridge_failed
         Toast.makeText(requireContext(), messageRes, Toast.LENGTH_SHORT).show()
     }

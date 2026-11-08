@@ -33,7 +33,8 @@ object SmsBridge {
     private const val KEY_CONTACT = "contact_phone"
     private const val KEY_AUTO = "auto_send_on_sos"
     private const val KEY_LAST_SENT = "last_sent_at"
-    private val AUTO_THROTTLE_MS = TimeUnit.MINUTES.toMillis(10)
+    private val URGENT_RESEND_MS = TimeUnit.MINUTES.toMillis(10)
+    private val ROUTINE_RESEND_MS = TimeUnit.MINUTES.toMillis(60)
 
     fun contact(context: Context): String? =
         prefs(context).getString(KEY_CONTACT, null)?.ifEmpty { null }
@@ -54,33 +55,43 @@ object SmsBridge {
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    /** Called from the background watchdog on every tick: only actually sends if
-     *  there's a contact configured, auto-send is on, something in the mesh is
-     *  actually worth reporting (an active SOS or inactivity alert, mine or
-     *  anyone else's), and we haven't just tried a few minutes ago — so a phone
-     *  that briefly touches a weak signal doesn't fire off a dozen texts. */
-    fun maybeAutoSend(context: Context) {
+    /** Called from the background watchdog on every tick. This is deliberately
+     *  NOT limited to emergencies: the whole point of this bridge is that
+     *  someone's last-known position reaches someone outside the mesh the
+     *  moment any signal shows up at all — not only after something has
+     *  already gone wrong. So it fires a routine status text on a long
+     *  interval regardless of alerts, and a much shorter one whenever an SOS
+     *  or inactivity alert is active, so a phone that briefly touches a weak
+     *  signal doesn't fire off a dozen texts but also never just stays quiet
+     *  because nothing urgent happened yet. */
+    fun maybeAutoSend(context: Context, myLocation: Pair<Double, Double>?) {
         if (!autoSendEnabled(context)) return
+        if (contact(context) == null) return
         val hasUrgent = SosRepository.alerts.value.values.any { it.active } ||
             InactivityRepository.alerts.value.values.any { it.active }
-        if (!hasUrgent) return
-        sendNow(context, bypassThrottle = false)
+        val resendInterval = if (hasUrgent) URGENT_RESEND_MS else ROUTINE_RESEND_MS
+        val lastSent = prefs(context).getLong(KEY_LAST_SENT, 0L)
+        if (System.currentTimeMillis() - lastSent < resendInterval) return
+        sendNow(context, myLocation)
     }
 
-    /** Attempts to send right now. [bypassThrottle] = true for a user-initiated tap
-     *  or a just-raised SOS, where we want the attempt regardless of the last try.
-     *  Returns false immediately (no attempt made) if nothing is configured, the
-     *  permission isn't granted, or the throttle hasn't elapsed. */
-    fun sendNow(context: Context, bypassThrottle: Boolean = true): Boolean {
+    /** Attempts to send right now, with no throttle of its own — callers that
+     *  want throttling (the background watchdog, via [maybeAutoSend]) do that
+     *  check themselves first. A user tapping "Send status now" or hitting SOS
+     *  should always get an attempt. Returns false immediately (no attempt
+     *  made) if nothing is configured or the permission isn't granted.
+     *
+     *  [myLocation] is THIS phone's own last GPS fix. If this phone is the one
+     *  that's isolated, its own position is the single most important line in
+     *  the text — it must never be left out just because this device's
+     *  broadcast of its own position never gets routed back into the peer
+     *  roster (a device doesn't relay its own envelope to itself). */
+    fun sendNow(context: Context, myLocation: Pair<Double, Double>? = null): Boolean {
         val phone = contact(context) ?: return false
         if (!hasPermission(context)) return false
-        if (!bypassThrottle) {
-            val lastSent = prefs(context).getLong(KEY_LAST_SENT, 0L)
-            if (System.currentTimeMillis() - lastSent < AUTO_THROTTLE_MS) return false
-        }
         return try {
             val manager = smsManager(context)
-            val text = buildDigest()
+            val text = buildDigest(com.ghaly.findme.mesh.DeviceIdentity.name(context), myLocation)
             val parts = manager.divideMessage(text)
             manager.sendMultipartTextMessage(phone, null, parts, null, null)
             prefs(context).edit().putLong(KEY_LAST_SENT, System.currentTimeMillis()).apply()
@@ -100,8 +111,11 @@ object SmsBridge {
             SmsManager.getDefault()
         }
 
-    private fun buildDigest(): String {
+    private fun buildDigest(myName: String, myLocation: Pair<Double, Double>?): String {
         val sb = StringBuilder("Find Me status:")
+        if (myLocation != null) {
+            sb.append("\nME ").append(myName).append(' ').append(coord(myLocation.first, myLocation.second))
+        }
         for (a in SosRepository.alerts.value.values.filter { it.active }.take(5)) {
             sb.append("\nSOS ").append(a.senderName).append(' ').append(coord(a.lat, a.lon))
         }
