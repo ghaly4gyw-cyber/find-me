@@ -83,4 +83,8 @@
     <string name="sms_bridge_sent">Status sent by SMS.</string>
     <string name="sms_bridge_failed">Couldn\'t send — probably no signal right now. It\'ll keep trying.</string>
     <string name="sms_bridge_no_contact_set">Set an emergency contact number first.</string>
+
+    <string name="fall_notification_channel">Possible fall detected</string>
+    <string name="fall_notification_title">Possible fall detected</string>
+    <string name="fall_notification_text">Open Find Me if you\'re okay — this alert clears the moment you touch your phone.</string>
 </resources>

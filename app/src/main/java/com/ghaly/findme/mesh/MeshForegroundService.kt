@@ -29,7 +29,9 @@ class MeshForegroundService : Service() {
 
     companion object {
         private const val CHANNEL_ID = "find_me_mesh"
+        private const val FALL_CHANNEL_ID = "find_me_fall"
         private const val NOTIFICATION_ID = 1001
+        private const val FALL_NOTIFICATION_ID = 1002
         private const val WATCHDOG_INTERVAL_MS = 60_000L
         private const val INACTIVITY_THRESHOLD_MS = 20 * 60_000L // 20 minutes of no touches
 
@@ -51,6 +53,7 @@ class MeshForegroundService : Service() {
     lateinit var mesh: MeshManager
         private set
     private lateinit var locationTracker: LocationTracker
+    private lateinit var fallDetector: FallDetector
 
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(serviceJob)
@@ -68,12 +71,14 @@ class MeshForegroundService : Service() {
         locationTracker = LocationTracker(applicationContext) { lat, lon ->
             mesh.sendPosition(lat, lon)
         }
+        fallDetector = FallDetector(applicationContext) { onPossibleFallDetected() }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, buildNotification())
         mesh.start()
         locationTracker.start(currentIntervalMs)
+        fallDetector.start()
         startWatchdog()
         return START_STICKY
     }
@@ -84,6 +89,7 @@ class MeshForegroundService : Service() {
         watchdogJob?.cancel()
         serviceJob.cancel()
         locationTracker.stop()
+        fallDetector.stop()
         mesh.stop()
         super.onDestroy()
     }
@@ -120,14 +126,58 @@ class MeshForegroundService : Service() {
     private fun checkInactivity() {
         val idleMs = ActivityWatcher.idleMs()
         if (idleMs >= INACTIVITY_THRESHOLD_MS) {
-            if (!inactiveAlertSent) {
-                inactiveAlertSent = true
-                val loc = mesh.myLocation()
-                mesh.sendInactive(loc?.first ?: 0.0, loc?.second ?: 0.0)
-            }
+            raiseInactiveAlert()
         } else if (inactiveAlertSent) {
             inactiveAlertSent = false
             mesh.clearInactive()
+        }
+    }
+
+    private fun raiseInactiveAlert() {
+        if (inactiveAlertSent) return
+        inactiveAlertSent = true
+        val loc = mesh.myLocation()
+        mesh.sendInactive(loc?.first ?: 0.0, loc?.second ?: 0.0)
+    }
+
+    /** The accelerometer heuristic thinks this phone just took a fall. Raise the
+     *  same "may be incapacitated" alert the 20-minute idle timer would — no
+     *  need to wait that long when there's already a strong physical signal —
+     *  and post a one-off notification so the person can see why, and clear it
+     *  with a single touch to the phone if they're actually fine. */
+    private fun onPossibleFallDetected() {
+        raiseInactiveAlert()
+        notifyPossibleFall()
+    }
+
+    private fun notifyPossibleFall() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                FALL_CHANNEL_ID,
+                getString(R.string.fall_notification_channel),
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+        val openAppIntent = PendingIntent.getActivity(
+            this, 1, Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val notification = NotificationCompat.Builder(this, FALL_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(getString(R.string.fall_notification_title))
+            .setContentText(getString(R.string.fall_notification_text))
+            .setContentIntent(openAppIntent)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+        try {
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.notify(FALL_NOTIFICATION_ID, notification)
+        } catch (e: SecurityException) {
+            // POST_NOTIFICATIONS not granted — the mesh alert itself still went
+            // out to teammates, this notification is just a local nice-to-have.
         }
     }
 

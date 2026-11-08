@@ -80,4 +80,8 @@
     <string name="sms_bridge_sent">تم إرسال الحالة برسالة نصية.</string>
     <string name="sms_bridge_failed">تعذر الإرسال، على الأرجح لا توجد تغطية الآن. ستتم المحاولة مرة أخرى لاحقًا.</string>
     <string name="sms_bridge_no_contact_set">حدد رقم جهة اتصال الطوارئ أولاً.</string>
+
+    <string name="fall_notification_channel">احتمال وقوع سقوط</string>
+    <string name="fall_notification_title">احتمال وقوع سقوط</string>
+    <string name="fall_notification_text">افتح إيجادني إذا كنت بخير، ستُلغى هذه التنبيه فور لمسك للهاتف.</string>
 </resources>
