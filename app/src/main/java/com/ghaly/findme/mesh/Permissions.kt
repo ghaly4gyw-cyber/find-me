@@ -12,7 +12,8 @@ object Permissions {
     fun required(): Array<String> {
         val perms = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.RECORD_AUDIO
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { // API 31+
             perms += Manifest.permission.BLUETOOTH_ADVERTISE

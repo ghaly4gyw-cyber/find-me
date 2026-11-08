@@ -62,6 +62,7 @@ class MeshForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         mesh = MeshManager(applicationContext)
+        mesh.onVoiceClip = { bytes -> VoicePlayer.play(applicationContext, bytes) }
         locationTracker = LocationTracker(applicationContext) { lat, lon ->
             mesh.sendPosition(lat, lon)
         }

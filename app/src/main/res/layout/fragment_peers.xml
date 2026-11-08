@@ -20,4 +20,15 @@
         android:text="@string/no_peers"
         android:textColor="@color/sand_300" />
 
+    <Button
+        android:id="@+id/pttButton"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_gravity="bottom"
+        android:layout_margin="12dp"
+        android:backgroundTint="@color/amber_500"
+        android:textColor="@color/sand_900"
+        android:textStyle="bold"
+        android:text="@string/voice_hold_to_talk" />
+
 </FrameLayout>

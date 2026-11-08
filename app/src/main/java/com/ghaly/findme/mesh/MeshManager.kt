@@ -155,16 +155,25 @@ class MeshManager(private val context: Context) {
 
     // ---------------------------------------------------------------------- payload
 
+    /** Set by the UI to get notified the instant a push-to-talk clip arrives. */
+    var onVoiceClip: ((bytes: ByteArray) -> Unit)? = null
+
     private val payloadCallback = object : PayloadCallback() {
         override fun onPayloadReceived(endpointId: String, payload: Payload) {
             if (payload.type != Payload.Type.BYTES) return
             val bytes = payload.asBytes() ?: return
-            val json = String(bytes, StandardCharsets.UTF_8)
-            try {
-                val envelope = parseEnvelope(json)
-                handleIncoming(endpointId, envelope)
-            } catch (e: Exception) {
-                Log.w(TAG, "bad payload from $endpointId", e)
+            // Every JSON envelope starts with '{' — anything else is a raw voice
+            // clip, sent directly (not flooded/relayed) between in-range phones.
+            if (bytes.isNotEmpty() && bytes[0] == '{'.code.toByte()) {
+                val json = String(bytes, StandardCharsets.UTF_8)
+                try {
+                    val envelope = parseEnvelope(json)
+                    handleIncoming(endpointId, envelope)
+                } catch (e: Exception) {
+                    Log.w(TAG, "bad payload from $endpointId", e)
+                }
+            } else {
+                onVoiceClip?.invoke(bytes)
             }
         }
 
@@ -375,6 +384,20 @@ class MeshManager(private val context: Context) {
             targetId = targetId
         )
     }
+
+    /** Direct-sends a push-to-talk clip to every phone we're currently connected to —
+     *  NOT flood-relayed like other message types, so it never travels past direct
+     *  Bluetooth/Wi-Fi range. Returns false if there's nobody directly in range. */
+    fun sendVoiceClip(bytes: ByteArray): Boolean {
+        if (connectedEndpoints.isEmpty()) return false
+        val payload = Payload.fromBytes(bytes)
+        for (endpointId in connectedEndpoints) {
+            connectionsClient.sendPayload(endpointId, payload)
+        }
+        return true
+    }
+
+    fun directPeerCount(): Int = connectedEndpoints.size
 
     fun sendGroupMessage(groupId: String, text: String): ChatMessage? {
         val group = GroupRepository.findById(context, groupId) ?: return null
