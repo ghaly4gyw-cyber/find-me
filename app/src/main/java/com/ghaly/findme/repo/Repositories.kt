@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * In-memory, process-wide stores for mesh state. Kept simple on purpose (no DB)
@@ -33,6 +34,15 @@ object PeerRepository {
     private val _peers = MutableStateFlow<Map<String, PeerPosition>>(emptyMap())
     val peers: StateFlow<Map<String, PeerPosition>> = _peers
 
+    /** Last few positions per peer (in-memory only, not disk-cached — a trail
+     *  that's briefly wrong after a restart is harmless, unlike the roster
+     *  itself). Used to work out which way someone was moving when last
+     *  heard from, so if they go quiet you have more to go on than just a
+     *  single dot: a bearing from YOU to THEM tells you which way to walk;
+     *  this tells you which way THEY were walking. */
+    private const val HISTORY_LIMIT = 5
+    private val history = ConcurrentHashMap<String, MutableList<Triple<Double, Double, Long>>>()
+
     /** Call once, early (e.g. the mesh service's onCreate), to load the cached roster. */
     fun init(context: Context) {
         if (appContext != null) return
@@ -42,7 +52,33 @@ object PeerRepository {
 
     fun upsert(position: PeerPosition) {
         _peers.update { it + (position.deviceId to position) }
+        recordHistory(position)
         saveToDisk()
+    }
+
+    private fun recordHistory(position: PeerPosition) {
+        if (position.lat == 0.0 && position.lon == 0.0) return
+        val list = history.getOrPut(position.deviceId) { mutableListOf() }
+        synchronized(list) {
+            list.add(Triple(position.lat, position.lon, position.ts))
+            while (list.size > HISTORY_LIMIT) list.removeAt(0)
+        }
+    }
+
+    /** Bearing (degrees, 0 = north) this peer appeared to be moving in, based on
+     *  their last few reported positions. Null if we don't have enough recent
+     *  points, or the spread between them is too small to tell real movement
+     *  apart from ordinary GPS jitter while someone is just standing still. */
+    fun headingOf(deviceId: String): Float? {
+        val list = history[deviceId] ?: return null
+        val snapshot = synchronized(list) { list.toList() }
+        if (snapshot.size < 2) return null
+        val (oldLat, oldLon, _) = snapshot.first()
+        val (newLat, newLon, _) = snapshot.last()
+        val results = FloatArray(2)
+        android.location.Location.distanceBetween(oldLat, oldLon, newLat, newLon, results)
+        if (results[0] < 20f) return null // too little movement to trust as a heading
+        return results[1]
     }
 
     fun markDisconnected(deviceId: String) {

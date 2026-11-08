@@ -44,6 +44,12 @@ class RadarMapView @JvmOverloads constructor(
 
     var maxRangeMeters: Float = 2000f
 
+    /** Returns the bearing (degrees, 0 = north) a peer was last seen moving in,
+     *  or null if unknown/not enough data — wired up by the fragment. Only
+     *  drawn for stale ("last known") peers: once someone's back in direct
+     *  range their live dot already says all that matters. */
+    var headingOf: ((deviceId: String) -> Float?)? = null
+
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#28474B")
         style = Paint.Style.STROKE
@@ -68,6 +74,12 @@ class RadarMapView @JvmOverloads constructor(
     private val peerStalePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#AFC9C7")
         style = Paint.Style.FILL
+    }
+    private val headingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#F2A541")
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        strokeCap = Paint.Cap.ROUND
     }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -168,11 +180,37 @@ class RadarMapView @JvmOverloads constructor(
                     canvas.drawCircle(px, py, 12f * peerPulse + 6f, peerGlowPaint)
                 }
                 canvas.drawCircle(px, py, 12f, paint)
+                if (!p.connected) {
+                    val heading = headingOf?.invoke(p.deviceId)
+                    if (heading != null) drawHeadingArrow(canvas, px, py, heading)
+                }
                 canvas.drawText(p.name, px, py + 30f, labelPaint)
                 dots += DotHit(p, px, py)
             }
         }
         lastDots = dots
+    }
+
+    /** Draws a short arrow out of a stale peer's dot, pointing the direction they
+     *  appeared to be moving when last heard from — a "which way they walked off
+     *  to" cue, separate from the dot's own position (which way to walk TO reach
+     *  their last known spot). */
+    private fun drawHeadingArrow(canvas: Canvas, px: Float, py: Float, headingDeg: Float) {
+        val angleRad = Math.toRadians((headingDeg - 90).toDouble())
+        val dx = cos(angleRad).toFloat()
+        val dy = sin(angleRad).toFloat()
+        val startR = 18f
+        val endR = 36f
+        val sx = px + dx * startR
+        val sy = py + dy * startR
+        val ex = px + dx * endR
+        val ey = py + dy * endR
+        canvas.drawLine(sx, sy, ex, ey, headingPaint)
+        // small arrowhead
+        val headAngle1 = angleRad + Math.toRadians(150.0)
+        val headAngle2 = angleRad - Math.toRadians(150.0)
+        canvas.drawLine(ex, ey, ex + (cos(headAngle1) * 10).toFloat(), ey + (sin(headAngle1) * 10).toFloat(), headingPaint)
+        canvas.drawLine(ex, ey, ex + (cos(headAngle2) * 10).toFloat(), ey + (sin(headAngle2) * 10).toFloat(), headingPaint)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

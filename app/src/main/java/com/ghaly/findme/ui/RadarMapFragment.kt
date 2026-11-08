@@ -21,6 +21,7 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map) {
         radar.onPeerTap = { peer ->
             showPeerProfileDialog(peer, radar.myLocation)
         }
+        radar.headingOf = { deviceId -> PeerRepository.headingOf(deviceId) }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
