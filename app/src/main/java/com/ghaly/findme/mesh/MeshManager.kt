@@ -8,7 +8,9 @@ import com.ghaly.findme.model.MsgType
 import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.model.SosAlert
 import com.ghaly.findme.repo.ChatRepository
+import com.ghaly.findme.repo.InactivityRepository
 import com.ghaly.findme.repo.PeerRepository
+import com.ghaly.findme.repo.ProfileRepository
 import com.ghaly.findme.repo.SosRepository
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.AdvertisingOptions
@@ -139,6 +141,13 @@ class MeshManager(private val context: Context) {
             // and so it immediately has our last known position and profile.
             sendEnvelopeTo(endpointId, buildPositionEnvelope(lastLat, lastLon))
             sendEnvelopeTo(endpointId, buildProfileEnvelope())
+            // "Carrier pigeon" relay: also hand over everything we've cached about
+            // the rest of the mesh (other people's last known positions/profiles and
+            // any active SOS/inactivity alerts). This is how word about someone who
+            // isn't directly reachable right now still crosses to a brand-new phone —
+            // whoever we just met carries it onward from here, hop by hop, even
+            // though they never talked to that person directly.
+            relayCachedKnowledgeTo(endpointId)
         }
 
         override fun onDisconnected(endpointId: String) {
@@ -559,6 +568,64 @@ class MeshManager(private val context: Context) {
             ts = System.currentTimeMillis(),
             payload = payload.toString()
         )
+    }
+
+    /** Replays everything we currently know about the rest of the mesh to a
+     *  freshly-connected endpoint, as fresh (hop = 0) envelopes under each
+     *  original person's own identity — so it keeps traveling just like a
+     *  live message would, and the newly-met phone's own cache fills in
+     *  immediately instead of waiting for that person to come back into range. */
+    private fun relayCachedKnowledgeTo(endpointId: String) {
+        for (peer in PeerRepository.peers.value.values) {
+            sendEnvelopeTo(endpointId, Envelope(
+                id = UUID.randomUUID().toString(),
+                type = MsgType.POSITION,
+                originId = peer.deviceId,
+                originName = peer.name,
+                hop = 0,
+                ts = peer.ts,
+                payload = JSONObject().put("lat", peer.lat).put("lon", peer.lon).toString()
+            ))
+        }
+        for (profile in ProfileRepository.profiles.value.values) {
+            sendEnvelopeTo(endpointId, Envelope(
+                id = UUID.randomUUID().toString(),
+                type = MsgType.PROFILE,
+                originId = profile.deviceId,
+                originName = profile.name,
+                hop = 0,
+                ts = profile.ts,
+                payload = JSONObject()
+                    .put("phone", profile.phone ?: "")
+                    .put("description", profile.description ?: "")
+                    .put("photo", profile.photoBase64 ?: "")
+                    .toString()
+            ))
+        }
+        for (alert in SosRepository.alerts.value.values) {
+            if (!alert.active) continue
+            sendEnvelopeTo(endpointId, Envelope(
+                id = UUID.randomUUID().toString(),
+                type = MsgType.SOS,
+                originId = alert.senderId,
+                originName = alert.senderName,
+                hop = 0,
+                ts = alert.ts,
+                payload = JSONObject().put("lat", alert.lat).put("lon", alert.lon).toString()
+            ))
+        }
+        for (alert in InactivityRepository.alerts.value.values) {
+            if (!alert.active) continue
+            sendEnvelopeTo(endpointId, Envelope(
+                id = UUID.randomUUID().toString(),
+                type = MsgType.INACTIVE,
+                originId = alert.senderId,
+                originName = alert.senderName,
+                hop = 0,
+                ts = alert.ts,
+                payload = JSONObject().put("lat", alert.lat).put("lon", alert.lon).toString()
+            ))
+        }
     }
 
     private fun buildPositionEnvelope(lat: Double, lon: Double) = Envelope(
