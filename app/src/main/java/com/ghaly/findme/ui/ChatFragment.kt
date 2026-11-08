@@ -24,7 +24,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
     private val adapter = ChatAdapter()
 
     /** index 0 = "Everyone" (null deviceId), rest = a specific peer to DM. */
-    private var targets: List<Pair<String?, String>> = listOf(null to "Everyone")
+    private var targets: List<Pair<String?, String>> = emptyList()
     private var selectedTargetId: String? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -34,9 +34,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         list.adapter = adapter
         list.layoutAnimation = android.view.animation.AnimationUtils.loadLayoutAnimation(requireContext(), R.anim.layout_fade_up)
 
+        targets = listOf(null to getString(R.string.to_everyone))
+
         val spinner = view.findViewById<Spinner>(R.id.chatTargetSpinner)
         val spinnerAdapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_dropdown_item, mutableListOf("Everyone")
+            requireContext(), android.R.layout.simple_spinner_dropdown_item,
+            mutableListOf(getString(R.string.to_everyone))
         )
         spinner.adapter = spinnerAdapter
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -62,7 +65,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 PeerRepository.peers.collect { map ->
-                    val newTargets = listOf<Pair<String?, String>>(null to "Everyone") +
+                    val newTargets = listOf<Pair<String?, String>>(null to getString(R.string.to_everyone)) +
                         map.values.sortedBy { it.name }.map { it.deviceId to it.name }
                     targets = newTargets
                     val previousSelection = selectedTargetId

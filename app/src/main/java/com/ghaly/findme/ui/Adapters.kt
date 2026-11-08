@@ -1,5 +1,6 @@
 package com.ghaly.findme.ui
 
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,13 +16,13 @@ import com.ghaly.findme.model.SosAlert
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-private fun timeAgo(ts: Long): String {
+private fun timeAgo(context: Context, ts: Long): String {
     val diffMs = System.currentTimeMillis() - ts
     val mins = TimeUnit.MILLISECONDS.toMinutes(diffMs)
     return when {
-        mins < 1 -> "just now"
-        mins < 60 -> "$mins min ago"
-        else -> "${TimeUnit.MILLISECONDS.toHours(diffMs)} h ago"
+        mins < 1 -> context.getString(R.string.time_just_now)
+        mins < 60 -> context.getString(R.string.time_min_ago, mins)
+        else -> context.getString(R.string.time_h_ago, TimeUnit.MILLISECONDS.toHours(diffMs))
     }
 }
 
@@ -73,8 +74,11 @@ class PeerAdapter(private val onClick: (PeerPosition) -> Unit = {}) : RecyclerVi
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val p = items[position]
+        val context = holder.root.context
         holder.name.text = p.name
-        holder.status.text = if (p.connected) "in range" else "last known"
+        holder.status.text = context.getString(
+            if (p.connected) R.string.status_in_range else R.string.status_last_known
+        )
         holder.status.setTextColor(
             if (p.connected) 0xFF7CCB7C.toInt() else 0xFFD8C3A5.toInt()
         )
@@ -91,7 +95,7 @@ class PeerAdapter(private val onClick: (PeerPosition) -> Unit = {}) : RecyclerVi
             holder.coordsView.text = coords(p.lat, p.lon)
         }
 
-        holder.age.text = "last seen ${timeAgo(p.ts)}"
+        holder.age.text = context.getString(R.string.last_seen_fmt, timeAgo(context, p.ts))
         holder.root.setOnClickListener { onClick(p) }
     }
 }
@@ -119,7 +123,7 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.VH>() {
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val m = items[position]
-        holder.sender.text = if (m.isMine) "You" else m.senderName
+        holder.sender.text = if (m.isMine) holder.row.context.getString(R.string.you_label) else m.senderName
         holder.text.text = m.text
         holder.row.layoutDirection =
             if (m.isMine) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
@@ -148,8 +152,9 @@ class SosAdapter : RecyclerView.Adapter<SosAdapter.VH>() {
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val s = items[position]
-        holder.name.text = "${s.senderName} needs help"
-        holder.coordsView.text = "${coords(s.lat, s.lon)} · ${timeAgo(s.ts)}"
+        val context = holder.name.context
+        holder.name.text = context.getString(R.string.sos_needs_help, s.senderName)
+        holder.coordsView.text = "${coords(s.lat, s.lon)} · ${timeAgo(context, s.ts)}"
     }
 }
 
@@ -175,8 +180,9 @@ class InactiveAdapter : RecyclerView.Adapter<InactiveAdapter.VH>() {
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val a = items[position]
-        holder.name.text = "${a.senderName} hasn't responded in a while"
-        holder.coordsView.text = "${coords(a.lat, a.lon)} · last seen ${timeAgo(a.ts)}"
+        val context = holder.name.context
+        holder.name.text = context.getString(R.string.inactive_alert, a.senderName)
+        holder.coordsView.text = "${coords(a.lat, a.lon)} · ${context.getString(R.string.last_seen_fmt, timeAgo(context, a.ts))}"
     }
 }
 
@@ -210,10 +216,15 @@ class PostAdapter(private val onClick: (Post) -> Unit) : RecyclerView.Adapter<Po
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val p = items[position]
-        holder.author.text = "${p.authorName} · ${timeAgo(p.ts)}"
+        val context = holder.root.context
+        holder.author.text = "${p.authorName} · ${timeAgo(context, p.ts)}"
         holder.text.text = p.text
         val count = commentCounts[p.id] ?: 0
-        holder.commentCount.text = if (count == 0) "No replies yet — tap to reply" else "$count repl${if (count == 1) "y" else "ies"} — tap to view"
+        holder.commentCount.text = if (count == 0) {
+            context.getString(R.string.no_replies_yet)
+        } else {
+            context.resources.getQuantityString(R.plurals.reply_count, count, count)
+        }
         holder.root.setOnClickListener { onClick(p) }
     }
 }

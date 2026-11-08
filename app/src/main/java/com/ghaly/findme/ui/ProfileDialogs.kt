@@ -13,7 +13,6 @@ import androidx.fragment.app.Fragment
 import com.ghaly.findme.R
 import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.repo.ProfileRepository
-import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /** Shows a peer's profile (photo, name, phone, description) with Call/WhatsApp
@@ -35,16 +34,24 @@ fun Fragment.showPeerProfileDialog(peer: PeerPosition, myLocation: Pair<Double, 
     name.text = peer.name
 
     val mins = TimeUnit.MILLISECONDS.toMinutes(System.currentTimeMillis() - peer.ts)
-    val lastSeen = if (mins < 1) "just now" else "$mins min ago"
+    val lastSeen = if (mins < 1) {
+        context.getString(R.string.time_just_now)
+    } else {
+        context.getString(R.string.time_min_ago, mins)
+    }
+    val lastSeenFull = context.getString(R.string.last_seen_fmt, lastSeen)
     if (myLocation != null && (peer.lat != 0.0 || peer.lon != 0.0)) {
         val results = FloatArray(2)
         Location.distanceBetween(myLocation.first, myLocation.second, peer.lat, peer.lon, results)
         val meters = results[0]
-        val distText = if (meters < 1000) "${meters.toInt()} m away" else
-            String.format(Locale.US, "%.1f km away", meters / 1000f)
-        distance.text = "$distText • last seen $lastSeen"
+        val distText = if (meters < 1000) {
+            context.getString(R.string.distance_m_away, meters.toInt())
+        } else {
+            context.getString(R.string.distance_km_away, meters / 1000f)
+        }
+        distance.text = "$distText • $lastSeenFull"
     } else {
-        distance.text = "last seen $lastSeen"
+        distance.text = lastSeenFull
     }
 
     if (profile?.description.isNullOrBlank()) {

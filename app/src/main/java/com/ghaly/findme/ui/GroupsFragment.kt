@@ -86,7 +86,7 @@ class GroupsFragment : Fragment(R.layout.fragment_groups) {
                 if (code.isNotEmpty()) {
                     val group = GroupRepository.joinFromCode(requireContext(), code)
                     if (group == null) {
-                        Toast.makeText(requireContext(), "That code didn't look right", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), R.string.invalid_group_code, Toast.LENGTH_SHORT).show()
                     }
                 }
             }

@@ -87,7 +87,7 @@ class PeersFragment : Fragment(R.layout.fragment_peers) {
             return
         }
         if (recorder?.start() == true) {
-            button.text = "● REC — release to send"
+            button.setText(R.string.recording_release)
         }
     }
 

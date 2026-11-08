@@ -45,4 +45,29 @@
     <string name="edit_profile">Edit profile</string>
     <string name="tab_map">Map</string>
     <string name="map_center_you">You</string>
+
+    <!-- Added during the localization pass: strings that used to be hardcoded
+         English literals in the Kotlin code, now routed through resources so
+         the French/Arabic translations actually apply to them. -->
+    <string name="status_in_range">in range</string>
+    <string name="status_last_known">last known</string>
+    <string name="last_seen_fmt">last seen %1$s</string>
+    <string name="you_label">You</string>
+    <string name="cancel_sos">CANCEL SOS</string>
+    <string name="mesh_not_ready">Mesh not ready yet</string>
+    <string name="active_sos_count">%1$d active SOS in range</string>
+    <string name="recording_release">● REC — release to send</string>
+    <string name="sos_needs_help">%1$s needs help</string>
+    <string name="photo_load_failed">Couldn\'t load that photo</string>
+    <string name="invalid_group_code">That code didn\'t look right</string>
+    <string name="no_replies_yet">No replies yet — tap to reply</string>
+    <plurals name="reply_count">
+        <item quantity="one">%1$d reply — tap to view</item>
+        <item quantity="other">%1$d replies — tap to view</item>
+    </plurals>
+    <string name="time_just_now">just now</string>
+    <string name="time_min_ago">%1$d min ago</string>
+    <string name="time_h_ago">%1$d h ago</string>
+    <string name="distance_m_away">%1$d m away</string>
+    <string name="distance_km_away">%1$.1f km away</string>
 </resources>

@@ -44,13 +44,13 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
         button.setOnClickListener {
             val mesh = (requireActivity() as MainActivity).mesh
             if (mesh == null) {
-                Toast.makeText(requireContext(), "Mesh not ready yet", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.mesh_not_ready, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             if (!sosActive) {
                 sendSos(mesh)
                 sosActive = true
-                button.text = "CANCEL SOS"
+                button.setText(R.string.cancel_sos)
                 startPulse(button)
             } else {
                 mesh.clearSos()
@@ -68,7 +68,7 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
                     hint.text = if (active.isEmpty()) {
                         getString(R.string.no_peers)
                     } else {
-                        "${active.size} active SOS in range"
+                        getString(R.string.active_sos_count, active.size)
                     }
                 }
             }

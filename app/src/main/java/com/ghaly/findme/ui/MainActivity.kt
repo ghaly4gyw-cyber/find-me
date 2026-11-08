@@ -191,7 +191,7 @@ class MainActivity : AppCompatActivity() {
             pendingPhotoBase64 = base64
             pendingPhotoView?.let { applyPhotoPreview(it, base64) }
         } catch (e: Exception) {
-            Toast.makeText(this, "Couldn't load that photo", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.photo_load_failed, Toast.LENGTH_SHORT).show()
         }
     }
 
