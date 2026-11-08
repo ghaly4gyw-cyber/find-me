@@ -69,4 +69,15 @@
     <string name="distance_km_away">على بعد %1$.1f كم</string>
     <string name="battery_optimization_needed">قد يوقف نظام أندرويد تشغيل إيجادني في الخلفية ويقطع الشبكة. يرجى السماح له بتجاهل تحسين البطارية لتتبع موثوق.</string>
     <string name="allow_battery">السماح</string>
+
+    <string name="sms_bridge_no_contact">جسر الرسائل النصية: لم يتم تحديد جهة اتصال للطوارئ بعد. إذا عاد هذا الهاتف إلى تغطية عادية، يمكنه إرسال آخر حالة معروفة للمجموعة عبر رسالة نصية.</string>
+    <string name="sms_bridge_contact_set">جهة اتصال جسر الرسائل: %1$s</string>
+    <string name="sms_bridge_set_contact">تحديد جهة الاتصال</string>
+    <string name="sms_bridge_send_now">إرسال الحالة الآن</string>
+    <string name="sms_bridge_dialog_title">جهة اتصال الطوارئ عبر الرسائل</string>
+    <string name="sms_bridge_dialog_hint">رقم الهاتف لإرسال رسالة إليه إذا عاد هذا الهاتف إلى التغطية العادية</string>
+    <string name="sms_bridge_permission_needed">يحتاج التطبيق إلى إذن الرسائل النصية لإرسال الحالة.</string>
+    <string name="sms_bridge_sent">تم إرسال الحالة برسالة نصية.</string>
+    <string name="sms_bridge_failed">تعذر الإرسال، على الأرجح لا توجد تغطية الآن. ستتم المحاولة مرة أخرى لاحقًا.</string>
+    <string name="sms_bridge_no_contact_set">حدد رقم جهة اتصال الطوارئ أولاً.</string>
 </resources>

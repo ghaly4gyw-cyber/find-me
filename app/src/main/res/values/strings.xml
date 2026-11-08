@@ -72,4 +72,15 @@
     <string name="distance_km_away">%1$.1f km away</string>
     <string name="battery_optimization_needed">Android may stop Find Me running in the background and break the mesh. Allow it to ignore battery optimization for reliable tracking.</string>
     <string name="allow_battery">Allow</string>
+
+    <string name="sms_bridge_no_contact">SMS bridge: no emergency contact set yet. If your phone ever reaches normal signal, it can text someone the group\'s last-known status.</string>
+    <string name="sms_bridge_contact_set">SMS bridge contact: %1$s</string>
+    <string name="sms_bridge_set_contact">Set contact</string>
+    <string name="sms_bridge_send_now">Send status now</string>
+    <string name="sms_bridge_dialog_title">Emergency SMS contact</string>
+    <string name="sms_bridge_dialog_hint">Phone number to text if this phone ever reaches normal signal</string>
+    <string name="sms_bridge_permission_needed">Find Me needs SMS permission to send the status text.</string>
+    <string name="sms_bridge_sent">Status sent by SMS.</string>
+    <string name="sms_bridge_failed">Couldn\'t send — probably no signal right now. It\'ll keep trying.</string>
+    <string name="sms_bridge_no_contact_set">Set an emergency contact number first.</string>
 </resources>

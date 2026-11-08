@@ -32,6 +32,47 @@
         android:layout_marginTop="12dp"
         android:clipToPadding="false" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/smsBridgeStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/sand_300"
+            android:textSize="13sp"
+            android:text="@string/sms_bridge_no_contact" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/smsBridgeSetContact"
+                style="@style/FindMe.Button.Pill"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:text="@string/sms_bridge_set_contact" />
+
+            <Button
+                android:id="@+id/smsBridgeSendNow"
+                style="@style/FindMe.Button.Pill"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/sms_bridge_send_now" />
+        </LinearLayout>
+    </LinearLayout>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/inactiveList"
         android:layout_width="match_parent"

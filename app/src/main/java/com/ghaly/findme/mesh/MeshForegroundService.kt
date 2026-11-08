@@ -96,6 +96,7 @@ class MeshForegroundService : Service() {
             while (true) {
                 adjustBeaconFrequency()
                 checkInactivity()
+                SmsBridge.maybeAutoSend(applicationContext)
                 delay(WATCHDOG_INTERVAL_MS)
             }
         }

@@ -7,6 +7,12 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- Opportunistic SMS bridge: lets a phone that regains ordinary cell signal
+         (even with no mobile data) text the group's last-known status to one
+         pre-set contact. Optional — only requested/used if the user sets a
+         contact number; the rest of the app works fully without it. -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+
     <!-- Classic Bluetooth / BLE, legacy (API < 31) -->
     <uses-permission android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />

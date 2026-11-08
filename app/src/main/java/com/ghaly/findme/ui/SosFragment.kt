@@ -6,8 +6,11 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
@@ -16,6 +19,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ghaly.findme.R
+import com.ghaly.findme.mesh.SmsBridge
 import com.ghaly.findme.repo.InactivityRepository
 import com.ghaly.findme.repo.SosRepository
 import com.google.android.gms.location.LocationServices
@@ -27,6 +31,22 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
     private val inactiveAdapter = InactiveAdapter()
     private var sosActive = false
     private var pulseAnimator: ValueAnimator? = null
+
+    /** Whether to actually fire a send once SEND_SMS is granted — true only when
+     *  the user tapped "Send status now" and we had to ask for permission first;
+     *  false when permission was requested just because they set a contact
+     *  number, where sending immediately would be a surprise. */
+    private var sendAfterPermission = false
+
+    private val smsPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                if (sendAfterPermission) attemptSmsSend()
+            } else {
+                Toast.makeText(requireContext(), R.string.sms_bridge_permission_needed, Toast.LENGTH_SHORT).show()
+            }
+            sendAfterPermission = false
+        }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -52,11 +72,31 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
                 sosActive = true
                 button.setText(R.string.cancel_sos)
                 startPulse(button)
+                // Best-effort: if this phone happens to have real signal right now,
+                // get the status out immediately rather than waiting for the next
+                // watchdog tick — SOS is exactly the case worth bypassing the throttle for.
+                SmsBridge.sendNow(requireContext(), bypassThrottle = true)
             } else {
                 mesh.clearSos()
                 sosActive = false
                 button.setText(R.string.sos_button)
                 stopPulse(button)
+            }
+        }
+
+        val smsStatus = view.findViewById<TextView>(R.id.smsBridgeStatus)
+        refreshSmsStatus(smsStatus)
+        view.findViewById<Button>(R.id.smsBridgeSetContact).setOnClickListener {
+            showSetContactDialog(smsStatus)
+        }
+        view.findViewById<Button>(R.id.smsBridgeSendNow).setOnClickListener {
+            if (SmsBridge.contact(requireContext()) == null) {
+                Toast.makeText(requireContext(), R.string.sms_bridge_no_contact_set, Toast.LENGTH_SHORT).show()
+            } else if (!SmsBridge.hasPermission(requireContext())) {
+                sendAfterPermission = true
+                smsPermissionLauncher.launch(android.Manifest.permission.SEND_SMS)
+            } else {
+                attemptSmsSend()
             }
         }
 
@@ -106,6 +146,42 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
         super.onDestroyView()
         pulseAnimator?.cancel()
         pulseAnimator = null
+    }
+
+    private fun refreshSmsStatus(statusView: TextView) {
+        val contact = SmsBridge.contact(requireContext())
+        statusView.text = if (contact != null) {
+            getString(R.string.sms_bridge_contact_set, contact)
+        } else {
+            getString(R.string.sms_bridge_no_contact)
+        }
+    }
+
+    private fun showSetContactDialog(statusView: TextView) {
+        val input = EditText(requireContext())
+        input.inputType = android.text.InputType.TYPE_CLASS_PHONE
+        input.hint = getString(R.string.sms_bridge_dialog_hint)
+        input.setText(SmsBridge.contact(requireContext()).orEmpty())
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.sms_bridge_dialog_title)
+            .setView(input)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val phone = input.text?.toString()?.trim().orEmpty()
+                SmsBridge.setContact(requireContext(), phone.ifEmpty { null })
+                refreshSmsStatus(statusView)
+                if (phone.isNotEmpty() && !SmsBridge.hasPermission(requireContext())) {
+                    smsPermissionLauncher.launch(android.Manifest.permission.SEND_SMS)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun attemptSmsSend() {
+        val sent = SmsBridge.sendNow(requireContext(), bypassThrottle = true)
+        val messageRes = if (sent) R.string.sms_bridge_sent else R.string.sms_bridge_failed
+        Toast.makeText(requireContext(), messageRes, Toast.LENGTH_SHORT).show()
     }
 
     @SuppressLint("MissingPermission")

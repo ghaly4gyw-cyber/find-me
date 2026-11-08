@@ -69,4 +69,15 @@
     <string name="distance_km_away">à %1$.1f km</string>
     <string name="battery_optimization_needed">Android peut arrêter Trouve-Moi en arrière-plan et casser le réseau. Autorisez-le à ignorer l\'optimisation de la batterie pour un suivi fiable.</string>
     <string name="allow_battery">Autoriser</string>
+
+    <string name="sms_bridge_no_contact">Passerelle SMS : aucun contact d\'urgence défini. Si ce téléphone retrouve un signal normal, il peut envoyer par SMS le dernier statut connu du groupe.</string>
+    <string name="sms_bridge_contact_set">Contact de la passerelle SMS : %1$s</string>
+    <string name="sms_bridge_set_contact">Définir le contact</string>
+    <string name="sms_bridge_send_now">Envoyer le statut</string>
+    <string name="sms_bridge_dialog_title">Contact SMS d\'urgence</string>
+    <string name="sms_bridge_dialog_hint">Numéro à contacter par SMS si ce téléphone retrouve un signal normal</string>
+    <string name="sms_bridge_permission_needed">Trouve-Moi a besoin de l\'autorisation SMS pour envoyer le statut.</string>
+    <string name="sms_bridge_sent">Statut envoyé par SMS.</string>
+    <string name="sms_bridge_failed">Envoi impossible — probablement aucun signal pour le moment. Nouvelle tentative plus tard.</string>
+    <string name="sms_bridge_no_contact_set">Définissez d\'abord un numéro de contact d\'urgence.</string>
 </resources>
