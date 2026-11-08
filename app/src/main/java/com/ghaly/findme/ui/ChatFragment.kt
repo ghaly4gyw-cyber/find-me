@@ -32,6 +32,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
         val list = view.findViewById<RecyclerView>(R.id.chatList)
         list.layoutManager = LinearLayoutManager(requireContext())
         list.adapter = adapter
+        list.layoutAnimation = android.view.animation.AnimationUtils.loadLayoutAnimation(requireContext(), R.anim.layout_fade_up)
 
         val spinner = view.findViewById<Spinner>(R.id.chatTargetSpinner)
         val spinnerAdapter = ArrayAdapter(

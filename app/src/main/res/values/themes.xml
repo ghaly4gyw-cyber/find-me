@@ -3,7 +3,22 @@
     <style name="Theme.FindMe" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/amber_500</item>
         <item name="colorPrimaryDark">@color/sand_900</item>
-        <item name="colorAccent">@color/sos_red</item>
+        <item name="colorAccent">@color/teal_400</item>
         <item name="android:statusBarColor" tools:targetApi="21">@color/sand_900</item>
+        <item name="android:windowBackground">@color/sand_900</item>
+    </style>
+
+    <!-- Rounded, ripple-backed pill button for primary tap actions. -->
+    <style name="FindMe.Button.Pill">
+        <item name="android:background">@drawable/bg_button_pill</item>
+        <item name="android:textColor">@color/sand_900</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:stateListAnimator">@animator/press_scale</item>
+    </style>
+
+    <!-- Borderless tab button, used for the bottom tab bar. -->
+    <style name="FindMe.Button.Tab" parent="android:Widget.Material.Button.Borderless">
+        <item name="android:background">@drawable/bg_tab_item</item>
+        <item name="android:stateListAnimator">@animator/press_scale</item>
     </style>
 </resources>

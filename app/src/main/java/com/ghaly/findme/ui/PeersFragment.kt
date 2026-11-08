@@ -31,6 +31,7 @@ class PeersFragment : Fragment(R.layout.fragment_peers) {
         val list = view.findViewById<RecyclerView>(R.id.peersList)
         list.layoutManager = LinearLayoutManager(requireContext())
         list.adapter = adapter
+        list.layoutAnimation = android.view.animation.AnimationUtils.loadLayoutAnimation(requireContext(), R.anim.layout_fade_up)
         val emptyText = view.findViewById<View>(R.id.emptyText)
 
         recorder = VoiceRecorder(requireContext())

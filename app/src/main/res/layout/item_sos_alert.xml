@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@color/sos_red"
+    android:background="@drawable/bg_card_sos"
     android:padding="12dp"
     android:layout_marginBottom="8dp">
 

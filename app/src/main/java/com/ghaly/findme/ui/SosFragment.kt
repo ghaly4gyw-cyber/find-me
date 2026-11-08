@@ -1,5 +1,6 @@
 package com.ghaly.findme.ui
 
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -25,6 +26,7 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
     private val adapter = SosAdapter()
     private val inactiveAdapter = InactiveAdapter()
     private var sosActive = false
+    private var pulseAnimator: ValueAnimator? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -49,10 +51,12 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
                 sendSos(mesh)
                 sosActive = true
                 button.text = "CANCEL SOS"
+                startPulse(button)
             } else {
                 mesh.clearSos()
                 sosActive = false
                 button.setText(R.string.sos_button)
+                stopPulse(button)
             }
         }
 
@@ -77,6 +81,31 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
                 }
             }
         }
+    }
+
+    /** Pulses the SOS button gently (alpha breathing) while an alert is active. */
+    private fun startPulse(button: Button) {
+        stopPulse(button)
+        val animator = ValueAnimator.ofFloat(1f, 0.55f).apply {
+            duration = 650
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+            addUpdateListener { button.alpha = it.animatedValue as Float }
+        }
+        animator.start()
+        pulseAnimator = animator
+    }
+
+    private fun stopPulse(button: Button) {
+        pulseAnimator?.cancel()
+        pulseAnimator = null
+        button.alpha = 1f
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        pulseAnimator?.cancel()
+        pulseAnimator = null
     }
 
     @SuppressLint("MissingPermission")

@@ -36,6 +36,8 @@ class MainActivity : AppCompatActivity() {
     private var bound = false
     private lateinit var meshStatus: TextView
     private lateinit var permissionBar: android.view.View
+    private lateinit var tabButtons: List<Button>
+    private var selectedTabIndex = 0
 
     /** Holds the chosen photo (base64) while the edit-profile dialog is open. */
     private var pendingPhotoBase64: String? = null
@@ -80,14 +82,24 @@ class MainActivity : AppCompatActivity() {
         refreshNameButton(nameButton)
         nameButton.setOnClickListener { showEditProfileDialog(nameButton) }
 
-        findViewById<Button>(R.id.tabPeers).setOnClickListener { showFragment(PeersFragment()) }
-        findViewById<Button>(R.id.tabMap).setOnClickListener { showFragment(RadarMapFragment()) }
-        findViewById<Button>(R.id.tabChat).setOnClickListener { showFragment(ChatFragment()) }
-        findViewById<Button>(R.id.tabSos).setOnClickListener { showFragment(SosFragment()) }
-        findViewById<Button>(R.id.tabPosts).setOnClickListener { showFragment(PostsFragment()) }
-        findViewById<Button>(R.id.tabGroups).setOnClickListener { showFragment(GroupsFragment()) }
+        tabButtons = listOf(
+            findViewById(R.id.tabPeers),
+            findViewById(R.id.tabMap),
+            findViewById(R.id.tabChat),
+            findViewById(R.id.tabSos),
+            findViewById(R.id.tabPosts),
+            findViewById(R.id.tabGroups)
+        )
+
+        tabButtons[0].setOnClickListener { selectTab(0); showFragment(PeersFragment()) }
+        tabButtons[1].setOnClickListener { selectTab(1); showFragment(RadarMapFragment()) }
+        tabButtons[2].setOnClickListener { selectTab(2); showFragment(ChatFragment()) }
+        tabButtons[3].setOnClickListener { selectTab(3); showFragment(SosFragment()) }
+        tabButtons[4].setOnClickListener { selectTab(4); showFragment(PostsFragment()) }
+        tabButtons[5].setOnClickListener { selectTab(5); showFragment(GroupsFragment()) }
 
         if (savedInstanceState == null) {
+            selectTab(0)
             showFragment(PeersFragment())
         }
 
@@ -205,10 +217,33 @@ class MainActivity : AppCompatActivity() {
     private fun showFragment(fragment: androidx.fragment.app.Fragment) {
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(
-                android.R.anim.fade_in, android.R.anim.fade_out,
-                android.R.anim.fade_in, android.R.anim.fade_out
+                R.anim.slide_in_right, R.anim.slide_out_left,
+                R.anim.slide_in_right, R.anim.slide_out_left
             )
             .replace(R.id.contentContainer, fragment)
             .commit()
+    }
+
+    /** Highlights the active bottom tab (pill background + brighter text) and dims the rest. */
+    private fun selectTab(index: Int) {
+        selectedTabIndex = index
+        val sosIndex = 3
+        tabButtons.forEachIndexed { i, button ->
+            val selected = i == index
+            button.background = androidx.core.content.ContextCompat.getDrawable(
+                this,
+                if (selected) R.drawable.bg_tab_item_selected else R.drawable.bg_tab_item
+            )
+            button.setTextColor(
+                androidx.core.content.ContextCompat.getColor(
+                    this,
+                    when {
+                        i == sosIndex -> R.color.sos_red
+                        selected -> R.color.teal_400
+                        else -> R.color.sand_300
+                    }
+                )
+            )
+        }
     }
 }

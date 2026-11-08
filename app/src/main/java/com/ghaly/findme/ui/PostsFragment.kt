@@ -31,6 +31,7 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
         val list = view.findViewById<RecyclerView>(R.id.postsList)
         list.layoutManager = LinearLayoutManager(requireContext())
         list.adapter = adapter
+        list.layoutAnimation = android.view.animation.AnimationUtils.loadLayoutAnimation(requireContext(), R.anim.layout_fade_up)
 
         val emptyText = view.findViewById<View>(R.id.noPostsText)
         val input = view.findViewById<EditText>(R.id.postInput)

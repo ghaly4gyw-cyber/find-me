@@ -13,7 +13,8 @@
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="@color/white"
-        android:backgroundTint="@color/sos_red" />
+        android:background="@drawable/bg_button_sos"
+        android:stateListAnimator="@animator/press_scale" />
 
     <TextView
         android:id="@+id/sosHint"

@@ -1,10 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="sand_900">#1C1510</color>
-    <color name="sand_700">#3A2E24</color>
-    <color name="sand_300">#D8C3A5</color>
-    <color name="amber_500">#E4A64B</color>
-    <color name="sos_red">#D7263D</color>
+    <!-- "Desert night" theme: cool deep teal-night base, warm gold accent,
+         a fresh teal highlight for selection/active states. -->
+    <color name="sand_900">#0E1B1D</color>
+    <color name="sand_700">#1B3236</color>
+    <color name="sand_300">#AFC9C7</color>
+    <color name="amber_500">#F2A541</color>
+    <color name="sos_red">#FF4D5E</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
+
+    <!-- New accents for the UI polish pass -->
+    <color name="teal_400">#39C5BB</color>
+    <color name="teal_700">#123B3A</color>
+    <color name="night_panel">#16292C</color>
+    <color name="divider">#28474B</color>
+    <color name="ripple_light">#33FFFFFF</color>
+    <color name="ripple_dark">#22000000</color>
 </resources>

@@ -4,10 +4,10 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@color/sand_700"
-    android:foreground="?android:attr/selectableItemBackground"
+    android:background="@drawable/bg_card_ripple"
     android:padding="12dp"
     android:layout_marginBottom="8dp"
+    android:stateListAnimator="@animator/press_scale"
     android:clickable="true"
     android:focusable="true">
 
