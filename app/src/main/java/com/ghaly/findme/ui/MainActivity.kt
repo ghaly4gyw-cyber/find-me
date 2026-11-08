@@ -21,6 +21,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.lifecycleScope
 import com.ghaly.findme.R
 import com.ghaly.findme.mesh.ActivityWatcher
 import com.ghaly.findme.mesh.DeviceIdentity
@@ -29,6 +30,8 @@ import com.ghaly.findme.mesh.MeshManager
 import com.ghaly.findme.mesh.Permissions
 import com.ghaly.findme.mesh.ProfileStore
 import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -55,22 +58,46 @@ class MainActivity : AppCompatActivity() {
     private var pendingPhotoBase64: String? = null
     private var pendingPhotoView: ImageView? = null
 
+    // The event log line below ("Searching…", "Connected! Exchanging…", etc.)
+    // is transient — it gets overwritten by the next discovery/advertising
+    // event within seconds, so a real connection can silently scroll off the
+    // header and make the app look dead even while two phones are actually
+    // linked. This keeps a live, always-current "N connected" count visible
+    // alongside it, refreshed both on every event and on a steady timer, so
+    // "why won't my voice message send" has a visible answer right there:
+    // if it says 0 connected, nothing CAN send until a direct link exists.
+    private var lastMeshEvent: String = ""
+
+    private fun refreshMeshStatusLine() {
+        val count = mesh?.directPeerCount() ?: 0
+        val countText = if (count > 0) {
+            getString(R.string.mesh_connected_count_fmt, count)
+        } else {
+            getString(R.string.mesh_connected_none)
+        }
+        meshStatus.text = if (lastMeshEvent.isEmpty()) countText else "$countText · $lastMeshEvent"
+    }
+
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             val binder = service as MeshForegroundService.LocalBinder
             mesh = binder.getMesh()
             bound = true
-            meshStatus.text = getString(R.string.mesh_status_on)
+            refreshMeshStatusLine()
             // Surface every advertising/discovery/connection step (and any failure)
             // right in the header — this is what actually told us what's wrong
             // the first time two real phones couldn't find each other, instead of
             // that only existing in Logcat where nobody could see it.
-            mesh?.onStatusChanged = { text -> runOnUiThread { meshStatus.text = text } }
+            mesh?.onStatusChanged = { text ->
+                lastMeshEvent = text
+                runOnUiThread { refreshMeshStatusLine() }
+            }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             mesh = null
             bound = false
+            lastMeshEvent = ""
             meshStatus.text = getString(R.string.mesh_status_off)
         }
     }
@@ -135,6 +162,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         refreshPermissionState()
+
+        lifecycleScope.launch {
+            while (true) {
+                refreshMeshStatusLine()
+                delay(5_000L)
+            }
+        }
     }
 
     override fun onStart() {

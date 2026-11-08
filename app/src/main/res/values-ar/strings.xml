@@ -13,6 +13,8 @@
     <string name="grant_permissions">منح الأذونات</string>
     <string name="mesh_status_on">الشبكة نشطة — جارٍ البحث عن هواتف قريبة</string>
     <string name="mesh_status_off">الشبكة متوقفة</string>
+    <string name="mesh_connected_count_fmt">%d هاتف متصل مباشرة</string>
+    <string name="mesh_connected_none">لا يوجد اتصال مباشر حالياً</string>
     <string name="set_name_title">اسمك في الشبكة</string>
     <string name="save">حفظ</string>
     <string name="tab_posts">المنشورات</string>

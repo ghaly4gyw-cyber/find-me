@@ -13,6 +13,8 @@
     <string name="grant_permissions">Grant permissions</string>
     <string name="mesh_status_on">Mesh active — looking for nearby phones</string>
     <string name="mesh_status_off">Mesh stopped</string>
+    <string name="mesh_connected_count_fmt">%d phone(s) connected</string>
+    <string name="mesh_connected_none">0 connected — no direct link yet</string>
     <string name="set_name_title">Your name on the mesh</string>
     <string name="save">Save</string>
     <string name="tab_posts">Posts</string>

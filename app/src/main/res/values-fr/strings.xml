@@ -13,6 +13,8 @@
     <string name="grant_permissions">Accorder les autorisations</string>
     <string name="mesh_status_on">Réseau actif — recherche de téléphones proches</string>
     <string name="mesh_status_off">Réseau arrêté</string>
+    <string name="mesh_connected_count_fmt">%d téléphone(s) connecté(s)</string>
+    <string name="mesh_connected_none">0 connecté — pas encore de lien direct</string>
     <string name="set_name_title">Votre nom sur le réseau</string>
     <string name="save">Enregistrer</string>
     <string name="tab_posts">Publications</string>
