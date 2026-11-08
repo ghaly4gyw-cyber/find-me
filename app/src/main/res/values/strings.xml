@@ -87,4 +87,8 @@
     <string name="fall_notification_channel">Possible fall detected</string>
     <string name="fall_notification_title">Possible fall detected</string>
     <string name="fall_notification_text">Open Find Me if you\'re okay — this alert clears the moment you touch your phone.</string>
+
+    <string name="physical_signal_hint">No phone or mesh needed: blink the flashlight and beep the speaker in Morse SOS, in case someone can see or hear you nearby.</string>
+    <string name="physical_signal_start">Start light &amp; sound signal</string>
+    <string name="physical_signal_stop">Stop signal</string>
 </resources>

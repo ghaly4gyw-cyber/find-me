@@ -41,6 +41,30 @@
         android:padding="12dp">
 
         <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/sand_300"
+            android:textSize="13sp"
+            android:text="@string/physical_signal_hint" />
+
+        <Button
+            android:id="@+id/physicalSignalButton"
+            style="@style/FindMe.Button.Pill"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/physical_signal_start" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="12dp">
+
+        <TextView
             android:id="@+id/smsBridgeStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

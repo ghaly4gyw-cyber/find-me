@@ -84,4 +84,8 @@
     <string name="fall_notification_channel">احتمال وقوع سقوط</string>
     <string name="fall_notification_title">احتمال وقوع سقوط</string>
     <string name="fall_notification_text">افتح إيجادني إذا كنت بخير، ستُلغى هذه التنبيه فور لمسك للهاتف.</string>
+
+    <string name="physical_signal_hint">دون حاجة إلى هاتف أو شبكة: يُومض الفلاش ويُصدر صفارة من السماعة بشفرة مورس SOS، في حال كان أحد قريبًا يمكنه رؤيتك أو سماعك.</string>
+    <string name="physical_signal_start">بدء إشارة الضوء والصوت</string>
+    <string name="physical_signal_stop">إيقاف الإشارة</string>
 </resources>

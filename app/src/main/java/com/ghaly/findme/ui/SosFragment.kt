@@ -19,6 +19,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ghaly.findme.R
+import com.ghaly.findme.mesh.PhysicalSignal
 import com.ghaly.findme.mesh.SmsBridge
 import com.ghaly.findme.repo.InactivityRepository
 import com.ghaly.findme.repo.SosRepository
@@ -31,6 +32,7 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
     private val inactiveAdapter = InactiveAdapter()
     private var sosActive = false
     private var pulseAnimator: ValueAnimator? = null
+    private var physicalSignal: PhysicalSignal? = null
 
     /** Whether to actually fire a send once SEND_SMS is granted — true only when
      *  the user tapped "Send status now" and we had to ask for permission first;
@@ -81,6 +83,19 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
                 sosActive = false
                 button.setText(R.string.sos_button)
                 stopPulse(button)
+            }
+        }
+
+        physicalSignal = PhysicalSignal(requireContext())
+        val physicalSignalButton = view.findViewById<Button>(R.id.physicalSignalButton)
+        physicalSignalButton.setOnClickListener {
+            val signal = physicalSignal ?: return@setOnClickListener
+            if (signal.running) {
+                signal.stop()
+                physicalSignalButton.setText(R.string.physical_signal_start)
+            } else {
+                signal.start()
+                physicalSignalButton.setText(R.string.physical_signal_stop)
             }
         }
 
@@ -146,6 +161,8 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
         super.onDestroyView()
         pulseAnimator?.cancel()
         pulseAnimator = null
+        physicalSignal?.stop()
+        physicalSignal = null
     }
 
     private fun refreshSmsStatus(statusView: TextView) {
