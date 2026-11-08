@@ -1,5 +1,6 @@
 package com.ghaly.findme.repo
 
+import android.content.Context
 import com.ghaly.findme.model.ChatMessage
 import com.ghaly.findme.model.InactivityAlert
 import com.ghaly.findme.model.PeerPosition
@@ -10,23 +11,92 @@ import com.ghaly.findme.model.SosAlert
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * In-memory, process-wide stores for mesh state. Kept simple on purpose (no DB)
  * for the MVP: state only needs to survive while the app/service is alive.
+ *
+ * [PeerRepository] and [ProfileRepository] additionally cache the last known
+ * roster to disk (plain SharedPreferences JSON) so that if the app/service
+ * restarts — a crash, a phone reboot, Android killing it under memory
+ * pressure — the roster doesn't come back completely empty. On a safety app,
+ * "I don't know where anyone was" for even a minute after a restart is worse
+ * than showing slightly-stale cached positions until fresh ones arrive.
  */
 object PeerRepository {
+    private const val PREFS = "find_me_peers_cache"
+    private const val KEY_DATA = "peers_json"
+
+    private var appContext: Context? = null
     private val _peers = MutableStateFlow<Map<String, PeerPosition>>(emptyMap())
     val peers: StateFlow<Map<String, PeerPosition>> = _peers
 
+    /** Call once, early (e.g. the mesh service's onCreate), to load the cached roster. */
+    fun init(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        loadFromDisk()
+    }
+
     fun upsert(position: PeerPosition) {
         _peers.update { it + (position.deviceId to position) }
+        saveToDisk()
     }
 
     fun markDisconnected(deviceId: String) {
         _peers.update { map ->
             val existing = map[deviceId] ?: return@update map
             map + (deviceId to existing.copy(connected = false))
+        }
+        saveToDisk()
+    }
+
+    private fun loadFromDisk() {
+        val ctx = appContext ?: return
+        try {
+            val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(KEY_DATA, null) ?: return
+            val arr = JSONArray(json)
+            val loaded = mutableMapOf<String, PeerPosition>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val id = o.getString("deviceId")
+                loaded[id] = PeerPosition(
+                    deviceId = id,
+                    name = o.getString("name"),
+                    lat = o.getDouble("lat"),
+                    lon = o.getDouble("lon"),
+                    ts = o.getLong("ts"),
+                    connected = false // nothing is "live" right after a restart
+                )
+            }
+            if (loaded.isNotEmpty()) _peers.value = loaded
+        } catch (e: Exception) {
+            // corrupted/old cache format — just start empty, nothing to recover
+        }
+    }
+
+    private fun saveToDisk() {
+        val ctx = appContext ?: return
+        try {
+            val arr = JSONArray()
+            for (p in _peers.value.values) {
+                arr.put(
+                    JSONObject()
+                        .put("deviceId", p.deviceId)
+                        .put("name", p.name)
+                        .put("lat", p.lat)
+                        .put("lon", p.lon)
+                        .put("ts", p.ts)
+                )
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY_DATA, arr.toString())
+                .apply()
+        } catch (e: Exception) {
+            // best-effort cache — losing it just means a slower warm-up next time
         }
     }
 }
@@ -73,14 +143,74 @@ object InactivityRepository {
 }
 
 object ProfileRepository {
+    private const val PREFS = "find_me_profiles_cache"
+    private const val KEY_DATA = "profiles_json"
+
+    private var appContext: Context? = null
     private val _profiles = MutableStateFlow<Map<String, Profile>>(emptyMap())
     val profiles: StateFlow<Map<String, Profile>> = _profiles
 
+    /** Call once, early (e.g. the mesh service's onCreate), to load cached peer profiles. */
+    fun init(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        loadFromDisk()
+    }
+
     fun upsert(profile: Profile) {
         _profiles.update { it + (profile.deviceId to profile) }
+        saveToDisk()
     }
 
     fun get(deviceId: String): Profile? = _profiles.value[deviceId]
+
+    private fun loadFromDisk() {
+        val ctx = appContext ?: return
+        try {
+            val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(KEY_DATA, null) ?: return
+            val arr = JSONArray(json)
+            val loaded = mutableMapOf<String, Profile>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val id = o.getString("deviceId")
+                loaded[id] = Profile(
+                    deviceId = id,
+                    name = o.getString("name"),
+                    phone = o.optString("phone", "").ifEmpty { null },
+                    description = o.optString("description", "").ifEmpty { null },
+                    photoBase64 = o.optString("photo", "").ifEmpty { null },
+                    ts = o.optLong("ts", System.currentTimeMillis())
+                )
+            }
+            if (loaded.isNotEmpty()) _profiles.value = loaded
+        } catch (e: Exception) {
+            // corrupted/old cache format — just start empty, nothing to recover
+        }
+    }
+
+    private fun saveToDisk() {
+        val ctx = appContext ?: return
+        try {
+            val arr = JSONArray()
+            for (p in _profiles.value.values) {
+                arr.put(
+                    JSONObject()
+                        .put("deviceId", p.deviceId)
+                        .put("name", p.name)
+                        .put("phone", p.phone ?: "")
+                        .put("description", p.description ?: "")
+                        .put("photo", p.photoBase64 ?: "")
+                        .put("ts", p.ts)
+                )
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY_DATA, arr.toString())
+                .apply()
+        } catch (e: Exception) {
+            // best-effort cache — losing it just means a slower warm-up next time
+        }
+    }
 }
 
 object GroupChatRepository {
