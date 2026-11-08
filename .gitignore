@@ -1,5 +1,6 @@
 *.iml
 .gradle/
+/design-mockups/
 /local.properties
 /.idea/
 .DS_Store
