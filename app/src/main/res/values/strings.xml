@@ -116,4 +116,11 @@
     <string name="now_navigating_fmt">Navigating to %s</string>
     <string name="stopped_navigating_fmt">Stopped navigating to %s</string>
     <string name="place_deleted_fmt">Deleted \"%s\"</string>
+
+    <string name="choose_language">Choose language</string>
+    <string-array name="language_names">
+        <item>العربية</item>
+        <item>English</item>
+        <item>Français</item>
+    </string-array>
 </resources>

@@ -19,6 +19,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import com.ghaly.findme.R
 import com.ghaly.findme.mesh.ActivityWatcher
 import com.ghaly.findme.mesh.DeviceIdentity
@@ -109,6 +111,8 @@ class MainActivity : AppCompatActivity() {
         refreshNameButton(nameButton)
         nameButton.setOnClickListener { showEditProfileDialog(nameButton) }
 
+        findViewById<TextView>(R.id.languageButton).setOnClickListener { showLanguageDialog() }
+
         tabButtons = listOf(
             findViewById(R.id.tabPeers),
             findViewById(R.id.tabMap),
@@ -197,6 +201,26 @@ class MainActivity : AppCompatActivity() {
         MeshForegroundService.start(this)
         val intent = Intent(this, MeshForegroundService::class.java)
         bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    }
+
+    /** Explicit in-app switcher — doesn't rely on the phone's system language,
+     *  since many of these phones are secondhand and set to whatever the
+     *  previous owner used. Default on first launch is Arabic (see
+     *  FindMeApplication); this just lets anyone change it afterwards. */
+    private fun showLanguageDialog() {
+        val tags = arrayOf("ar", "en", "fr")
+        val names = resources.getStringArray(R.array.language_names)
+        val current = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+        val checkedIndex = tags.indexOfFirst { current.startsWith(it) }.let { if (it < 0) 0 else it }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.choose_language)
+            .setSingleChoiceItems(names, checkedIndex) { dialog, index ->
+                AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tags[index]))
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun refreshNameButton(button: TextView) {

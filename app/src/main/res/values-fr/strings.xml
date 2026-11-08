@@ -113,4 +113,6 @@
     <string name="now_navigating_fmt">Navigation vers %s</string>
     <string name="stopped_navigating_fmt">Navigation arrêtée vers %s</string>
     <string name="place_deleted_fmt">\"%s\" supprimé</string>
+
+    <string name="choose_language">Choisir la langue</string>
 </resources>

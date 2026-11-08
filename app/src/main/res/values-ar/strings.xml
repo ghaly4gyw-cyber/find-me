@@ -113,4 +113,6 @@
     <string name="now_navigating_fmt">التوجّه إلى %s</string>
     <string name="stopped_navigating_fmt">تم إيقاف التوجّه إلى %s</string>
     <string name="place_deleted_fmt">تم حذف \"%s\"</string>
+
+    <string name="choose_language">اختر اللغة</string>
 </resources>
