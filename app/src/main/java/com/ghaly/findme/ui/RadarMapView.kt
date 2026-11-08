@@ -78,6 +78,19 @@ class RadarMapView @JvmOverloads constructor(
 
     var maxRangeMeters: Float = 2000f
 
+    /** The compass heading the phone is currently pointing, 0 = true/magnetic
+     *  north, fed by the fragment from the rotation-vector sensor. When this is
+     *  kept updated, the whole radar becomes "heading-up" — whatever the phone
+     *  is pointed at is drawn straight up, so a dot to your actual left appears
+     *  on the left of the screen and one behind you appears at the bottom,
+     *  without the user needing to know which way true north is first. Left at
+     *  0 (no sensor available), it falls back to plain north-up. */
+    var deviceHeadingDeg: Float = 0f
+        set(value) {
+            field = value
+            invalidate()
+        }
+
     // Pinch-to-zoom + one-finger pan. This is still a bearing/distance radar
     // (there's no offline map tile data to show out in the desert), but it's
     // no longer a fixed scale — zoom in to spread out a crowded cluster,
@@ -244,7 +257,16 @@ class RadarMapView @JvmOverloads constructor(
         canvas.drawCircle(ccx, ccy, radius, sweepPaint)
         canvas.restore()
 
-        canvas.drawText("N", ccx, ccy - radius - 12f, northPaint)
+        // North's position on screen rotates with the phone's own heading in
+        // heading-up mode (deviceHeadingDeg != 0) instead of always sitting at
+        // the top — it's the one fixed reference point letting the user check
+        // the view still makes sense.
+        run {
+            val northAngleRad = Math.toRadians((0 - deviceHeadingDeg - 90).toDouble())
+            val nx = ccx + ((radius + 24f) * cos(northAngleRad)).toFloat()
+            val ny = ccy + ((radius + 24f) * sin(northAngleRad)).toFloat()
+            canvas.drawText("N", nx, ny + 8f, northPaint)
+        }
 
         val mine = myLocation
         val dots = mutableListOf<DotHit>()
@@ -259,7 +281,7 @@ class RadarMapView @JvmOverloads constructor(
                 val bearingDeg = results[1]
                 val clamped = min(distance, maxRangeMeters)
                 val r = (clamped / maxRangeMeters) * radius
-                val angleRad = Math.toRadians((bearingDeg - 90).toDouble()) // -90 so 0deg(N) draws upward
+                val angleRad = Math.toRadians((bearingDeg - deviceHeadingDeg - 90).toDouble()) // minus device heading so the view is heading-up, minus 90 so 0deg(N) draws upward
                 val dx = (r * cos(angleRad)).toFloat()
                 val dy = (r * sin(angleRad)).toFloat()
                 val px = ccx + dx
@@ -299,7 +321,7 @@ class RadarMapView @JvmOverloads constructor(
                 val bearingDeg = results[1]
                 val clamped = min(distance, maxRangeMeters)
                 val r = (clamped / maxRangeMeters) * radius
-                val angleRad = Math.toRadians((bearingDeg - 90).toDouble())
+                val angleRad = Math.toRadians((bearingDeg - deviceHeadingDeg - 90).toDouble())
                 val px = ccx + (r * cos(angleRad)).toFloat()
                 val py = ccy + (r * sin(angleRad)).toFloat()
                 // small diamond marker so it reads as "a fixed spot", not a person
@@ -338,7 +360,7 @@ class RadarMapView @JvmOverloads constructor(
      *  to" cue, separate from the dot's own position (which way to walk TO reach
      *  their last known spot). */
     private fun drawHeadingArrow(canvas: Canvas, px: Float, py: Float, headingDeg: Float) {
-        val angleRad = Math.toRadians((headingDeg - 90).toDouble())
+        val angleRad = Math.toRadians((headingDeg - deviceHeadingDeg - 90).toDouble())
         val dx = cos(angleRad).toFloat()
         val dy = sin(angleRad).toFloat()
         val startR = 18f
