@@ -1,7 +1,10 @@
 package com.ghaly.findme.repo
 
 import com.ghaly.findme.model.ChatMessage
+import com.ghaly.findme.model.InactivityAlert
 import com.ghaly.findme.model.PeerPosition
+import com.ghaly.findme.model.Post
+import com.ghaly.findme.model.PostComment
 import com.ghaly.findme.model.SosAlert
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,4 +53,46 @@ object SosRepository {
             map + (senderId to existing.copy(active = false))
         }
     }
+}
+
+object InactivityRepository {
+    private val _alerts = MutableStateFlow<Map<String, InactivityAlert>>(emptyMap())
+    val alerts: StateFlow<Map<String, InactivityAlert>> = _alerts
+
+    fun upsert(alert: InactivityAlert) {
+        _alerts.update { it + (alert.senderId to alert) }
+    }
+
+    fun clear(senderId: String) {
+        _alerts.update { map ->
+            val existing = map[senderId] ?: return@update map
+            map + (senderId to existing.copy(active = false))
+        }
+    }
+}
+
+object PostRepository {
+    private val _posts = MutableStateFlow<List<Post>>(emptyList())
+    val posts: StateFlow<List<Post>> = _posts
+
+    private val _comments = MutableStateFlow<Map<String, List<PostComment>>>(emptyMap())
+    val comments: StateFlow<Map<String, List<PostComment>>> = _comments
+
+    private val seenPostIds = mutableSetOf<String>()
+    private val seenCommentIds = mutableSetOf<String>()
+
+    fun addPost(post: Post) {
+        if (!seenPostIds.add(post.id)) return
+        _posts.update { it + post }
+    }
+
+    fun addComment(comment: PostComment) {
+        if (!seenCommentIds.add(comment.id)) return
+        _comments.update { map ->
+            val list = map[comment.postId].orEmpty() + comment
+            map + (comment.postId to list)
+        }
+    }
+
+    fun commentsFor(postId: String): List<PostComment> = _comments.value[postId].orEmpty()
 }

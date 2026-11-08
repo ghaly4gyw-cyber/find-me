@@ -7,10 +7,14 @@ import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.ghaly.findme.R
+import com.ghaly.findme.mesh.ActivityWatcher
+import com.ghaly.findme.mesh.DeviceIdentity
 import com.ghaly.findme.mesh.MeshForegroundService
 import com.ghaly.findme.mesh.MeshManager
 import com.ghaly.findme.mesh.Permissions
@@ -54,9 +58,14 @@ class MainActivity : AppCompatActivity() {
             permissionLauncher.launch(Permissions.required())
         }
 
+        val nameButton = findViewById<TextView>(R.id.myNameButton)
+        refreshNameButton(nameButton)
+        nameButton.setOnClickListener { showRenameDialog(nameButton) }
+
         findViewById<Button>(R.id.tabPeers).setOnClickListener { showFragment(PeersFragment()) }
         findViewById<Button>(R.id.tabChat).setOnClickListener { showFragment(ChatFragment()) }
         findViewById<Button>(R.id.tabSos).setOnClickListener { showFragment(SosFragment()) }
+        findViewById<Button>(R.id.tabPosts).setOnClickListener { showFragment(PostsFragment()) }
 
         if (savedInstanceState == null) {
             showFragment(PeersFragment())
@@ -91,6 +100,32 @@ class MainActivity : AppCompatActivity() {
         MeshForegroundService.start(this)
         val intent = Intent(this, MeshForegroundService::class.java)
         bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    }
+
+    private fun refreshNameButton(button: TextView) {
+        button.text = "${DeviceIdentity.name(this)} ✎"
+    }
+
+    private fun showRenameDialog(nameButton: TextView) {
+        val input = EditText(this)
+        input.setText(DeviceIdentity.name(this))
+        AlertDialog.Builder(this)
+            .setTitle(R.string.set_name_title)
+            .setView(input)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val newName = input.text?.toString()?.trim().orEmpty()
+                if (newName.isNotEmpty()) {
+                    DeviceIdentity.setName(this, newName)
+                    refreshNameButton(nameButton)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        ActivityWatcher.poke()
     }
 
     private fun showFragment(fragment: androidx.fragment.app.Fragment) {

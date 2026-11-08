@@ -8,26 +8,45 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:padding="16dp">
 
-        <TextView
-            android:id="@+id/appTitle"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textColor="@color/amber_500"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/appTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textColor="@color/amber_500"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/meshStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/mesh_status_off"
+                android:textColor="@color/sand_300"
+                android:textSize="13sp" />
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/meshStatus"
+            android:id="@+id/myNameButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="@string/mesh_status_off"
             android:textColor="@color/sand_300"
-            android:textSize="13sp" />
+            android:textSize="13sp"
+            android:padding="8dp"
+            android:background="@color/sand_700"
+            tools:text="Miner-3F2A ✎"
+            xmlns:tools="http://schemas.android.com/tools" />
     </LinearLayout>
 
     <LinearLayout
@@ -93,6 +112,15 @@
             android:layout_weight="1"
             android:textColor="@color/sos_red"
             android:text="@string/tab_sos" />
+
+        <Button
+            android:id="@+id/tabPosts"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/sand_300"
+            android:text="@string/tab_posts" />
     </LinearLayout>
 
 </LinearLayout>

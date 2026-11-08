@@ -15,6 +15,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ghaly.findme.R
+import com.ghaly.findme.repo.InactivityRepository
 import com.ghaly.findme.repo.SosRepository
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.launch
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 class SosFragment : Fragment(R.layout.fragment_sos) {
 
     private val adapter = SosAdapter()
+    private val inactiveAdapter = InactiveAdapter()
     private var sosActive = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -29,6 +31,10 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
         val list = view.findViewById<RecyclerView>(R.id.sosList)
         list.layoutManager = LinearLayoutManager(requireContext())
         list.adapter = adapter
+
+        val inactiveList = view.findViewById<RecyclerView>(R.id.inactiveList)
+        inactiveList.layoutManager = LinearLayoutManager(requireContext())
+        inactiveList.adapter = inactiveAdapter
 
         val hint = view.findViewById<TextView>(R.id.sosHint)
         val button = view.findViewById<Button>(R.id.sosButton)
@@ -60,6 +66,14 @@ class SosFragment : Fragment(R.layout.fragment_sos) {
                     } else {
                         "${active.size} active SOS in range"
                     }
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                InactivityRepository.alerts.collect { map ->
+                    inactiveAdapter.items = map.values.toList()
                 }
             }
         }

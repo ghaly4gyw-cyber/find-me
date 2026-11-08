@@ -204,16 +204,23 @@ class MeshManager(private val context: Context) {
             }
             MsgType.CHAT -> {
                 val obj = JSONObject(envelope.payload)
-                ChatRepository.add(
-                    ChatMessage(
-                        id = envelope.id,
-                        senderId = envelope.originId,
-                        senderName = envelope.originName,
-                        text = obj.optString("text", ""),
-                        ts = envelope.ts,
-                        isMine = false
+                val targetId = obj.optString("to", "").ifEmpty { null }
+                // Only show it if it's a public message, or it's a DM addressed to me.
+                // (We still relayed it above regardless, so it can keep hopping to its
+                // actual recipient even through phones that aren't the recipient.)
+                if (targetId == null || targetId == myId) {
+                    ChatRepository.add(
+                        ChatMessage(
+                            id = envelope.id,
+                            senderId = envelope.originId,
+                            senderName = envelope.originName,
+                            text = obj.optString("text", ""),
+                            ts = envelope.ts,
+                            isMine = false,
+                            targetId = targetId
+                        )
                     )
-                )
+                }
             }
             MsgType.SOS -> {
                 val obj = JSONObject(envelope.payload)
@@ -231,6 +238,47 @@ class MeshManager(private val context: Context) {
             }
             MsgType.SOS_CLEAR -> {
                 SosRepository.clear(envelope.originId)
+            }
+            MsgType.INACTIVE -> {
+                val obj = JSONObject(envelope.payload)
+                com.ghaly.findme.repo.InactivityRepository.upsert(
+                    com.ghaly.findme.model.InactivityAlert(
+                        senderId = envelope.originId,
+                        senderName = envelope.originName,
+                        lat = obj.optDouble("lat", 0.0),
+                        lon = obj.optDouble("lon", 0.0),
+                        ts = envelope.ts,
+                        active = true
+                    )
+                )
+            }
+            MsgType.INACTIVE_CLEAR -> {
+                com.ghaly.findme.repo.InactivityRepository.clear(envelope.originId)
+            }
+            MsgType.POST -> {
+                val obj = JSONObject(envelope.payload)
+                com.ghaly.findme.repo.PostRepository.addPost(
+                    com.ghaly.findme.model.Post(
+                        id = envelope.id,
+                        authorId = envelope.originId,
+                        authorName = envelope.originName,
+                        text = obj.optString("text", ""),
+                        ts = envelope.ts
+                    )
+                )
+            }
+            MsgType.POST_COMMENT -> {
+                val obj = JSONObject(envelope.payload)
+                com.ghaly.findme.repo.PostRepository.addComment(
+                    com.ghaly.findme.model.PostComment(
+                        id = envelope.id,
+                        postId = obj.optString("postId", ""),
+                        authorId = envelope.originId,
+                        authorName = envelope.originName,
+                        text = obj.optString("text", ""),
+                        ts = envelope.ts
+                    )
+                )
             }
         }
     }
@@ -264,15 +312,24 @@ class MeshManager(private val context: Context) {
 
     @Volatile private var lastLat: Double = 0.0
     @Volatile private var lastLon: Double = 0.0
+    @Volatile private var hasFix: Boolean = false
+
+    /** My own last known GPS fix, or null if we don't have one yet. */
+    fun myLocation(): Pair<Double, Double>? = if (hasFix) lastLat to lastLon else null
 
     /** Call whenever we get a fresh GPS fix; broadcasts it and remembers it for new connections. */
     fun sendPosition(lat: Double, lon: Double) {
         lastLat = lat
         lastLon = lon
+        hasFix = true
         broadcast(buildPositionEnvelope(lat, lon))
     }
 
-    fun sendChat(text: String): ChatMessage {
+    /** [targetId] null = send to everyone; otherwise a direct message to just that peer
+     *  (still physically relayed by everyone, but only shown by the recipient). */
+    fun sendChat(text: String, targetId: String? = null): ChatMessage {
+        val payload = JSONObject().put("text", text)
+        if (targetId != null) payload.put("to", targetId)
         val envelope = Envelope(
             id = UUID.randomUUID().toString(),
             type = MsgType.CHAT,
@@ -280,7 +337,7 @@ class MeshManager(private val context: Context) {
             originName = myName,
             hop = 0,
             ts = System.currentTimeMillis(),
-            payload = JSONObject().put("text", text).toString()
+            payload = payload.toString()
         )
         seenIds.add(envelope.id)
         broadcast(envelope)
@@ -290,8 +347,76 @@ class MeshManager(private val context: Context) {
             senderName = myName,
             text = text,
             ts = envelope.ts,
-            isMine = true
+            isMine = true,
+            targetId = targetId
         )
+    }
+
+    fun sendPost(text: String) {
+        val envelope = Envelope(
+            id = UUID.randomUUID().toString(),
+            type = MsgType.POST,
+            originId = myId,
+            originName = myName,
+            hop = 0,
+            ts = System.currentTimeMillis(),
+            payload = JSONObject().put("text", text).toString()
+        )
+        seenIds.add(envelope.id)
+        broadcast(envelope)
+        com.ghaly.findme.repo.PostRepository.addPost(
+            com.ghaly.findme.model.Post(envelope.id, myId, myName, text, envelope.ts)
+        )
+    }
+
+    fun sendComment(postId: String, text: String) {
+        val envelope = Envelope(
+            id = UUID.randomUUID().toString(),
+            type = MsgType.POST_COMMENT,
+            originId = myId,
+            originName = myName,
+            hop = 0,
+            ts = System.currentTimeMillis(),
+            payload = JSONObject().put("postId", postId).put("text", text).toString()
+        )
+        seenIds.add(envelope.id)
+        broadcast(envelope)
+        com.ghaly.findme.repo.PostRepository.addComment(
+            com.ghaly.findme.model.PostComment(envelope.id, postId, myId, myName, text, envelope.ts)
+        )
+    }
+
+    /** Broadcast that this phone has had no user interaction for a while (dead-man's switch). */
+    fun sendInactive(lat: Double, lon: Double) {
+        val envelope = Envelope(
+            id = UUID.randomUUID().toString(),
+            type = MsgType.INACTIVE,
+            originId = myId,
+            originName = myName,
+            hop = 0,
+            ts = System.currentTimeMillis(),
+            payload = JSONObject().put("lat", lat).put("lon", lon).toString()
+        )
+        seenIds.add(envelope.id)
+        broadcast(envelope)
+        com.ghaly.findme.repo.InactivityRepository.upsert(
+            com.ghaly.findme.model.InactivityAlert(myId, myName, lat, lon, envelope.ts, true)
+        )
+    }
+
+    fun clearInactive() {
+        val envelope = Envelope(
+            id = UUID.randomUUID().toString(),
+            type = MsgType.INACTIVE_CLEAR,
+            originId = myId,
+            originName = myName,
+            hop = 0,
+            ts = System.currentTimeMillis(),
+            payload = "{}"
+        )
+        seenIds.add(envelope.id)
+        broadcast(envelope)
+        com.ghaly.findme.repo.InactivityRepository.clear(myId)
     }
 
     /** SOS skips nothing special in this simple sender (everything already sends

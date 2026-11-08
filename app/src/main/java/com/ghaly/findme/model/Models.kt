@@ -1,7 +1,7 @@
 package com.ghaly.findme.model
 
 /** Kinds of message that travel over the mesh. */
-enum class MsgType { POSITION, CHAT, SOS, SOS_CLEAR }
+enum class MsgType { POSITION, CHAT, SOS, SOS_CLEAR, INACTIVE, INACTIVE_CLEAR, POST, POST_COMMENT }
 
 /**
  * Envelope every mesh message is wrapped in, so any device can relay it
@@ -38,7 +38,9 @@ data class ChatMessage(
     val senderName: String,
     val text: String,
     val ts: Long,
-    val isMine: Boolean = false
+    val isMine: Boolean = false,
+    /** null = sent to everyone; otherwise the deviceId of the one intended recipient. */
+    val targetId: String? = null
 )
 
 data class SosAlert(
@@ -49,4 +51,30 @@ data class SosAlert(
     val lon: Double,
     val ts: Long,
     val active: Boolean = true
+)
+
+data class InactivityAlert(
+    val senderId: String,
+    val senderName: String,
+    val lat: Double,
+    val lon: Double,
+    val ts: Long,
+    val active: Boolean = true
+)
+
+data class Post(
+    val id: String,
+    val authorId: String,
+    val authorName: String,
+    val text: String,
+    val ts: Long
+)
+
+data class PostComment(
+    val id: String,
+    val postId: String,
+    val authorId: String,
+    val authorName: String,
+    val text: String,
+    val ts: Long
 )

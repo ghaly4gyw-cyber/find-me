@@ -34,5 +34,17 @@ class PeersFragment : Fragment(R.layout.fragment_peers) {
                 }
             }
         }
+
+        // Refresh direction arrows periodically — my own position moves even when
+        // nothing else about the peer list changes.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) {
+                    val mesh = (requireActivity() as? MainActivity)?.mesh
+                    adapter.myLocation = mesh?.myLocation()
+                    kotlinx.coroutines.delay(10_000L)
+                }
+            }
+        }
     }
 }

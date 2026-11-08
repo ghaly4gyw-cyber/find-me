@@ -13,4 +13,15 @@
     <string name="grant_permissions">Grant permissions</string>
     <string name="mesh_status_on">Mesh active — looking for nearby phones</string>
     <string name="mesh_status_off">Mesh stopped</string>
+    <string name="set_name_title">Your name on the mesh</string>
+    <string name="save">Save</string>
+    <string name="tab_posts">Posts</string>
+    <string name="new_post_hint">Share an update…</string>
+    <string name="post_button">Post</string>
+    <string name="no_posts">No posts yet.</string>
+    <string name="comment_hint">Write a reply…</string>
+    <string name="to_everyone">Everyone</string>
+    <string name="inactive_alert">%1$s hasn\'t responded in a while</string>
+    <string name="voice_hold_to_talk">Hold to talk</string>
+    <string name="voice_in_range_only">Voice only works with phones in direct range (no multi-hop)</string>
 </resources>
