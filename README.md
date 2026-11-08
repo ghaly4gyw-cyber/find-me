@@ -1,29 +1,49 @@
 # Find Me
 
 A free, no-internet-needed safety app for gold prospectors in the Mauritanian desert.
-Phones relay each other's position, SOS alerts and text chat hand-to-hand over
-Bluetooth/Wi-Fi (Android Nearby Connections) — no SIM signal, no hardware, no
-subscription needed.
+Phones relay each other's position, SOS alerts, chat, voice and posts hand-to-hand
+over Bluetooth/Wi-Fi (Android Nearby Connections) — no SIM signal, no extra
+hardware, no subscription needed.
 
-## What's in this MVP
+## What's in the app
 
-- **Position sharing** — every phone broadcasts its GPS position every ~30s to
-  everyone it's connected to; each device caches the last known position of
-  everyone else so a teammate still shows on the list even after they drop out
-  of direct range.
+- **Position sharing** — every phone broadcasts its GPS position (interval scales
+  with battery: 30s/60s/120s) to everyone it's connected to; each device caches
+  the last known position of everyone else so a teammate still shows on the list
+  even after they drop out of direct range.
 - **Mesh relay** — messages aren't just sent directly: every phone also forwards
   what it receives to its *own* other neighbours (up to 8 hops), so a message
   can travel further than any single Bluetooth/Wi-Fi link, hand to hand through
   a chain of people.
+- **Direction + distance** — the Peers screen shows a compass arrow and distance
+  to each teammate, computed from your own last GPS fix.
 - **SOS** — one button broadcasts an urgent alert with your position to
   everyone in the mesh.
-- **Group chat** — simple text chat relayed the same way.
+- **Dead-man's switch** — if a phone sees no touch input for 20 minutes, it
+  automatically broadcasts an inactivity alert so teammates know to check on
+  that person.
+- **Group chat + private 1:1 chat** — a target picker lets you message
+  everyone or just one peer directly.
+- **Private encrypted groups** — create a group, get a short join code (share
+  it verbally or by typing, since there's no internet for an invite link);
+  messages are AES-GCM encrypted with the group's key, so only members can
+  read them even though everyone still relays the (unreadable) bytes.
+- **Push-to-talk voice** — hold a button to record and send a short voice clip
+  directly to whoever's in actual Bluetooth/Wi-Fi range right now (not
+  relayed further — multi-hop voice isn't practical over this kind of link).
+- **Offline posts with threaded comments** — share an update, teammates reply,
+  relayed the same way as everything else.
+- **Roster + identity** — set your own display name, shown to everyone else
+  on the mesh.
 
-## Not in this MVP yet (next phases, already discussed)
+## Not built yet
 
-Push-to-talk voice, offline posts/feed, encrypted private groups, the
-online/offline sync bridge (SMS or internet handoff between separate groups),
-battery-aware beacon frequency, and a direction arrow to each teammate.
+The online/offline sync bridge — syncing cached messages/positions to a
+shared online feed once any phone reaches real internet, and pulling updates
+from other groups/sites. This needs picking and standing up a backend
+(Supabase/Firebase free tier, or a small Laravel API) and isn't something
+that can be finished without a decision from Ghaly about which to use and
+credentials to it.
 
 ## How the app gets built
 
@@ -42,8 +62,18 @@ from outside the Play Store; that's expected for a sideloaded app, tap
 
 ```
 app/src/main/java/com/ghaly/findme/
-  mesh/   — Nearby Connections wrapper, GPS tracking, foreground service, permissions
-  model/  — data classes (Envelope, PeerPosition, ChatMessage, SosAlert)
+  mesh/   — Nearby Connections wrapper, crypto, GPS tracking, voice record/play,
+            groups, foreground service, permissions, dead-man's-switch watchdog
+  model/  — data classes (Envelope, PeerPosition, ChatMessage, SosAlert, Group, Post...)
   repo/   — in-memory state shared between the mesh layer and the UI
-  ui/     — MainActivity + 3 screens (Peers / Chat / SOS)
+  ui/     — MainActivity + screens (Peers / Chat / SOS / Posts / Groups)
 ```
+
+## Testing status
+
+This was built and pushed without access to a real Android device, so it's
+only confirmed to **compile cleanly** (GitHub Actions build is green). It has
+**not** been confirmed to actually work between two real phones yet — that
+needs testing with two devices: install on both, grant permissions, and check
+that they find each other, share positions, and that chat/SOS/voice/groups
+all actually arrive on the other phone.
