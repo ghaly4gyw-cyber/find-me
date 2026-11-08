@@ -155,6 +155,11 @@ class MeshManager(private val context: Context) {
         }
     }
 
+    /** True if [deviceId] is someone we currently hold a live, direct Nearby
+     *  Connections link to (not just someone we've heard about via relay). */
+    private fun isDirectNeighbor(deviceId: String): Boolean =
+        endpointToDevice.values.contains(deviceId)
+
     private fun handleDisconnect(endpointId: String) {
         connectedEndpoints.remove(endpointId)
         val deviceId = endpointToDevice.remove(endpointId)
@@ -193,7 +198,16 @@ class MeshManager(private val context: Context) {
     }
 
     private fun handleIncoming(endpointId: String, envelope: Envelope) {
-        endpointToDevice[endpointId] = envelope.originId
+        // Only the FIRST envelope we ever see on a given endpoint tells us who's
+        // actually on the other end of that direct link. After the carrier-pigeon
+        // relay was added, a newly-connected endpoint also forwards envelopes that
+        // originated from totally different (not-directly-connected) people — if we
+        // kept overwriting the mapping with every envelope's originId, this endpoint
+        // would get mis-attributed to whichever peer's cached data arrived last, and
+        // a later disconnect would mark the WRONG person as disconnected. putIfAbsent
+        // keeps the mapping pinned to the real direct neighbor for this endpoint's
+        // whole lifetime.
+        endpointToDevice.putIfAbsent(endpointId, envelope.originId)
 
         if (envelope.originId == myId) return // our own message, looped back
         if (seenIds.contains(envelope.id)) return
@@ -217,7 +231,14 @@ class MeshManager(private val context: Context) {
                         lat = obj.optDouble("lat", 0.0),
                         lon = obj.optDouble("lon", 0.0),
                         ts = envelope.ts,
-                        connected = true
+                        // A position that arrived via a multi-hop relay or via the
+                        // carrier-pigeon cache replay is NOT the same as that person
+                        // being physically nearby right now — only mark them "in
+                        // range" if they're an actual direct Nearby Connections
+                        // neighbor of ours at this moment. Getting this wrong on a
+                        // desert safety app would tell someone help is right next to
+                        // them when it's really hours away through several relays.
+                        connected = isDirectNeighbor(envelope.originId)
                     )
                 )
             }
