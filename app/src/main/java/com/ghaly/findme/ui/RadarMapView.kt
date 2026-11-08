@@ -14,6 +14,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import com.ghaly.findme.model.PeerPosition
+import com.ghaly.findme.model.SavedPlace
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
@@ -45,10 +46,31 @@ class RadarMapView @JvmOverloads constructor(
 
     var onPeerTap: ((PeerPosition) -> Unit)? = null
 
+    /** Spots the user marked themselves (current position, campsite, water,
+     *  parked vehicle...) — fixed points, not other people. */
+    var savedPlaces: List<SavedPlace> = emptyList()
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    var onPlaceTap: ((SavedPlace) -> Unit)? = null
+
     /** Device id of the peer currently being "followed" — a live line is drawn
      *  from you to them for as long as they're in the last-known peer list.
      *  Set/cleared by the fragment from the tap menu. */
     var followedDeviceId: String? = null
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    /** Id of the saved place currently being "navigated to" — same idea as
+     *  [followedDeviceId] but for a fixed spot instead of a moving person.
+     *  Distance is clamped to the edge of the radar just like everything
+     *  else here, so a place hundreds of km away still shows the right
+     *  direction, it just won't look close. */
+    var followedPlaceId: String? = null
         set(value) {
             field = value
             invalidate()
@@ -120,10 +142,28 @@ class RadarMapView @JvmOverloads constructor(
         strokeWidth = 4f
         pathEffect = android.graphics.DashPathEffect(floatArrayOf(18f, 14f), 0f)
     }
+    private val placeLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#39C5BB")
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        pathEffect = android.graphics.DashPathEffect(floatArrayOf(18f, 14f), 0f)
+    }
+    private val placePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#D8C3A5") // a fixed-spot marker, distinct from a person's dot
+        style = Paint.Style.FILL
+    }
+    private val placeOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#0E1B1D")
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
 
     /** last drawn dot positions, for hit testing on tap */
     private data class DotHit(val peer: PeerPosition, val cx: Float, val cy: Float)
     private var lastDots: List<DotHit> = emptyList()
+
+    private data class PlaceHit(val place: SavedPlace, val cx: Float, val cy: Float)
+    private var lastPlaceDots: List<PlaceHit> = emptyList()
 
     private val scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
@@ -244,9 +284,46 @@ class RadarMapView @JvmOverloads constructor(
         }
         lastDots = dots
 
-        // the "follow" line — drawn before the center dot so the dot sits on top of it
+        // saved places — fixed spots, not people. Distance is clamped to the
+        // radar edge the same way a peer's is, so a place hundreds of km away
+        // (another mining site, say) still points the right direction even
+        // though it can't possibly be drawn at true scale.
+        val placeDots = mutableListOf<PlaceHit>()
+        var followPlacePx: Float? = null
+        var followPlacePy: Float? = null
+        if (mine != null) {
+            for (place in savedPlaces) {
+                val results = FloatArray(2)
+                Location.distanceBetween(mine.first, mine.second, place.lat, place.lon, results)
+                val distance = results[0]
+                val bearingDeg = results[1]
+                val clamped = min(distance, maxRangeMeters)
+                val r = (clamped / maxRangeMeters) * radius
+                val angleRad = Math.toRadians((bearingDeg - 90).toDouble())
+                val px = ccx + (r * cos(angleRad)).toFloat()
+                val py = ccy + (r * sin(angleRad)).toFloat()
+                // small diamond marker so it reads as "a fixed spot", not a person
+                canvas.save()
+                canvas.rotate(45f, px, py)
+                canvas.drawRect(px - 9f, py - 9f, px + 9f, py + 9f, placePaint)
+                canvas.drawRect(px - 9f, py - 9f, px + 9f, py + 9f, placeOutlinePaint)
+                canvas.restore()
+                canvas.drawText(place.name, px, py + 30f, labelPaint)
+                placeDots += PlaceHit(place, px, py)
+                if (place.id == followedPlaceId) {
+                    followPlacePx = px
+                    followPlacePy = py
+                }
+            }
+        }
+        lastPlaceDots = placeDots
+
+        // the "follow"/"navigate to" lines — drawn before the center dot so it sits on top
         if (followPx != null && followPy != null) {
             canvas.drawLine(ccx, ccy, followPx, followPy, followLinePaint)
+        }
+        if (followPlacePx != null && followPlacePy != null) {
+            canvas.drawLine(ccx, ccy, followPlacePx, followPlacePy, placeLinePaint)
         }
 
         // me, in the middle — a soft breathing glow behind a solid dot
@@ -307,10 +384,20 @@ class RadarMapView @JvmOverloads constructor(
                 if (!isDragging) {
                     val x = event.x
                     val y = event.y
-                    val hit = lastDots.minByOrNull { dist(it.cx, it.cy, x, y) }
-                    if (hit != null && dist(hit.cx, hit.cy, x, y) < max(60f, 60f * scaleFactor)) {
-                        onPeerTap?.invoke(hit.peer)
-                        performClick()
+                    val threshold = max(60f, 60f * scaleFactor)
+                    val peerHit = lastDots.minByOrNull { dist(it.cx, it.cy, x, y) }
+                        ?.takeIf { dist(it.cx, it.cy, x, y) < threshold }
+                    val placeHit = lastPlaceDots.minByOrNull { dist(it.cx, it.cy, x, y) }
+                        ?.takeIf { dist(it.cx, it.cy, x, y) < threshold }
+                    when {
+                        peerHit != null && (placeHit == null || dist(peerHit.cx, peerHit.cy, x, y) <= dist(placeHit.cx, placeHit.cy, x, y)) -> {
+                            onPeerTap?.invoke(peerHit.peer)
+                            performClick()
+                        }
+                        placeHit != null -> {
+                            onPlaceTap?.invoke(placeHit.place)
+                            performClick()
+                        }
                     }
                 }
                 isDragging = false

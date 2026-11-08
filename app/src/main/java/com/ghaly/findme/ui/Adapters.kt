@@ -16,7 +16,9 @@ import com.ghaly.findme.model.SosAlert
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-private fun timeAgo(context: Context, ts: Long): String {
+// Kept non-private (not just file-private) so RadarMapFragment's saved-places
+// list can reuse the exact same distance/bearing/time formatting as the peer list.
+internal fun timeAgo(context: Context, ts: Long): String {
     val diffMs = System.currentTimeMillis() - ts
     val mins = TimeUnit.MILLISECONDS.toMinutes(diffMs)
     return when {
@@ -26,18 +28,18 @@ private fun timeAgo(context: Context, ts: Long): String {
     }
 }
 
-private fun coords(lat: Double, lon: Double): String =
+internal fun coords(lat: Double, lon: Double): String =
     String.format(Locale.US, "%.4f, %.4f", lat, lon)
 
 /** 8-point compass arrow for a bearing in degrees (0 = north). */
-private fun bearingArrow(bearingDeg: Float): String {
+internal fun bearingArrow(bearingDeg: Float): String {
     val dirs = arrayOf("↑", "↗", "→", "↘", "↓", "↙", "←", "↖")
     val normalized = ((bearingDeg % 360) + 360) % 360
     val index = ((normalized + 22.5f) / 45f).toInt() % 8
     return dirs[index]
 }
 
-private fun distanceLabel(meters: Float): String = when {
+internal fun distanceLabel(meters: Float): String = when {
     meters < 1000 -> "${meters.toInt()} m"
     else -> String.format(Locale.US, "%.1f km", meters / 1000f)
 }

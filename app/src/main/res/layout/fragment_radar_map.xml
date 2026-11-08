@@ -18,4 +18,34 @@
         android:text="@string/no_peers"
         android:textColor="@color/sand_300" />
 
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/myPlacesButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_button_pill"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:textColor="@color/sand_900"
+            android:text="@string/my_places" />
+
+        <Button
+            android:id="@+id/savePlaceButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_button_pill"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:textColor="@color/sand_900"
+            android:text="@string/save_this_spot" />
+
+    </LinearLayout>
+
 </FrameLayout>

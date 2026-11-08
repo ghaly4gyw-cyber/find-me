@@ -97,4 +97,20 @@
 
     <string name="location_services_needed">La localisation (GPS) doit être ACTIVÉE — pas seulement autorisée pour l\'application — pour qu\'Android puisse trouver les téléphones proches via Bluetooth/Wi-Fi. C\'est différent de la permission de localisation ci-dessus.</string>
     <string name="enable_location">Activer la localisation</string>
+
+    <string name="save_this_spot">Enregistrer cet endroit</string>
+    <string name="my_places">Mes endroits</string>
+    <string name="save_place_dialog_title">Enregistrer cette position comme…</string>
+    <string name="save_place_dialog_hint">Nom (ex. campement de Zouérat, point d\'eau)</string>
+    <string name="place_saved_fmt">\"%s\" enregistré</string>
+    <string name="no_location_yet">Pas encore de position GPS — attendez une première position.</string>
+    <string name="no_saved_places">Aucun endroit enregistré. Utilisez \"Enregistrer cet endroit\" sur la carte.</string>
+    <string name="place_action_navigate">Naviguer ici (ligne de direction)</string>
+    <string name="place_action_stop_navigating">Arrêter la navigation</string>
+    <string name="place_action_rename">Renommer</string>
+    <string name="place_action_delete">Supprimer</string>
+    <string name="rename_place_dialog_title">Renommer cet endroit</string>
+    <string name="now_navigating_fmt">Navigation vers %s</string>
+    <string name="stopped_navigating_fmt">Navigation arrêtée vers %s</string>
+    <string name="place_deleted_fmt">\"%s\" supprimé</string>
 </resources>

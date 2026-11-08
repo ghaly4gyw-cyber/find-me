@@ -100,4 +100,20 @@
 
     <string name="location_services_needed">Location services (GPS) must be turned ON — not just granted to the app — for Android to find nearby phones over Bluetooth/Wi-Fi. This is different from the location permission above.</string>
     <string name="enable_location">Turn on Location</string>
+
+    <string name="save_this_spot">Save this spot</string>
+    <string name="my_places">My places</string>
+    <string name="save_place_dialog_title">Save this position as…</string>
+    <string name="save_place_dialog_hint">Name (e.g. Zouérat camp, water point)</string>
+    <string name="place_saved_fmt">Saved \"%s\"</string>
+    <string name="no_location_yet">No GPS fix yet — wait for a position first.</string>
+    <string name="no_saved_places">No saved places yet. Use \"Save this spot\" on the map.</string>
+    <string name="place_action_navigate">Navigate here (show direction line)</string>
+    <string name="place_action_stop_navigating">Stop navigating</string>
+    <string name="place_action_rename">Rename</string>
+    <string name="place_action_delete">Delete</string>
+    <string name="rename_place_dialog_title">Rename this place</string>
+    <string name="now_navigating_fmt">Navigating to %s</string>
+    <string name="stopped_navigating_fmt">Stopped navigating to %s</string>
+    <string name="place_deleted_fmt">Deleted \"%s\"</string>
 </resources>

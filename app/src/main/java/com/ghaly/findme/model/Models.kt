@@ -78,3 +78,15 @@ data class PostComment(
     val text: String,
     val ts: Long
 )
+
+/** A spot the user marked themselves — their own current position, a
+ *  campsite, a water source, where the truck is parked, etc. Purely local:
+ *  never sent over the mesh, just saved on this one phone so it can be found
+ *  again later (e.g. navigate back to where you started digging). */
+data class SavedPlace(
+    val id: String,
+    val name: String,
+    val lat: Double,
+    val lon: Double,
+    val ts: Long
+)

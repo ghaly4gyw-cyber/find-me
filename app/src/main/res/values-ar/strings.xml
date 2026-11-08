@@ -97,4 +97,20 @@
 
     <string name="location_services_needed">يجب تفعيل خدمة الموقع (GPS) من إعدادات الهاتف، لا يكفي منح الإذن للتطبيق فقط، ليتمكن أندرويد من العثور على الهواتف القريبة عبر البلوتوث أو واي فاي. هذا يختلف عن إذن الموقع المذكور أعلاه.</string>
     <string name="enable_location">تفعيل الموقع</string>
+
+    <string name="save_this_spot">حفظ هذا الموقع</string>
+    <string name="my_places">مواقعي المحفوظة</string>
+    <string name="save_place_dialog_title">حفظ هذا الموقع باسم…</string>
+    <string name="save_place_dialog_hint">الاسم (مثال: مخيم الزويرات، نقطة ماء)</string>
+    <string name="place_saved_fmt">تم حفظ \"%s\"</string>
+    <string name="no_location_yet">لا توجد إشارة GPS بعد — انتظر حتى يتم تحديد موقعك.</string>
+    <string name="no_saved_places">لا توجد مواقع محفوظة بعد. استخدم \"حفظ هذا الموقع\" على الخريطة.</string>
+    <string name="place_action_navigate">التوجّه إليه (عرض خط الاتجاه)</string>
+    <string name="place_action_stop_navigating">إيقاف التوجّه</string>
+    <string name="place_action_rename">إعادة التسمية</string>
+    <string name="place_action_delete">حذف</string>
+    <string name="rename_place_dialog_title">إعادة تسمية هذا الموقع</string>
+    <string name="now_navigating_fmt">التوجّه إلى %s</string>
+    <string name="stopped_navigating_fmt">تم إيقاف التوجّه إلى %s</string>
+    <string name="place_deleted_fmt">تم حذف \"%s\"</string>
 </resources>

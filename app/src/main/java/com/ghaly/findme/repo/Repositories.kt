@@ -7,12 +7,14 @@ import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.model.Post
 import com.ghaly.findme.model.PostComment
 import com.ghaly.findme.model.Profile
+import com.ghaly.findme.model.SavedPlace
 import com.ghaly.findme.model.SosAlert
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -289,4 +291,92 @@ object PostRepository {
     }
 
     fun commentsFor(postId: String): List<PostComment> = _comments.value[postId].orEmpty()
+}
+
+/** Places the user marked on this one phone — their own current spot, a
+ *  campsite, a water source, where the vehicle is parked. Purely local
+ *  (never sent over the mesh — this is "remember where I've been", not
+ *  "tell others where I am"), disk-cached the same way the peer/profile
+ *  rosters are so it survives an app restart. */
+object SavedPlaceRepository {
+    private const val PREFS = "find_me_saved_places"
+    private const val KEY_DATA = "places_json"
+
+    private var appContext: Context? = null
+    private val _places = MutableStateFlow<List<SavedPlace>>(emptyList())
+    val places: StateFlow<List<SavedPlace>> = _places
+
+    fun init(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        loadFromDisk()
+    }
+
+    fun add(name: String, lat: Double, lon: Double): SavedPlace {
+        val place = SavedPlace(
+            id = UUID.randomUUID().toString(),
+            name = name,
+            lat = lat,
+            lon = lon,
+            ts = System.currentTimeMillis()
+        )
+        _places.update { it + place }
+        saveToDisk()
+        return place
+    }
+
+    fun rename(id: String, newName: String) {
+        _places.update { list -> list.map { if (it.id == id) it.copy(name = newName) else it } }
+        saveToDisk()
+    }
+
+    fun remove(id: String) {
+        _places.update { list -> list.filter { it.id != id } }
+        saveToDisk()
+    }
+
+    private fun loadFromDisk() {
+        val ctx = appContext ?: return
+        try {
+            val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(KEY_DATA, null) ?: return
+            val arr = JSONArray(json)
+            val loaded = mutableListOf<SavedPlace>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                loaded += SavedPlace(
+                    id = o.getString("id"),
+                    name = o.getString("name"),
+                    lat = o.getDouble("lat"),
+                    lon = o.getDouble("lon"),
+                    ts = o.optLong("ts", System.currentTimeMillis())
+                )
+            }
+            _places.value = loaded
+        } catch (e: Exception) {
+            // corrupted/old cache format — just start empty, nothing to recover
+        }
+    }
+
+    private fun saveToDisk() {
+        val ctx = appContext ?: return
+        try {
+            val arr = JSONArray()
+            for (p in _places.value) {
+                arr.put(
+                    JSONObject()
+                        .put("id", p.id)
+                        .put("name", p.name)
+                        .put("lat", p.lat)
+                        .put("lon", p.lon)
+                        .put("ts", p.ts)
+                )
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY_DATA, arr.toString())
+                .apply()
+        } catch (e: Exception) {
+            // best-effort cache — losing it just means the saved places are gone
+        }
+    }
 }
