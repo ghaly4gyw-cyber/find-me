@@ -34,6 +34,14 @@ class MainActivity : AppCompatActivity() {
         private set
 
     private var bound = false
+    // Guards against calling bindService() more than once per onCreate..onStop
+    // window. onCreate's refreshPermissionState() and onStart's own calls can
+    // both reach startMesh() back-to-back on the main thread before the async
+    // onServiceConnected callback ever fires (so `bound` alone can't catch
+    // this) — without the guard, each extra bindService() call needs its own
+    // matching unbindService(), but onStop() only ever issues one, leaking a
+    // bind reference on every app foreground/background cycle.
+    private var meshBindRequested = false
     private lateinit var meshStatus: TextView
     private lateinit var permissionBar: android.view.View
     private lateinit var batteryBar: android.view.View
@@ -130,9 +138,7 @@ class MainActivity : AppCompatActivity() {
         refreshPermissionState()
         refreshBatteryState()
         refreshLocationServicesState()
-        if (Permissions.allGranted(this)) {
-            startMesh()
-        }
+        // refreshPermissionState() above already calls startMesh() when granted.
     }
 
     override fun onStop() {
@@ -141,6 +147,7 @@ class MainActivity : AppCompatActivity() {
             unbindService(connection)
             bound = false
         }
+        meshBindRequested = false
     }
 
     private fun refreshPermissionState() {
@@ -185,6 +192,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startMesh() {
+        if (meshBindRequested) return
+        meshBindRequested = true
         MeshForegroundService.start(this)
         val intent = Intent(this, MeshForegroundService::class.java)
         bindService(intent, connection, Context.BIND_AUTO_CREATE)
@@ -270,7 +279,14 @@ class MainActivity : AppCompatActivity() {
         ActivityWatcher.poke()
     }
 
+    /** Switches to one of the 6 bottom-tab screens. Also clears any back-stack
+     *  entries left over from drilling into a group chat or a post's comments —
+     *  without this, switching tabs while inside one of those left it on the
+     *  stack, so pressing system Back after hopping tabs could pop you into a
+     *  stale screen that no longer matched whichever tab was highlighted. Each
+     *  tab switch should start clean. */
     private fun showFragment(fragment: androidx.fragment.app.Fragment) {
+        supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(
                 R.anim.slide_in_right, R.anim.slide_out_left,
