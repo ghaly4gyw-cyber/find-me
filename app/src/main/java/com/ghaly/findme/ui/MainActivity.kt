@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private var bound = false
     private lateinit var meshStatus: TextView
     private lateinit var permissionBar: android.view.View
+    private lateinit var batteryBar: android.view.View
     private lateinit var tabButtons: List<Button>
     private var selectedTabIndex = 0
 
@@ -74,8 +75,12 @@ class MainActivity : AppCompatActivity() {
 
         meshStatus = findViewById(R.id.meshStatus)
         permissionBar = findViewById(R.id.permissionBar)
+        batteryBar = findViewById(R.id.batteryBar)
         findViewById<Button>(R.id.grantPermissionsButton).setOnClickListener {
             permissionLauncher.launch(Permissions.required())
+        }
+        findViewById<Button>(R.id.allowBatteryButton).setOnClickListener {
+            requestIgnoreBatteryOptimizations()
         }
 
         val nameButton = findViewById<TextView>(R.id.myNameButton)
@@ -109,6 +114,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         refreshPermissionState()
+        refreshBatteryState()
         if (Permissions.allGranted(this)) {
             startMesh()
         }
@@ -126,6 +132,27 @@ class MainActivity : AppCompatActivity() {
         val granted = Permissions.allGranted(this)
         permissionBar.visibility = if (granted) android.view.View.GONE else android.view.View.VISIBLE
         if (granted) startMesh()
+    }
+
+    /** Android aggressively kills background work unless the app is exempted from
+     *  battery optimization — without this the mesh/GPS can silently stop while the
+     *  phone is in someone's pocket, which defeats the whole point of the app. */
+    private fun refreshBatteryState() {
+        val powerManager = getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+        val ignoring = powerManager?.isIgnoringBatteryOptimizations(packageName) ?: true
+        batteryBar.visibility = if (ignoring) android.view.View.GONE else android.view.View.VISIBLE
+    }
+
+    private fun requestIgnoreBatteryOptimizations() {
+        try {
+            val intent = Intent(
+                android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                Uri.parse("package:$packageName")
+            )
+            startActivity(intent)
+        } catch (e: Exception) {
+            // some OEM skins block this intent outright — nothing more we can do here
+        }
     }
 
     private fun startMesh() {

@@ -67,4 +67,6 @@
     <string name="time_h_ago">il y a %1$d h</string>
     <string name="distance_m_away">à %1$d m</string>
     <string name="distance_km_away">à %1$.1f km</string>
+    <string name="battery_optimization_needed">Android peut arrêter Trouve-Moi en arrière-plan et casser le réseau. Autorisez-le à ignorer l\'optimisation de la batterie pour un suivi fiable.</string>
+    <string name="allow_battery">Autoriser</string>
 </resources>

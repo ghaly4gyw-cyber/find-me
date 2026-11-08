@@ -70,4 +70,6 @@
     <string name="time_h_ago">%1$d h ago</string>
     <string name="distance_m_away">%1$d m away</string>
     <string name="distance_km_away">%1$.1f km away</string>
+    <string name="battery_optimization_needed">Android may stop Find Me running in the background and break the mesh. Allow it to ignore battery optimization for reliable tracking.</string>
+    <string name="allow_battery">Allow</string>
 </resources>
