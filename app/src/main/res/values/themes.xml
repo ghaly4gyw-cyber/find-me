@@ -9,7 +9,7 @@
     </style>
 
     <!-- Rounded, ripple-backed pill button for primary tap actions. -->
-    <style name="FindMe.Button.Pill">
+    <style name="FindMe.Button.Pill" parent="android:Widget.Material.Button">
         <item name="android:background">@drawable/bg_button_pill</item>
         <item name="android:textColor">@color/sand_900</item>
         <item name="android:textStyle">bold</item>
