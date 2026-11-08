@@ -35,6 +35,21 @@ hardware, no subscription needed.
   relayed the same way as everything else.
 - **Roster + identity** — set your own display name, shown to everyone else
   on the mesh.
+- **Full profiles** — name, phone number, a short description, and a photo
+  (picked from the gallery, resized small before sending). Shared on the mesh
+  the same way everything else is, and visible to teammates.
+- **Offline radar map** — a dedicated Map tab draws you in the center and
+  every teammate as a dot placed by real bearing + distance (there's no
+  internet for real map tiles out there), with range rings for scale. Tap a
+  teammate's dot to see their full profile — name, phone, description — with
+  one-tap Call and WhatsApp buttons if they've shared a number.
+- **Arabic and French translations** — Mauritania's official languages, so
+  the app isn't English-only for the people actually using it in the field.
+  The UI mirrors right-to-left automatically in Arabic.
+- **Visual polish** — a cooler teal-night color palette, a highlighted active
+  tab, rounded ripple-backed cards, a pulsing SOS button while an alert is
+  active, a slowly rotating sweep + glowing dots on the radar map, and
+  smoother slide/fade transitions between screens.
 
 ## Not built yet
 
@@ -63,17 +78,22 @@ from outside the Play Store; that's expected for a sideloaded app, tap
 ```
 app/src/main/java/com/ghaly/findme/
   mesh/   — Nearby Connections wrapper, crypto, GPS tracking, voice record/play,
-            groups, foreground service, permissions, dead-man's-switch watchdog
-  model/  — data classes (Envelope, PeerPosition, ChatMessage, SosAlert, Group, Post...)
+            groups, profile storage, foreground service, permissions,
+            dead-man's-switch watchdog
+  model/  — data classes (Envelope, PeerPosition, ChatMessage, SosAlert, Group,
+            Post, Profile...)
   repo/   — in-memory state shared between the mesh layer and the UI
-  ui/     — MainActivity + screens (Peers / Chat / SOS / Posts / Groups)
+  ui/     — MainActivity + screens (Peers / Map / Chat / SOS / Posts / Groups),
+            the radar map view, profile dialogs
+app/src/main/res/values(-ar|-fr)/ — English/Arabic/French strings
 ```
 
 ## Testing status
 
 This was built and pushed without access to a real Android device, so it's
-only confirmed to **compile cleanly** (GitHub Actions build is green). It has
-**not** been confirmed to actually work between two real phones yet — that
-needs testing with two devices: install on both, grant permissions, and check
-that they find each other, share positions, and that chat/SOS/voice/groups
+only confirmed to **compile cleanly** (GitHub Actions build is green). The
+app has been confirmed to launch on a real phone. It has **not** been
+confirmed to actually mesh between two real phones yet — that needs testing
+with two devices: install on both, grant permissions, and check that they
+find each other, share positions/profiles, and that chat/SOS/voice/groups/map
 all actually arrive on the other phone.
