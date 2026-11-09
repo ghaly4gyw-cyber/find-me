@@ -62,6 +62,9 @@
     <string name="peer_action_stop_following">Stop following</string>
     <string name="now_following_fmt">Following %s</string>
     <string name="stopped_following_fmt">Stopped following %s</string>
+    <string name="peer_action_ring">Ring their phone</string>
+    <string name="ring_sent_fmt">Ringing %s\'s phone</string>
+    <string name="ring_in_range_only">That only works while they\'re still in direct range</string>
 
     <!-- Added during the localization pass: strings that used to be hardcoded
          English literals in the Kotlin code, now routed through resources so
@@ -115,6 +118,22 @@
         <item>Every 60 min</item>
         <item>Every 90 min</item>
         <item>Every 120 min</item>
+    </string-array>
+    <string name="weather_notification_channel">Pressure drop notice</string>
+    <string name="weather_notification_title">Pressure falling fast</string>
+    <string name="weather_notification_text_fmt">Dropped %.1f hPa in the last %d min — often a sign the weather is about to change.</string>
+
+    <string name="buddy_checkin_dialog_title">Buddy check-in</string>
+    <string name="buddy_checkin_notification_channel">Buddy check-in</string>
+    <string name="buddy_checkin_notification_title">You OK?</string>
+    <string name="buddy_checkin_notification_text">Tap \"I\'m OK\" — if nobody hears from you, the team gets the same alert as the no-touch watchdog.</string>
+    <string name="buddy_checkin_im_ok">I\'m OK</string>
+    <string-array name="buddy_checkin_interval_options">
+        <item>Off</item>
+        <item>Every 60 min</item>
+        <item>Every 90 min</item>
+        <item>Every 120 min</item>
+        <item>Every 180 min</item>
     </string-array>
 
     <string name="physical_signal_hint">No phone or mesh needed: blink the flashlight and beep the speaker in Morse SOS, in case someone can see or hear you nearby.</string>

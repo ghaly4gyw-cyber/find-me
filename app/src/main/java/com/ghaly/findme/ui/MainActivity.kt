@@ -140,6 +140,7 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<TextView>(R.id.languageButton).setOnClickListener { showLanguageDialog() }
         findViewById<TextView>(R.id.hydrationButton).setOnClickListener { showHydrationDialog() }
+        findViewById<TextView>(R.id.buddyCheckinButton).setOnClickListener { showBuddyCheckInDialog() }
 
         tabButtons = listOf(
             findViewById(R.id.tabPeers),
@@ -281,6 +282,39 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     com.ghaly.findme.mesh.HydrationReminder.setIntervalMinutes(this, minutes)
                     com.ghaly.findme.mesh.HydrationReminder.setEnabled(this, true)
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Same "Off is just the first option" pattern as the hydration dialog
+     *  above. Needs POST_NOTIFICATIONS to actually show the "You OK?" prompt
+     *  (requested elsewhere at startup, same as every other alert in this
+     *  app), but turning the feature on never depends on that having been
+     *  granted — if it's missing, the grace-window alert still fires on
+     *  schedule, the person just never saw the prompt that could have headed
+     *  it off. */
+    private fun showBuddyCheckInDialog() {
+        val options = resources.getStringArray(R.array.buddy_checkin_interval_options)
+        val minutesForIndex = intArrayOf(0, 60, 90, 120, 180)
+        val currentMinutes = if (com.ghaly.findme.mesh.BuddyCheckIn.enabled(this)) {
+            com.ghaly.findme.mesh.BuddyCheckIn.intervalMinutes(this)
+        } else {
+            0
+        }
+        val checkedIndex = minutesForIndex.indexOf(currentMinutes).let { if (it < 0) 0 else it }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.buddy_checkin_dialog_title)
+            .setSingleChoiceItems(options, checkedIndex) { dialog, index ->
+                val minutes = minutesForIndex[index]
+                if (minutes == 0) {
+                    com.ghaly.findme.mesh.BuddyCheckIn.setEnabled(this, false)
+                } else {
+                    com.ghaly.findme.mesh.BuddyCheckIn.setIntervalMinutes(this, minutes)
+                    com.ghaly.findme.mesh.BuddyCheckIn.setEnabled(this, true)
                 }
                 dialog.dismiss()
             }

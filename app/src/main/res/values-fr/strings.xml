@@ -62,6 +62,9 @@
     <string name="peer_action_stop_following">Arrêter de suivre</string>
     <string name="now_following_fmt">Suivi de %s</string>
     <string name="stopped_following_fmt">Suivi de %s arrêté</string>
+    <string name="peer_action_ring">Faire sonner son téléphone</string>
+    <string name="ring_sent_fmt">Téléphone de %s en train de sonner</string>
+    <string name="ring_in_range_only">Cela ne fonctionne que s\'il est encore à portée directe</string>
 
     <string name="status_in_range">à portée</string>
     <string name="status_last_known">dernière position connue</string>
@@ -112,6 +115,22 @@
         <item>Toutes les 60 min</item>
         <item>Toutes les 90 min</item>
         <item>Toutes les 120 min</item>
+    </string-array>
+    <string name="weather_notification_channel">Avis de baisse de pression</string>
+    <string name="weather_notification_title">Pression en chute rapide</string>
+    <string name="weather_notification_text_fmt">Baisse de %.1f hPa en %d min — souvent le signe d\'un changement de temps à venir.</string>
+
+    <string name="buddy_checkin_dialog_title">Pointage avec l\'équipe</string>
+    <string name="buddy_checkin_notification_channel">Pointage</string>
+    <string name="buddy_checkin_notification_title">Tout va bien ?</string>
+    <string name="buddy_checkin_notification_text">Appuyez sur \"Ça va\" — sans réponse, l\'équipe reçoit la même alerte que la veille d\'inactivité.</string>
+    <string name="buddy_checkin_im_ok">Ça va</string>
+    <string-array name="buddy_checkin_interval_options">
+        <item>Désactivé</item>
+        <item>Toutes les 60 min</item>
+        <item>Toutes les 90 min</item>
+        <item>Toutes les 120 min</item>
+        <item>Toutes les 180 min</item>
     </string-array>
 
     <string name="physical_signal_hint">Sans téléphone ni réseau : fait clignoter la lampe et biper le haut-parleur en SOS Morse, si quelqu\'un peut vous voir ou vous entendre à proximité.</string>

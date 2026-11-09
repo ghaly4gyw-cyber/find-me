@@ -269,7 +269,7 @@ class MeshManager(private val context: Context) {
 
     /** True if [deviceId] is someone we currently hold a live, direct Nearby
      *  Connections link to (not just someone we've heard about via relay). */
-    private fun isDirectNeighbor(deviceId: String): Boolean =
+    fun isDirectNeighbor(deviceId: String): Boolean =
         endpointToDevice.values.contains(deviceId)
 
     private fun handleDisconnect(endpointId: String) {
@@ -289,6 +289,10 @@ class MeshManager(private val context: Context) {
      *  position/chat envelope is what establishes that mapping in the first
      *  place and phones are usually connected for a while before anyone talks). */
     var onVoiceClip: ((bytes: ByteArray, senderName: String?) -> Unit)? = null
+
+    /** Set by the service to get notified when another phone pings us with
+     *  [sendRing] — "make some noise so I can find you." */
+    var onRingReceived: (() -> Unit)? = null
 
     private val payloadCallback = object : PayloadCallback() {
         override fun onPayloadReceived(endpointId: String, payload: Payload) {
@@ -358,9 +362,13 @@ class MeshManager(private val context: Context) {
                         // neighbor of ours at this moment. Getting this wrong on a
                         // desert safety app would tell someone help is right next to
                         // them when it's really hours away through several relays.
-                        connected = isDirectNeighbor(envelope.originId)
+                        connected = isDirectNeighbor(envelope.originId),
+                        batteryPct = obj.optInt("battery", -1).let { if (it in 0..100) it else null }
                     )
                 )
+            }
+            MsgType.RING -> {
+                onRingReceived?.invoke()
             }
             MsgType.CHAT -> {
                 val obj = JSONObject(envelope.payload)
@@ -549,11 +557,11 @@ class MeshManager(private val context: Context) {
     fun myLocation(): Pair<Double, Double>? = if (hasFix) lastLat to lastLon else null
 
     /** Call whenever we get a fresh GPS fix; broadcasts it and remembers it for new connections. */
-    fun sendPosition(lat: Double, lon: Double) {
+    fun sendPosition(lat: Double, lon: Double, batteryPct: Int? = null) {
         lastLat = lat
         lastLon = lon
         hasFix = true
-        broadcast(buildPositionEnvelope(lat, lon))
+        broadcast(buildPositionEnvelope(lat, lon, batteryPct))
     }
 
     /** [targetId] null = send to everyone; otherwise a direct message to just that peer
@@ -601,6 +609,29 @@ class MeshManager(private val context: Context) {
     }
 
     fun directPeerCount(): Int = connectedEndpoints.size
+
+    /** Makes a specific nearby phone flash/beep its own physical SOS signal
+     *  for a few seconds — for finding someone or something (a dropped
+     *  phone) that's out of sight but still in direct mesh range. Only
+     *  works, and only makes sense, for a live direct neighbor — this isn't
+     *  a mesh-wide broadcast, so the hop is pinned at MAX_HOP: the recipient
+     *  never relays it onward. Returns false if that phone isn't a direct
+     *  neighbor right now. */
+    fun sendRing(targetDeviceId: String): Boolean {
+        val endpointId = endpointToDevice.entries.firstOrNull { it.value == targetDeviceId }?.key
+            ?: return false
+        val envelope = Envelope(
+            id = UUID.randomUUID().toString(),
+            type = MsgType.RING,
+            originId = myId,
+            originName = myName,
+            hop = MAX_HOP,
+            ts = System.currentTimeMillis(),
+            payload = "{}"
+        )
+        sendEnvelopeTo(endpointId, envelope)
+        return true
+    }
 
     fun sendGroupMessage(groupId: String, text: String): ChatMessage? {
         val group = GroupRepository.findById(context, groupId) ?: return null
@@ -849,7 +880,9 @@ class MeshManager(private val context: Context) {
                 originName = peer.name,
                 hop = 0,
                 ts = peer.ts,
-                payload = JSONObject().put("lat", peer.lat).put("lon", peer.lon).toString()
+                payload = JSONObject().put("lat", peer.lat).put("lon", peer.lon).let {
+                    if (peer.batteryPct != null) it.put("battery", peer.batteryPct) else it
+                }.toString()
             ))
         }
         for (profile in ProfileRepository.profiles.value.values) {
@@ -929,14 +962,16 @@ class MeshManager(private val context: Context) {
         }
     }
 
-    private fun buildPositionEnvelope(lat: Double, lon: Double) = Envelope(
+    private fun buildPositionEnvelope(lat: Double, lon: Double, batteryPct: Int?) = Envelope(
         id = UUID.randomUUID().toString(),
         type = MsgType.POSITION,
         originId = myId,
         originName = myName,
         hop = 0,
         ts = System.currentTimeMillis(),
-        payload = JSONObject().put("lat", lat).put("lon", lon).toString()
+        payload = JSONObject().put("lat", lat).put("lon", lon).let {
+            if (batteryPct != null) it.put("battery", batteryPct) else it
+        }.toString()
     )
 
     // ------------------------------------------------------------------ (de)serialize

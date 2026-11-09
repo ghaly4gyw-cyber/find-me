@@ -236,24 +236,41 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
      *  cancelled, so you can keep walking while glancing at the radar. */
     private fun showPeerActionMenu(radar: RadarMapView, peer: PeerPosition) {
         val isFollowing = radar.followedDeviceId == peer.deviceId
-        val options = if (isFollowing) {
-            arrayOf(getString(R.string.peer_action_view_profile), getString(R.string.peer_action_stop_following))
-        } else {
-            arrayOf(getString(R.string.peer_action_view_profile), getString(R.string.peer_action_follow))
-        }
+        val mesh = (requireActivity() as? MainActivity)?.mesh
+        // Ringing only makes sense — and only works — for someone we hold a
+        // live direct Bluetooth/Wi-Fi link to right now, not someone we only
+        // know about via multi-hop relay. Hiding the option otherwise avoids
+        // offering something that would just silently fail.
+        val canRing = mesh?.isDirectNeighbor(peer.deviceId) == true
+        val options = mutableListOf(
+            getString(R.string.peer_action_view_profile),
+            if (isFollowing) getString(R.string.peer_action_stop_following) else getString(R.string.peer_action_follow)
+        )
+        if (canRing) options.add(getString(R.string.peer_action_ring))
+
         AlertDialog.Builder(requireContext())
             .setTitle(peer.name)
-            .setItems(options) { _, which ->
-                if (which == 0) {
-                    showPeerProfileDialog(peer, radar.myLocation)
-                } else if (isFollowing) {
-                    radar.followedDeviceId = null
-                    updateNavigationHint()
-                    Toast.makeText(requireContext(), getString(R.string.stopped_following_fmt, peer.name), Toast.LENGTH_SHORT).show()
-                } else {
-                    radar.followedDeviceId = peer.deviceId
-                    updateNavigationHint()
-                    Toast.makeText(requireContext(), getString(R.string.now_following_fmt, peer.name), Toast.LENGTH_SHORT).show()
+            .setItems(options.toTypedArray()) { _, which ->
+                when (which) {
+                    0 -> showPeerProfileDialog(peer, radar.myLocation)
+                    1 -> if (isFollowing) {
+                        radar.followedDeviceId = null
+                        updateNavigationHint()
+                        Toast.makeText(requireContext(), getString(R.string.stopped_following_fmt, peer.name), Toast.LENGTH_SHORT).show()
+                    } else {
+                        radar.followedDeviceId = peer.deviceId
+                        updateNavigationHint()
+                        Toast.makeText(requireContext(), getString(R.string.now_following_fmt, peer.name), Toast.LENGTH_SHORT).show()
+                    }
+                    2 -> {
+                        val sent = mesh?.sendRing(peer.deviceId) == true
+                        val message = if (sent) {
+                            getString(R.string.ring_sent_fmt, peer.name)
+                        } else {
+                            getString(R.string.ring_in_range_only)
+                        }
+                        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
             .show()

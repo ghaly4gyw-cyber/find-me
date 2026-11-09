@@ -62,6 +62,9 @@
     <string name="peer_action_stop_following">إيقاف التتبّع</string>
     <string name="now_following_fmt">يتم تتبّع %s</string>
     <string name="stopped_following_fmt">تم إيقاف تتبّع %s</string>
+    <string name="peer_action_ring">تشغيل صفارة هاتفه</string>
+    <string name="ring_sent_fmt">تم تشغيل صفارة هاتف %s</string>
+    <string name="ring_in_range_only">هذا يعمل فقط إذا كان لا يزال في المدى المباشر</string>
 
     <string name="status_in_range">في المدى</string>
     <string name="status_last_known">آخر موقع معروف</string>
@@ -112,6 +115,22 @@
         <item>كل 60 دقيقة</item>
         <item>كل 90 دقيقة</item>
         <item>كل 120 دقيقة</item>
+    </string-array>
+    <string name="weather_notification_channel">تنبيه انخفاض الضغط الجوي</string>
+    <string name="weather_notification_title">انخفاض سريع في الضغط الجوي</string>
+    <string name="weather_notification_text_fmt">انخفض %.1f هكتوباسكال خلال آخر %d دقيقة — غالبًا علامة على تغيّر قادم في الطقس.</string>
+
+    <string name="buddy_checkin_dialog_title">تفقّد الحال مع الفريق</string>
+    <string name="buddy_checkin_notification_channel">تفقّد الحال</string>
+    <string name="buddy_checkin_notification_title">هل أنت بخير؟</string>
+    <string name="buddy_checkin_notification_text">اضغط \"أنا بخير\" — إذا لم يصل رد منك، يصل للفريق نفس تنبيه عدم اللمس.</string>
+    <string name="buddy_checkin_im_ok">أنا بخير</string>
+    <string-array name="buddy_checkin_interval_options">
+        <item>معطّل</item>
+        <item>كل 60 دقيقة</item>
+        <item>كل 90 دقيقة</item>
+        <item>كل 120 دقيقة</item>
+        <item>كل 180 دقيقة</item>
     </string-array>
 
     <string name="physical_signal_hint">دون حاجة إلى هاتف أو شبكة: يُومض الفلاش ويُصدر صفارة من السماعة بشفرة مورس SOS، في حال كان أحد قريبًا يمكنه رؤيتك أو سماعك.</string>

@@ -27,6 +27,17 @@
             tools:text="Miner-3F2A" />
 
         <TextView
+            android:id="@+id/peerBattery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:layout_marginEnd="8dp"
+            android:textColor="@color/sand_300"
+            android:visibility="gone"
+            tools:text="🔋 42%"
+            tools:visibility="visible" />
+
+        <TextView
             android:id="@+id/peerDirection"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

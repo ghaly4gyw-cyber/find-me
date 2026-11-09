@@ -111,7 +111,8 @@ object PeerRepository {
                     lat = o.getDouble("lat"),
                     lon = o.getDouble("lon"),
                     ts = o.getLong("ts"),
-                    connected = false // nothing is "live" right after a restart
+                    connected = false, // nothing is "live" right after a restart
+                    batteryPct = o.optInt("battery", -1).let { if (it in 0..100) it else null }
                 )
             }
             if (loaded.isNotEmpty()) _peers.value = loaded
@@ -132,6 +133,7 @@ object PeerRepository {
                         .put("lat", p.lat)
                         .put("lon", p.lon)
                         .put("ts", p.ts)
+                        .let { if (p.batteryPct != null) it.put("battery", p.batteryPct) else it }
                 )
             }
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()

@@ -50,6 +50,17 @@
             android:background="@drawable/bg_tab_item_selected" />
 
         <TextView
+            android:id="@+id/buddyCheckinButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="🤝"
+            android:textSize="18sp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="8dp"
+            android:background="@drawable/bg_tab_item_selected" />
+
+        <TextView
             android:id="@+id/languageButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

@@ -63,6 +63,7 @@ class PeerAdapter(private val onClick: (PeerPosition) -> Unit = {}) : RecyclerVi
     class VH(v: View) : RecyclerView.ViewHolder(v) {
         val root: View = v
         val name: android.widget.TextView = v.findViewById(R.id.peerName)
+        val battery: android.widget.TextView = v.findViewById(R.id.peerBattery)
         val direction: android.widget.TextView = v.findViewById(R.id.peerDirection)
         val status: android.widget.TextView = v.findViewById(R.id.peerStatus)
         val coordsView: android.widget.TextView = v.findViewById(R.id.peerCoords)
@@ -86,6 +87,21 @@ class PeerAdapter(private val onClick: (PeerPosition) -> Unit = {}) : RecyclerVi
         holder.status.setTextColor(
             if (p.connected) 0xFF7CCB7C.toInt() else 0xFFD8C3A5.toInt()
         )
+
+        val battery = p.batteryPct
+        if (battery != null) {
+            holder.battery.visibility = View.VISIBLE
+            holder.battery.text = "🔋 $battery%"
+            // Flag a critically low battery distinctly from an ordinary one —
+            // this is the "may go dark soon, not necessarily in trouble" signal,
+            // deliberately a calmer color than the SOS/inactivity red used
+            // elsewhere so it doesn't read as an emergency.
+            holder.battery.setTextColor(
+                if (battery <= 15) 0xFFF2A541.toInt() else 0xFFAFC9C7.toInt()
+            )
+        } else {
+            holder.battery.visibility = View.GONE
+        }
 
         val mine = myLocation
         if (mine != null && (p.lat != 0.0 || p.lon != 0.0)) {

@@ -1,7 +1,7 @@
 package com.ghaly.findme.model
 
 /** Kinds of message that travel over the mesh. */
-enum class MsgType { POSITION, CHAT, SOS, SOS_CLEAR, INACTIVE, INACTIVE_CLEAR, POST, POST_COMMENT, GROUP_CHAT, PROFILE, PLACE, LISTING }
+enum class MsgType { POSITION, CHAT, SOS, SOS_CLEAR, INACTIVE, INACTIVE_CLEAR, POST, POST_COMMENT, GROUP_CHAT, PROFILE, PLACE, LISTING, RING }
 
 /**
  * Envelope every mesh message is wrapped in, so any device can relay it
@@ -29,7 +29,12 @@ data class PeerPosition(
     val lon: Double,
     val ts: Long,
     /** true while we have a live mesh connection to this peer right now */
-    val connected: Boolean
+    val connected: Boolean,
+    /** Battery percentage riding along with their last position beacon, or
+     *  null if they're on an older build that doesn't send it, or we just
+     *  haven't heard from them yet. Lets the team tell "about to go dark
+     *  from a dead battery" apart from "actually in trouble." */
+    val batteryPct: Int? = null
 )
 
 data class ChatMessage(
