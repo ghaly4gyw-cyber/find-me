@@ -1,7 +1,7 @@
 package com.ghaly.findme.model
 
 /** Kinds of message that travel over the mesh. */
-enum class MsgType { POSITION, CHAT, SOS, SOS_CLEAR, INACTIVE, INACTIVE_CLEAR, POST, POST_COMMENT, GROUP_CHAT, PROFILE }
+enum class MsgType { POSITION, CHAT, SOS, SOS_CLEAR, INACTIVE, INACTIVE_CLEAR, POST, POST_COMMENT, GROUP_CHAT, PROFILE, PLACE }
 
 /**
  * Envelope every mesh message is wrapped in, so any device can relay it
@@ -88,5 +88,9 @@ data class SavedPlace(
     val name: String,
     val lat: Double,
     val lon: Double,
-    val ts: Long
+    val ts: Long,
+    /** null = private, only ever saved locally. Non-null = the name of
+     *  whoever shared this place with the team over the mesh (which may
+     *  be this same device, if the user chose to share one of their own). */
+    val sharedByName: String? = null
 )

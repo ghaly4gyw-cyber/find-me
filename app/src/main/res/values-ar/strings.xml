@@ -118,6 +118,9 @@
     <string name="now_navigating_fmt">التوجّه إلى %s</string>
     <string name="stopped_navigating_fmt">تم إيقاف التوجّه إلى %s</string>
     <string name="place_deleted_fmt">تم حذف \"%s\"</string>
+    <string name="share_with_team">مشاركة مع الفريق</string>
+    <string name="shared_by_fmt">شارك به %s</string>
+    <string name="place_shared_fmt">تمت مشاركة \"%s\" مع الفريق</string>
 
     <string name="export_report">مشاركة التقرير</string>
     <string name="report_title">إيجادني — تقرير السلامة</string>

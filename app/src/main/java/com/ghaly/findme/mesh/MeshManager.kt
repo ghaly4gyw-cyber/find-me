@@ -13,6 +13,7 @@ import com.ghaly.findme.repo.ChatRepository
 import com.ghaly.findme.repo.InactivityRepository
 import com.ghaly.findme.repo.PeerRepository
 import com.ghaly.findme.repo.ProfileRepository
+import com.ghaly.findme.repo.SavedPlaceRepository
 import com.ghaly.findme.repo.SosRepository
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.nearby.Nearby
@@ -470,6 +471,17 @@ class MeshManager(private val context: Context) {
                     )
                 )
             }
+            MsgType.PLACE -> {
+                val obj = JSONObject(envelope.payload)
+                SavedPlaceRepository.receiveShared(
+                    placeId = obj.optString("placeId", ""),
+                    name = obj.optString("name", ""),
+                    lat = obj.optDouble("lat", 0.0),
+                    lon = obj.optDouble("lon", 0.0),
+                    ts = envelope.ts,
+                    sharedByName = envelope.originName
+                )
+            }
         }
     }
 
@@ -709,6 +721,31 @@ class MeshManager(private val context: Context) {
         )
     }
 
+    /** Broadcasts a saved place to the whole team, e.g. a water source or
+     *  where the truck is parked. The envelope's own id is random (so it
+     *  dedupes/relays normally for this hop), but [place.id] travels inside
+     *  the payload as a stable "placeId" — that's what every phone uses to
+     *  recognize it's the same place again later, including when it comes
+     *  back around through the carrier-pigeon cache replay below. */
+    fun sharePlace(place: com.ghaly.findme.model.SavedPlace) {
+        val payload = JSONObject()
+            .put("placeId", place.id)
+            .put("name", place.name)
+            .put("lat", place.lat)
+            .put("lon", place.lon)
+        val envelope = Envelope(
+            id = UUID.randomUUID().toString(),
+            type = MsgType.PLACE,
+            originId = myId,
+            originName = myName,
+            hop = 0,
+            ts = place.ts,
+            payload = payload.toString()
+        )
+        seenIds.add(envelope.id)
+        broadcast(envelope)
+    }
+
     /** Replays everything we currently know about the rest of the mesh to a
      *  freshly-connected endpoint, as fresh (hop = 0) envelopes under each
      *  original person's own identity — so it keeps traveling just like a
@@ -763,6 +800,23 @@ class MeshManager(private val context: Context) {
                 hop = 0,
                 ts = alert.ts,
                 payload = JSONObject().put("lat", alert.lat).put("lon", alert.lon).toString()
+            ))
+        }
+        for (place in SavedPlaceRepository.places.value) {
+            val sharedBy = place.sharedByName ?: continue // never leak purely-private places
+            sendEnvelopeTo(endpointId, Envelope(
+                id = UUID.randomUUID().toString(),
+                type = MsgType.PLACE,
+                originId = place.id, // not a real device id, but fine: receivers only read originName
+                originName = sharedBy,
+                hop = 0,
+                ts = place.ts,
+                payload = JSONObject()
+                    .put("placeId", place.id)
+                    .put("name", place.name)
+                    .put("lat", place.lat)
+                    .put("lon", place.lon)
+                    .toString()
             ))
         }
     }

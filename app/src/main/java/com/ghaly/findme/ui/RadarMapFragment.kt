@@ -188,13 +188,25 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         }
         val input = EditText(requireContext())
         input.hint = getString(R.string.save_place_dialog_hint)
+        val shareCheckbox = android.widget.CheckBox(requireContext())
+        shareCheckbox.text = getString(R.string.share_with_team)
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        val container = android.widget.LinearLayout(requireContext())
+        container.orientation = android.widget.LinearLayout.VERTICAL
+        container.setPadding(padding, padding / 2, padding, 0)
+        container.addView(input)
+        container.addView(shareCheckbox)
         AlertDialog.Builder(requireContext())
             .setTitle(R.string.save_place_dialog_title)
-            .setView(input)
+            .setView(container)
             .setPositiveButton(R.string.save) { _, _ ->
                 val name = input.text?.toString()?.trim().orEmpty()
                     .ifEmpty { getString(R.string.map_center_you) }
-                SavedPlaceRepository.add(name, location.first, location.second)
+                val mesh = (requireActivity() as? MainActivity)?.mesh
+                val sharedByName = if (shareCheckbox.isChecked)
+                    com.ghaly.findme.mesh.DeviceIdentity.name(requireContext()) else null
+                val place = SavedPlaceRepository.add(name, location.first, location.second, sharedByName)
+                if (sharedByName != null) mesh?.sharePlace(place)
                 Toast.makeText(requireContext(), getString(R.string.place_saved_fmt, name), Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -212,13 +224,15 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         }
         val mine = radar.myLocation
         val labels = places.map { place ->
-            if (mine != null) {
+            val base = if (mine != null) {
                 val results = FloatArray(2)
                 android.location.Location.distanceBetween(mine.first, mine.second, place.lat, place.lon, results)
                 "${place.name}  ·  ${distanceLabel(results[0])} ${bearingArrow(results[1])}"
             } else {
                 place.name
             }
+            val shared = place.sharedByName
+            if (shared != null) "$base  ·  ${getString(R.string.shared_by_fmt, shared)}" else base
         }.toTypedArray()
         AlertDialog.Builder(requireContext())
             .setTitle(R.string.my_places)
@@ -231,13 +245,17 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
      *  tapping its marker on the radar or picking it from the full list. */
     private fun showPlaceActionMenu(radar: RadarMapView, place: SavedPlace) {
         val isNavigating = radar.followedPlaceId == place.id
+        val alreadyShared = place.sharedByName != null
         val options = mutableListOf(
             getString(if (isNavigating) R.string.place_action_stop_navigating else R.string.place_action_navigate),
             getString(R.string.place_action_rename),
             getString(R.string.place_action_delete)
         )
+        if (!alreadyShared) options.add(getString(R.string.share_with_team))
+        val title = if (place.sharedByName != null)
+            "${place.name}  (${getString(R.string.shared_by_fmt, place.sharedByName)})" else place.name
         AlertDialog.Builder(requireContext())
-            .setTitle(place.name)
+            .setTitle(title)
             .setItems(options.toTypedArray()) { _, which ->
                 when (which) {
                     0 -> {
@@ -256,6 +274,14 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                         if (radar.followedPlaceId == place.id) { radar.followedPlaceId = null; updateNavigationHint() }
                         SavedPlaceRepository.remove(place.id)
                         Toast.makeText(requireContext(), getString(R.string.place_deleted_fmt, place.name), Toast.LENGTH_SHORT).show()
+                    }
+                    3 -> {
+                        val myName = com.ghaly.findme.mesh.DeviceIdentity.name(requireContext())
+                        val shared = SavedPlaceRepository.markShared(place.id, myName)
+                        if (shared != null) {
+                            (requireActivity() as? MainActivity)?.mesh?.sharePlace(shared)
+                            Toast.makeText(requireContext(), getString(R.string.place_shared_fmt, place.name), Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }

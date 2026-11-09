@@ -121,6 +121,9 @@
     <string name="now_navigating_fmt">Navigating to %s</string>
     <string name="stopped_navigating_fmt">Stopped navigating to %s</string>
     <string name="place_deleted_fmt">Deleted \"%s\"</string>
+    <string name="share_with_team">Share with team</string>
+    <string name="shared_by_fmt">shared by %s</string>
+    <string name="place_shared_fmt">\"%s\" shared with the team</string>
 
     <string name="export_report">Share report</string>
     <string name="report_title">Find Me — Safety Report</string>

@@ -546,13 +546,14 @@ object SavedPlaceRepository {
         loadFromDisk()
     }
 
-    fun add(name: String, lat: Double, lon: Double): SavedPlace {
+    fun add(name: String, lat: Double, lon: Double, sharedByName: String? = null): SavedPlace {
         val place = SavedPlace(
             id = UUID.randomUUID().toString(),
             name = name,
             lat = lat,
             lon = lon,
-            ts = System.currentTimeMillis()
+            ts = System.currentTimeMillis(),
+            sharedByName = sharedByName
         )
         _places.update { it + place }
         saveToDisk()
@@ -566,6 +567,41 @@ object SavedPlaceRepository {
 
     fun remove(id: String) {
         _places.update { list -> list.filter { it.id != id } }
+        saveToDisk()
+    }
+
+    /** Marks an already-saved (previously private) place as now shared with
+     *  the team under [sharedByName], returning the updated place so the
+     *  caller can broadcast it — or null if no such place exists. */
+    fun markShared(id: String, sharedByName: String): SavedPlace? {
+        var updated: SavedPlace? = null
+        _places.update { list -> list.map {
+            if (it.id == id) it.copy(sharedByName = sharedByName).also { p -> updated = p } else it
+        } }
+        if (updated != null) saveToDisk()
+        return updated
+    }
+
+    /** A place shared by someone (possibly ourselves) over the mesh.
+     *  [placeId] is the place's own stable id — fixed forever once first
+     *  shared, separate from whatever envelope id carried it this time —
+     *  so repeated carrier-pigeon replays of the same place update the
+     *  existing entry instead of piling up duplicates. */
+    fun receiveShared(placeId: String, name: String, lat: Double, lon: Double, ts: Long, sharedByName: String) {
+        val existing = _places.value.find { it.id == placeId }
+        if (existing != null) {
+            // Already known — refresh name in case it was renamed upstream,
+            // but never overwrite a newer local copy with a stale replay.
+            if (ts >= existing.ts) {
+                _places.update { list -> list.map {
+                    if (it.id == placeId) it.copy(name = name, ts = ts, sharedByName = sharedByName) else it
+                } }
+                saveToDisk()
+            }
+            return
+        }
+        val place = SavedPlace(id = placeId, name = name, lat = lat, lon = lon, ts = ts, sharedByName = sharedByName)
+        _places.update { it + place }
         saveToDisk()
     }
 
@@ -583,7 +619,8 @@ object SavedPlaceRepository {
                     name = o.getString("name"),
                     lat = o.getDouble("lat"),
                     lon = o.getDouble("lon"),
-                    ts = o.optLong("ts", System.currentTimeMillis())
+                    ts = o.optLong("ts", System.currentTimeMillis()),
+                    sharedByName = o.optString("sharedByName", "").ifEmpty { null }
                 )
             }
             _places.value = loaded
@@ -604,6 +641,7 @@ object SavedPlaceRepository {
                         .put("lat", p.lat)
                         .put("lon", p.lon)
                         .put("ts", p.ts)
+                        .put("sharedByName", p.sharedByName ?: "")
                 )
             }
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
