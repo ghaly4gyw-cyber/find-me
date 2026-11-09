@@ -251,7 +251,7 @@ class MeshManager(private val context: Context) {
             connectedEndpoints.add(endpointId)
             // Introduce ourselves so the other side can map endpointId -> deviceId,
             // and so it immediately has our last known position and profile.
-            sendEnvelopeTo(endpointId, buildPositionEnvelope(lastLat, lastLon))
+            sendEnvelopeTo(endpointId, buildPositionEnvelope(lastLat, lastLon, lastBatteryPct))
             sendEnvelopeTo(endpointId, buildProfileEnvelope())
             // "Carrier pigeon" relay: also hand over everything we've cached about
             // the rest of the mesh (other people's last known positions/profiles and
@@ -552,6 +552,7 @@ class MeshManager(private val context: Context) {
     @Volatile private var lastLat: Double = 0.0
     @Volatile private var lastLon: Double = 0.0
     @Volatile private var hasFix: Boolean = false
+    @Volatile private var lastBatteryPct: Int? = null
 
     /** My own last known GPS fix, or null if we don't have one yet. */
     fun myLocation(): Pair<Double, Double>? = if (hasFix) lastLat to lastLon else null
@@ -561,6 +562,7 @@ class MeshManager(private val context: Context) {
         lastLat = lat
         lastLon = lon
         hasFix = true
+        lastBatteryPct = batteryPct
         broadcast(buildPositionEnvelope(lat, lon, batteryPct))
     }
 
