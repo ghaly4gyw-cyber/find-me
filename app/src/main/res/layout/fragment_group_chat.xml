@@ -15,25 +15,64 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:padding="8dp"
         android:background="@color/sand_700">
 
-        <EditText
-            android:id="@+id/groupChatInput"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:id="@+id/groupChatPhotoPreviewRow"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="@string/chat_hint"
-            android:textColor="@color/white"
-            android:textColorHint="@color/sand_300"
-            android:inputType="text" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:visibility="gone">
 
-        <Button
-            android:id="@+id/groupChatSendButton"
-            android:layout_width="wrap_content"
+            <ImageView
+                android:id="@+id/groupChatPhotoPreview"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="8dp"
+                android:background="@color/sand_900"
+                android:scaleType="centerCrop" />
+
+            <Button
+                android:id="@+id/clearGroupChatPhotoButton"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/remove_photo"
+                android:textColor="@color/amber_500" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/send" />
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/attachGroupChatPhotoButton"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/attach_photo"
+                android:textColor="@color/teal_400" />
+
+            <EditText
+                android:id="@+id/groupChatInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="@string/chat_hint"
+                android:textColor="@color/white"
+                android:textColorHint="@color/sand_300"
+                android:inputType="text" />
+
+            <Button
+                android:id="@+id/groupChatSendButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/send" />
+        </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>

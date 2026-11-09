@@ -45,7 +45,9 @@ data class ChatMessage(
     val ts: Long,
     val isMine: Boolean = false,
     /** null = sent to everyone; otherwise the deviceId of the one intended recipient. */
-    val targetId: String? = null
+    val targetId: String? = null,
+    /** Resized/compressed JPEG, base64-encoded — same shape as Profile/MarketListing photos. */
+    val photoBase64: String? = null
 )
 
 data class SosAlert(

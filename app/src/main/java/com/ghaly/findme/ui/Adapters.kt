@@ -132,6 +132,7 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.VH>() {
         val row: View = v.findViewById(R.id.bubbleRow)
         val sender: android.widget.TextView = v.findViewById(R.id.senderName)
         val text: android.widget.TextView = v.findViewById(R.id.messageText)
+        val photo: android.widget.ImageView = v.findViewById(R.id.messagePhoto)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -145,7 +146,26 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.VH>() {
     override fun onBindViewHolder(holder: VH, position: Int) {
         val m = items[position]
         holder.sender.text = if (m.isMine) holder.row.context.getString(R.string.you_label) else m.senderName
-        holder.text.text = m.text
+        // A photo can be sent with no caption, so don't leave an empty bubble
+        // sitting above the picture in that case.
+        if (m.text.isEmpty()) {
+            holder.text.visibility = View.GONE
+        } else {
+            holder.text.visibility = View.VISIBLE
+            holder.text.text = m.text
+        }
+        if (m.photoBase64 != null) {
+            try {
+                val bytes = android.util.Base64.decode(m.photoBase64, android.util.Base64.NO_WRAP)
+                val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                holder.photo.setImageBitmap(bitmap)
+                holder.photo.visibility = View.VISIBLE
+            } catch (e: Exception) {
+                holder.photo.visibility = View.GONE
+            }
+        } else {
+            holder.photo.visibility = View.GONE
+        }
         // Bubble side (mine = right, theirs = left) is a pure layout question,
         // so it's set with absolute Gravity on the row — NOT layoutDirection.
         // Forcing layoutDirection here used to also flip how the message text

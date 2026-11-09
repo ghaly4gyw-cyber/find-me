@@ -26,4 +26,13 @@
         android:maxWidth="260dp"
         tools:text="Heading east along the ridge, anyone near?" />
 
+    <ImageView
+        android:id="@+id/messagePhoto"
+        android:layout_width="180dp"
+        android:layout_height="180dp"
+        android:layout_marginTop="4dp"
+        android:background="@color/sand_900"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
+
 </LinearLayout>

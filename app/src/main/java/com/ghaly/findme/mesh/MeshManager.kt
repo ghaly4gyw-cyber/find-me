@@ -392,7 +392,8 @@ class MeshManager(private val context: Context) {
                             text = obj.optString("text", ""),
                             ts = envelope.ts,
                             isMine = false,
-                            targetId = targetId
+                            targetId = targetId,
+                            photoBase64 = obj.optString("photo", "").ifEmpty { null }
                         )
                     )
                 }
@@ -461,6 +462,13 @@ class MeshManager(private val context: Context) {
                 if (group != null) {
                     val plaintext = Crypto.decrypt(ct, group.keyBase64)
                     if (plaintext != null) {
+                        // The photo, if any, travels as its own ciphertext field
+                        // ("ctPhoto") rather than being bundled into the same
+                        // encrypted blob as the text — keeps the two independent
+                        // so a photo-less message's payload doesn't grow just
+                        // because the group sometimes shares photos.
+                        val ctPhoto = obj.optString("ctPhoto", "")
+                        val photo = if (ctPhoto.isNotEmpty()) Crypto.decrypt(ctPhoto, group.keyBase64) else null
                         com.ghaly.findme.repo.GroupChatRepository.add(
                             groupId,
                             ChatMessage(
@@ -469,7 +477,8 @@ class MeshManager(private val context: Context) {
                                 senderName = envelope.originName,
                                 text = plaintext,
                                 ts = envelope.ts,
-                                isMine = false
+                                isMine = false,
+                                photoBase64 = photo
                             )
                         )
                     }
@@ -586,9 +595,10 @@ class MeshManager(private val context: Context) {
 
     /** [targetId] null = send to everyone; otherwise a direct message to just that peer
      *  (still physically relayed by everyone, but only shown by the recipient). */
-    fun sendChat(text: String, targetId: String? = null): ChatMessage {
+    fun sendChat(text: String, targetId: String? = null, photoBase64: String? = null): ChatMessage {
         val payload = JSONObject().put("text", text)
         if (targetId != null) payload.put("to", targetId)
+        if (photoBase64 != null) payload.put("photo", photoBase64)
         val envelope = Envelope(
             id = UUID.randomUUID().toString(),
             type = MsgType.CHAT,
@@ -607,7 +617,8 @@ class MeshManager(private val context: Context) {
             text = text,
             ts = envelope.ts,
             isMine = true,
-            targetId = targetId
+            targetId = targetId,
+            photoBase64 = photoBase64
         )
     }
 
@@ -653,9 +664,13 @@ class MeshManager(private val context: Context) {
         return true
     }
 
-    fun sendGroupMessage(groupId: String, text: String): ChatMessage? {
+    fun sendGroupMessage(groupId: String, text: String, photoBase64: String? = null): ChatMessage? {
         val group = GroupRepository.findById(context, groupId) ?: return null
         val ct = Crypto.encrypt(text, group.keyBase64)
+        val payload = JSONObject().put("groupId", groupId).put("ct", ct)
+        if (photoBase64 != null) {
+            payload.put("ctPhoto", Crypto.encrypt(photoBase64, group.keyBase64))
+        }
         val envelope = Envelope(
             id = UUID.randomUUID().toString(),
             type = MsgType.GROUP_CHAT,
@@ -663,7 +678,7 @@ class MeshManager(private val context: Context) {
             originName = myName,
             hop = 0,
             ts = System.currentTimeMillis(),
-            payload = JSONObject().put("groupId", groupId).put("ct", ct).toString()
+            payload = payload.toString()
         )
         seenIds.add(envelope.id)
         broadcast(envelope)
@@ -673,7 +688,8 @@ class MeshManager(private val context: Context) {
             senderName = myName,
             text = text,
             ts = envelope.ts,
-            isMine = true
+            isMine = true,
+            photoBase64 = photoBase64
         )
         com.ghaly.findme.repo.GroupChatRepository.add(groupId, mine)
         return mine
