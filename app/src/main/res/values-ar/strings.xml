@@ -124,6 +124,8 @@
     <string name="clear_trail_dialog_title">حذف مسار التنقل</string>
     <string name="clear_trail_dialog_message">سيؤدي هذا إلى حذف المسار المسجَّل من الخريطة على هذا الهاتف. لا يمكن التراجع عن هذا الإجراء.</string>
     <string name="trail_cleared">تم حذف المسار</string>
+    <string name="daylight_remaining_fmt">ضوء النهار: باقٍ %s</string>
+    <string name="night_until_sunrise_fmt">ظلام · الشروق بعد %s</string>
 
     <string name="export_report">مشاركة التقرير</string>
     <string name="report_title">إيجادني — تقرير السلامة</string>

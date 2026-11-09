@@ -51,4 +51,10 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("org.json:json:20240303")
+
+    // Sunset/sunrise calculation (NOAA solar position algorithm), used for the
+    // "daylight remaining" indicator. Pure Java, no network, no dependencies —
+    // matters here since a wrong hand-rolled formula would be actively
+    // dangerous in a desert-safety context.
+    implementation("org.shredzone.commons:commons-suncalc:3.11")
 }

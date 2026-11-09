@@ -127,6 +127,8 @@
     <string name="clear_trail_dialog_title">Clear breadcrumb trail</string>
     <string name="clear_trail_dialog_message">This removes your recorded path from the map on this phone. It can\'t be undone.</string>
     <string name="trail_cleared">Trail cleared</string>
+    <string name="daylight_remaining_fmt">Daylight: %s left</string>
+    <string name="night_until_sunrise_fmt">Dark · sunrise in %s</string>
 
     <string name="export_report">Share report</string>
     <string name="report_title">Find Me — Safety Report</string>

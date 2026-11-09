@@ -27,6 +27,24 @@
         tools:text="↑ Straight ahead · 340 m" />
 
     <TextView
+        android:id="@+id/daylightPill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_button_pill"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:textColor="@color/sand_900"
+        android:textStyle="bold"
+        android:textSize="13sp"
+        android:visibility="gone"
+        tools:text="☼ 2h 14m left" />
+
+    <TextView
         android:id="@+id/mapEmptyText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
