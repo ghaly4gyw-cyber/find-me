@@ -7,6 +7,7 @@ import android.os.Build
 import android.telephony.SmsManager
 import androidx.core.content.ContextCompat
 import com.ghaly.findme.repo.InactivityRepository
+import com.ghaly.findme.repo.MarketRepository
 import com.ghaly.findme.repo.PeerRepository
 import com.ghaly.findme.repo.SosRepository
 import java.util.Locale
@@ -67,9 +68,7 @@ object SmsBridge {
     fun maybeAutoSend(context: Context, myLocation: Pair<Double, Double>?) {
         if (!autoSendEnabled(context)) return
         if (contact(context) == null) return
-        val hasUrgent = SosRepository.alerts.value.values.any { it.active } ||
-            InactivityRepository.alerts.value.values.any { it.active }
-        val resendInterval = if (hasUrgent) URGENT_RESEND_MS else ROUTINE_RESEND_MS
+        val resendInterval = if (hasUrgentForDigest()) URGENT_RESEND_MS else ROUTINE_RESEND_MS
         val lastSent = prefs(context).getLong(KEY_LAST_SENT, 0L)
         if (System.currentTimeMillis() - lastSent < resendInterval) return
         sendNow(context, myLocation)
@@ -126,9 +125,27 @@ object SmsBridge {
         for (p in peers) {
             sb.append("\n").append(p.name).append(' ').append(coord(p.lat, p.lon))
         }
+        // GPS alone never moves data between phones — it only tells this one
+        // phone where it is. This text message IS the radio link whenever
+        // someone has no Bluetooth/Wi-Fi mesh neighbor at all, so it's also
+        // the only way a sponsored listing can reach beyond the mesh's
+        // ~200m range. Routine digests only, one line, cheapest-to-send
+        // listing wins ties — a real paid ad slot shouldn't cost the sender
+        // SMS parts on every emergency text too.
+        if (!hasUrgentForDigest()) {
+            MarketRepository.listings.value.filter { it.promoted }.maxByOrNull { it.ts }?.let { ad ->
+                sb.append("\nAD ").append(ad.title)
+                if (ad.priceText.isNotBlank()) sb.append(' ').append(ad.priceText)
+                sb.append(" — ").append(ad.authorName)
+            }
+        }
         return sb.toString()
     }
 
     private fun coord(lat: Double, lon: Double): String =
         String.format(Locale.US, "%.4f,%.4f", lat, lon)
+
+    private fun hasUrgentForDigest(): Boolean =
+        SosRepository.alerts.value.values.any { it.active } ||
+            InactivityRepository.alerts.value.values.any { it.active }
 }

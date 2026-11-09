@@ -500,7 +500,8 @@ class MeshManager(private val context: Context) {
                         details = obj.optString("details", ""),
                         priceText = obj.optString("priceText", ""),
                         ts = envelope.ts,
-                        promoted = obj.optBoolean("promoted", false)
+                        promoted = obj.optBoolean("promoted", false),
+                        photoBase64 = obj.optString("photo", "").ifEmpty { null }
                     )
                 )
             }
@@ -772,7 +773,7 @@ class MeshManager(private val context: Context) {
      *  the whole team. Unlike a saved place, a listing has no separate local
      *  "private" state — every listing is meant to be seen, so this is just
      *  a normal broadcast, same shape as a post. */
-    fun sendListing(kind: com.ghaly.findme.model.ListingKind, title: String, details: String, priceText: String, promoted: Boolean = false) {
+    fun sendListing(kind: com.ghaly.findme.model.ListingKind, title: String, details: String, priceText: String, promoted: Boolean = false, photoBase64: String? = null) {
         val listingId = UUID.randomUUID().toString()
         val envelope = Envelope(
             id = listingId,
@@ -788,6 +789,7 @@ class MeshManager(private val context: Context) {
                 .put("details", details)
                 .put("priceText", priceText)
                 .put("promoted", promoted)
+                .put("photo", photoBase64 ?: "")
                 .toString()
         )
         seenIds.add(envelope.id)
@@ -795,7 +797,8 @@ class MeshManager(private val context: Context) {
         com.ghaly.findme.repo.MarketRepository.add(
             com.ghaly.findme.model.MarketListing(
                 id = listingId, authorId = myId, authorName = myName, kind = kind,
-                title = title, details = details, priceText = priceText, ts = envelope.ts, promoted = promoted
+                title = title, details = details, priceText = priceText, ts = envelope.ts, promoted = promoted,
+                photoBase64 = photoBase64
             )
         )
     }
@@ -820,6 +823,7 @@ class MeshManager(private val context: Context) {
                 .put("details", updated.details)
                 .put("priceText", updated.priceText)
                 .put("promoted", updated.promoted)
+                .put("photo", updated.photoBase64 ?: "")
                 .toString()
         )
         broadcast(envelope)
@@ -913,6 +917,7 @@ class MeshManager(private val context: Context) {
                     .put("details", listing.details)
                     .put("priceText", listing.priceText)
                     .put("promoted", listing.promoted)
+                    .put("photo", listing.photoBase64 ?: "")
                     .toString()
             ))
         }

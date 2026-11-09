@@ -591,7 +591,8 @@ object MarketRepository {
                     details = o.optString("details", ""),
                     priceText = o.optString("priceText", ""),
                     ts = o.optLong("ts", System.currentTimeMillis()),
-                    promoted = o.optBoolean("promoted", false)
+                    promoted = o.optBoolean("promoted", false),
+                    photoBase64 = o.optString("photo", "").ifEmpty { null }
                 )
             }
             _listings.value = loaded
@@ -617,6 +618,7 @@ object MarketRepository {
                         .put("priceText", l.priceText)
                         .put("ts", l.ts)
                         .put("promoted", l.promoted)
+                        .put("photo", l.photoBase64 ?: "")
                 )
             }
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()

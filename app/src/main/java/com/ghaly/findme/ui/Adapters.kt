@@ -254,6 +254,7 @@ class MarketAdapter(private val myDeviceId: String, private val onLongClick: (Ma
 
     class VH(v: View) : RecyclerView.ViewHolder(v) {
         val root: View = v
+        val photo: android.widget.ImageView = v.findViewById(R.id.listingPhoto)
         val promotedBadge: android.widget.TextView = v.findViewById(R.id.listingPromotedBadge)
         val title: android.widget.TextView = v.findViewById(R.id.listingTitle)
         val kindPrice: android.widget.TextView = v.findViewById(R.id.listingKindPrice)
@@ -278,6 +279,18 @@ class MarketAdapter(private val myDeviceId: String, private val onLongClick: (Ma
         holder.kindPrice.text = if (l.priceText.isNotBlank()) "$kindLabel · ${l.priceText}" else kindLabel
         holder.details.text = l.details
         holder.author.text = "${l.authorName} · ${timeAgo(context, l.ts)}"
+        if (l.photoBase64 != null) {
+            try {
+                val bytes = android.util.Base64.decode(l.photoBase64, android.util.Base64.NO_WRAP)
+                val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                holder.photo.setImageBitmap(bitmap)
+                holder.photo.visibility = View.VISIBLE
+            } catch (e: Exception) {
+                holder.photo.visibility = View.GONE
+            }
+        } else {
+            holder.photo.visibility = View.GONE
+        }
         holder.root.setOnLongClickListener {
             if (l.authorId == myDeviceId) onLongClick(l)
             true

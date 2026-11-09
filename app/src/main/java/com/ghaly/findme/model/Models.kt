@@ -101,7 +101,11 @@ data class MarketListing(
      *  the Market feed. Nothing here enforces payment — that's arranged
      *  the same way his other client work is, by contacting him directly —
      *  this flag is just what makes a paid-for listing actually stand out. */
-    val promoted: Boolean = false
+    val promoted: Boolean = false,
+    /** Small base64 JPEG thumbnail, same idea as a profile photo — optional,
+     *  and kept deliberately tiny since this travels over the Bluetooth/Wi-Fi
+     *  mesh (and possibly several relay hops) like everything else here. */
+    val photoBase64: String? = null
 )
 
 /** A spot the user marked themselves — their own current position, a

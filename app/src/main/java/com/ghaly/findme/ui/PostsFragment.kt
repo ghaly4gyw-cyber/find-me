@@ -1,12 +1,18 @@
 package com.ghaly.findme.ui
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.Spinner
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
@@ -21,12 +27,20 @@ import com.ghaly.findme.model.MarketListing
 import com.ghaly.findme.repo.MarketRepository
 import com.ghaly.findme.repo.PostRepository
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 
 class PostsFragment : Fragment(R.layout.fragment_posts) {
 
     private lateinit var adapter: PostAdapter
     private lateinit var marketAdapter: MarketAdapter
     private var showingMarket = false
+    private var pendingListingPhotoBase64: String? = null
+    private var listingPhotoPreview: ImageView? = null
+
+    private val pickListingPhotoLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            if (uri != null) handlePickedListingPhoto(uri)
+        }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -122,6 +136,12 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
         val titleInput = view.findViewById<EditText>(R.id.listingTitleInput)
         val priceInput = view.findViewById<EditText>(R.id.listingPriceInput)
         val detailsInput = view.findViewById<EditText>(R.id.listingDetailsInput)
+
+        listingPhotoPreview = view.findViewById(R.id.listingPhotoPreview)
+        view.findViewById<Button>(R.id.addListingPhotoButton).setOnClickListener {
+            pickListingPhotoLauncher.launch("image/*")
+        }
+
         view.findViewById<Button>(R.id.postListingButton).setOnClickListener {
             val title = titleInput.text?.toString()?.trim().orEmpty()
             if (title.isEmpty()) {
@@ -131,10 +151,13 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
             val kind = ListingKind.values()[kindSpinner.selectedItemPosition]
             val price = priceInput.text?.toString()?.trim().orEmpty()
             val details = detailsInput.text?.toString()?.trim().orEmpty()
-            (requireActivity() as MainActivity).mesh?.sendListing(kind, title, details, price)
+            (requireActivity() as MainActivity).mesh?.sendListing(kind, title, details, price, photoBase64 = pendingListingPhotoBase64)
             titleInput.setText("")
             priceInput.setText("")
             detailsInput.setText("")
+            pendingListingPhotoBase64 = null
+            listingPhotoPreview?.setImageDrawable(null)
+            listingPhotoPreview?.visibility = View.GONE
             Toast.makeText(requireContext(), R.string.listing_posted, Toast.LENGTH_SHORT).show()
         }
 
@@ -145,6 +168,34 @@ class PostsFragment : Fragment(R.layout.fragment_posts) {
                     if (showingMarket) noListingsText.visibility = if (listings.isEmpty()) View.VISIBLE else View.GONE
                 }
             }
+        }
+    }
+
+    /** Same idea as the profile-photo picker on the main screen, but a bit
+     *  bigger (people need to actually recognize the item for sale) and not
+     *  force-cropped to a square. Still deliberately small — this travels
+     *  over the Bluetooth/Wi-Fi mesh, possibly several relay hops, so every
+     *  extra KB is a real cost, not just a nicety. */
+    private fun handlePickedListingPhoto(uri: Uri) {
+        try {
+            val input = requireContext().contentResolver.openInputStream(uri) ?: return
+            val original = BitmapFactory.decodeStream(input)
+            input.close()
+            val maxDim = 320
+            val scale = maxDim.toFloat() / maxOf(original.width, original.height)
+            val resized = if (scale < 1f) {
+                Bitmap.createScaledBitmap(original, (original.width * scale).toInt().coerceAtLeast(1), (original.height * scale).toInt().coerceAtLeast(1), true)
+            } else original
+            val out = ByteArrayOutputStream()
+            resized.compress(Bitmap.CompressFormat.JPEG, 60, out)
+            val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+            pendingListingPhotoBase64 = base64
+            listingPhotoPreview?.let {
+                it.setImageBitmap(resized)
+                it.visibility = View.VISIBLE
+            }
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), R.string.photo_load_failed, Toast.LENGTH_SHORT).show()
         }
     }
 
