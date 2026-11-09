@@ -9,6 +9,8 @@ import com.ghaly.findme.R
 import com.ghaly.findme.model.ChatMessage
 import com.ghaly.findme.model.Group
 import com.ghaly.findme.model.InactivityAlert
+import com.ghaly.findme.model.ListingKind
+import com.ghaly.findme.model.MarketListing
 import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.model.Post
 import com.ghaly.findme.model.PostComment
@@ -236,6 +238,50 @@ class PostAdapter(private val onClick: (Post) -> Unit) : RecyclerView.Adapter<Po
             context.resources.getQuantityString(R.plurals.reply_count, count, count)
         }
         holder.root.setOnClickListener { onClick(p) }
+    }
+}
+
+/** myDeviceId is used only to decide whether the "promote" action should be
+ *  offered on long-press — someone can only feature their OWN listing, since
+ *  there's no backend/accounts yet to gate that behind anything else. */
+class MarketAdapter(private val myDeviceId: String, private val onLongClick: (MarketListing) -> Unit) : RecyclerView.Adapter<MarketAdapter.VH>() {
+    var items: List<MarketListing> = emptyList()
+        set(value) {
+            // Promoted listings always float to the top; within each group, newest first.
+            field = value.sortedWith(compareByDescending<MarketListing> { it.promoted }.thenByDescending { it.ts })
+            notifyDataSetChanged()
+        }
+
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val root: View = v
+        val promotedBadge: android.widget.TextView = v.findViewById(R.id.listingPromotedBadge)
+        val title: android.widget.TextView = v.findViewById(R.id.listingTitle)
+        val kindPrice: android.widget.TextView = v.findViewById(R.id.listingKindPrice)
+        val details: android.widget.TextView = v.findViewById(R.id.listingDetails)
+        val author: android.widget.TextView = v.findViewById(R.id.listingAuthor)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_listing, parent, false)
+        return VH(v)
+    }
+
+    override fun getItemCount() = items.size
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val l = items[position]
+        val context = holder.root.context
+        holder.promotedBadge.visibility = if (l.promoted) View.VISIBLE else View.GONE
+        holder.promotedBadge.text = context.getString(R.string.sponsored_badge)
+        holder.title.text = l.title
+        val kindLabel = context.resources.getStringArray(R.array.listing_kind_labels)[l.kind.ordinal]
+        holder.kindPrice.text = if (l.priceText.isNotBlank()) "$kindLabel · ${l.priceText}" else kindLabel
+        holder.details.text = l.details
+        holder.author.text = "${l.authorName} · ${timeAgo(context, l.ts)}"
+        holder.root.setOnLongClickListener {
+            if (l.authorId == myDeviceId) onLongClick(l)
+            true
+        }
     }
 }
 

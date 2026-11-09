@@ -482,6 +482,28 @@ class MeshManager(private val context: Context) {
                     sharedByName = envelope.originName
                 )
             }
+            MsgType.LISTING -> {
+                val obj = JSONObject(envelope.payload)
+                com.ghaly.findme.repo.MarketRepository.add(
+                    com.ghaly.findme.model.MarketListing(
+                        // A cache replay to a later-connected phone resends this
+                        // same listing under a fresh envelope id (so it still
+                        // floods normally) — "listingId" in the payload is what
+                        // stays stable so it doesn't show up twice there.
+                        id = obj.optString("listingId", envelope.id),
+                        authorId = envelope.originId,
+                        authorName = envelope.originName,
+                        kind = try {
+                            com.ghaly.findme.model.ListingKind.valueOf(obj.optString("kind", "FOR_SALE"))
+                        } catch (e: Exception) { com.ghaly.findme.model.ListingKind.FOR_SALE },
+                        title = obj.optString("title", ""),
+                        details = obj.optString("details", ""),
+                        priceText = obj.optString("priceText", ""),
+                        ts = envelope.ts,
+                        promoted = obj.optBoolean("promoted", false)
+                    )
+                )
+            }
         }
     }
 
@@ -746,6 +768,63 @@ class MeshManager(private val context: Context) {
         broadcast(envelope)
     }
 
+    /** Broadcasts a market listing (for-sale / service / freelance offer) to
+     *  the whole team. Unlike a saved place, a listing has no separate local
+     *  "private" state — every listing is meant to be seen, so this is just
+     *  a normal broadcast, same shape as a post. */
+    fun sendListing(kind: com.ghaly.findme.model.ListingKind, title: String, details: String, priceText: String, promoted: Boolean = false) {
+        val listingId = UUID.randomUUID().toString()
+        val envelope = Envelope(
+            id = listingId,
+            type = MsgType.LISTING,
+            originId = myId,
+            originName = myName,
+            hop = 0,
+            ts = System.currentTimeMillis(),
+            payload = JSONObject()
+                .put("listingId", listingId)
+                .put("kind", kind.name)
+                .put("title", title)
+                .put("details", details)
+                .put("priceText", priceText)
+                .put("promoted", promoted)
+                .toString()
+        )
+        seenIds.add(envelope.id)
+        broadcast(envelope)
+        com.ghaly.findme.repo.MarketRepository.add(
+            com.ghaly.findme.model.MarketListing(
+                id = listingId, authorId = myId, authorName = myName, kind = kind,
+                title = title, details = details, priceText = priceText, ts = envelope.ts, promoted = promoted
+            )
+        )
+    }
+
+    /** Marks one of our own listings as promoted/sponsored (or un-marks it)
+     *  and rebroadcasts it under its own stable listingId so every phone's
+     *  copy upserts to match, instead of only updating this one phone. */
+    fun setListingPromoted(listing: com.ghaly.findme.model.MarketListing, promoted: Boolean) {
+        val updated = listing.copy(promoted = promoted)
+        com.ghaly.findme.repo.MarketRepository.add(updated)
+        val envelope = Envelope(
+            id = UUID.randomUUID().toString(),
+            type = MsgType.LISTING,
+            originId = updated.authorId,
+            originName = updated.authorName,
+            hop = 0,
+            ts = updated.ts,
+            payload = JSONObject()
+                .put("listingId", updated.id)
+                .put("kind", updated.kind.name)
+                .put("title", updated.title)
+                .put("details", updated.details)
+                .put("priceText", updated.priceText)
+                .put("promoted", updated.promoted)
+                .toString()
+        )
+        broadcast(envelope)
+    }
+
     /** Replays everything we currently know about the rest of the mesh to a
      *  freshly-connected endpoint, as fresh (hop = 0) envelopes under each
      *  original person's own identity — so it keeps traveling just like a
@@ -816,6 +895,24 @@ class MeshManager(private val context: Context) {
                     .put("name", place.name)
                     .put("lat", place.lat)
                     .put("lon", place.lon)
+                    .toString()
+            ))
+        }
+        for (listing in com.ghaly.findme.repo.MarketRepository.listings.value) {
+            sendEnvelopeTo(endpointId, Envelope(
+                id = UUID.randomUUID().toString(),
+                type = MsgType.LISTING,
+                originId = listing.authorId,
+                originName = listing.authorName,
+                hop = 0,
+                ts = listing.ts,
+                payload = JSONObject()
+                    .put("listingId", listing.id)
+                    .put("kind", listing.kind.name)
+                    .put("title", listing.title)
+                    .put("details", listing.details)
+                    .put("priceText", listing.priceText)
+                    .put("promoted", listing.promoted)
                     .toString()
             ))
         }

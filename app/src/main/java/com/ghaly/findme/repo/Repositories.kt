@@ -527,6 +527,105 @@ object PostRepository {
     }
 }
 
+/** Items/services people on the mesh are offering — equipment or gold for
+ *  sale, an on-site service, or a freelance gig. Spreads mesh-wide the same
+ *  way posts do; disk-cached so the board survives an app restart; capped
+ *  so it can't grow without bound. A listing with [MarketListing.promoted]
+ *  true always sorts first — that's the lever for actually making money
+ *  from this screen, by selling that placement the same way Ghaly already
+ *  sells his own client work (direct contact, not an in-app payment). */
+object MarketRepository {
+    private const val PREFS = "find_me_market_cache"
+    private const val KEY_LISTINGS = "listings_json"
+    private const val MAX_LISTINGS = 300
+
+    private var appContext: Context? = null
+    private val _listings = MutableStateFlow<List<MarketListing>>(emptyList())
+    val listings: StateFlow<List<MarketListing>> = _listings
+
+    private val seenIds = mutableSetOf<String>()
+
+    fun init(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        loadFromDisk()
+    }
+
+    /** Adds a listing we made ourselves, or one that arrived over the mesh.
+     *  Upserts by id: a repeat delivery of a listing we already have (our
+     *  own broadcast looping back, or a later carrier-pigeon replay) just
+     *  refreshes it in place — which matters because that's also how a
+     *  promoted-flag change reaches everyone, not only a brand-new listing. */
+    fun add(listing: MarketListing) {
+        val isNew = seenIds.add(listing.id)
+        if (isNew) {
+            _listings.update { (it + listing).takeLast(MAX_LISTINGS) }
+        } else {
+            _listings.update { list -> list.map { if (it.id == listing.id) listing else it } }
+        }
+        saveToDisk()
+    }
+
+    fun remove(id: String) {
+        _listings.update { list -> list.filter { it.id != id } }
+        saveToDisk()
+    }
+
+    private fun loadFromDisk() {
+        val ctx = appContext ?: return
+        try {
+            val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(KEY_LISTINGS, null) ?: return
+            val arr = JSONArray(json)
+            val loaded = mutableListOf<MarketListing>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                loaded += MarketListing(
+                    id = o.getString("id"),
+                    authorId = o.getString("authorId"),
+                    authorName = o.getString("authorName"),
+                    kind = try { ListingKind.valueOf(o.getString("kind")) } catch (e: Exception) { ListingKind.FOR_SALE },
+                    title = o.getString("title"),
+                    details = o.optString("details", ""),
+                    priceText = o.optString("priceText", ""),
+                    ts = o.optLong("ts", System.currentTimeMillis()),
+                    promoted = o.optBoolean("promoted", false)
+                )
+            }
+            _listings.value = loaded
+            seenIds.addAll(loaded.map { it.id })
+        } catch (e: Exception) {
+            // corrupted/old cache format — just start empty, nothing to recover
+        }
+    }
+
+    private fun saveToDisk() {
+        val ctx = appContext ?: return
+        try {
+            val arr = JSONArray()
+            for (l in _listings.value) {
+                arr.put(
+                    JSONObject()
+                        .put("id", l.id)
+                        .put("authorId", l.authorId)
+                        .put("authorName", l.authorName)
+                        .put("kind", l.kind.name)
+                        .put("title", l.title)
+                        .put("details", l.details)
+                        .put("priceText", l.priceText)
+                        .put("ts", l.ts)
+                        .put("promoted", l.promoted)
+                )
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY_LISTINGS, arr.toString())
+                .apply()
+        } catch (e: Exception) {
+            // best-effort cache
+        }
+    }
+}
+
 /** Places the user marked on this one phone — their own current spot, a
  *  campsite, a water source, where the vehicle is parked. Purely local
  *  (never sent over the mesh — this is "remember where I've been", not

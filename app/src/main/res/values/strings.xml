@@ -137,4 +137,22 @@
         <item>English</item>
         <item>Français</item>
     </string-array>
+
+    <string name="feed_tab_community">Community</string>
+    <string name="feed_tab_market">Market</string>
+    <string name="listing_title_hint">What are you offering?</string>
+    <string name="listing_price_hint">Price (optional)</string>
+    <string name="listing_details_hint">Details</string>
+    <string name="listing_post_button">Post listing</string>
+    <string name="no_listings">No listings yet</string>
+    <string name="listing_posted">Listing posted</string>
+    <string name="sponsored_badge">★ SPONSORED</string>
+    <string name="listing_action_promote">Mark as sponsored</string>
+    <string name="listing_action_unpromote">Remove sponsored mark</string>
+    <string name="listing_action_delete">Delete</string>
+    <string-array name="listing_kind_labels">
+        <item>For sale</item>
+        <item>Service offered</item>
+        <item>Freelance work</item>
+    </string-array>
 </resources>

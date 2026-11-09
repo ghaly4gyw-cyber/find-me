@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_card_ripple"
+    android:padding="12dp"
+    android:layout_marginBottom="8dp"
+    android:stateListAnimator="@animator/press_scale"
+    android:clickable="true"
+    android:focusable="true">
+
+    <TextView
+        android:id="@+id/listingPromotedBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/teal_400"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        tools:text="★ SPONSORED" />
+
+    <TextView
+        android:id="@+id/listingTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="Generator for sale" />
+
+    <TextView
+        android:id="@+id/listingKindPrice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/amber_500"
+        android:textSize="12sp"
+        tools:text="For sale · 45,000 UM" />
+
+    <TextView
+        android:id="@+id/listingDetails"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        tools:text="Used two seasons, runs fine, selling because upgrading." />
+
+    <TextView
+        android:id="@+id/listingAuthor"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/sand_300"
+        android:textSize="12sp"
+        tools:text="Miner-3F2A · 10 min ago" />
+
+</LinearLayout>

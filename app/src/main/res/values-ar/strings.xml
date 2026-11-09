@@ -129,4 +129,22 @@
     <string name="report_known_miners">الهواتف المعروفة:</string>
 
     <string name="choose_language">اختر اللغة</string>
+
+    <string name="feed_tab_community">المجتمع</string>
+    <string name="feed_tab_market">السوق</string>
+    <string name="listing_title_hint">ما الذي تقدّمه؟</string>
+    <string name="listing_price_hint">السعر (اختياري)</string>
+    <string name="listing_details_hint">التفاصيل</string>
+    <string name="listing_post_button">نشر الإعلان</string>
+    <string name="no_listings">لا توجد إعلانات حتى الآن</string>
+    <string name="listing_posted">تم نشر الإعلان</string>
+    <string name="sponsored_badge">★ إعلان مموّل</string>
+    <string name="listing_action_promote">تمييز كإعلان مموّل</string>
+    <string name="listing_action_unpromote">إزالة التمييز</string>
+    <string name="listing_action_delete">حذف</string>
+    <string-array name="listing_kind_labels">
+        <item>للبيع</item>
+        <item>خدمة مقدَّمة</item>
+        <item>عمل حر</item>
+    </string-array>
 </resources>

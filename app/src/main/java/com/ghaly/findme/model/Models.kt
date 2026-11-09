@@ -1,7 +1,7 @@
 package com.ghaly.findme.model
 
 /** Kinds of message that travel over the mesh. */
-enum class MsgType { POSITION, CHAT, SOS, SOS_CLEAR, INACTIVE, INACTIVE_CLEAR, POST, POST_COMMENT, GROUP_CHAT, PROFILE, PLACE }
+enum class MsgType { POSITION, CHAT, SOS, SOS_CLEAR, INACTIVE, INACTIVE_CLEAR, POST, POST_COMMENT, GROUP_CHAT, PROFILE, PLACE, LISTING }
 
 /**
  * Envelope every mesh message is wrapped in, so any device can relay it
@@ -77,6 +77,31 @@ data class PostComment(
     val authorName: String,
     val text: String,
     val ts: Long
+)
+
+/** What a market listing is offering. */
+enum class ListingKind { FOR_SALE, SERVICE, FREELANCE }
+
+/** A thing someone on the mesh is offering: equipment or gold for sale, a
+ *  service they can do on-site, or freelance work they can do remotely
+ *  (phone/network needed for that last one, but the listing itself still
+ *  spreads over the offline mesh same as a post). Buyer and seller agree
+ *  price/payment themselves via the contact info on the author's own
+ *  profile — this app never touches money directly. */
+data class MarketListing(
+    val id: String,
+    val authorId: String,
+    val authorName: String,
+    val kind: ListingKind,
+    val title: String,
+    val details: String,
+    val priceText: String,
+    val ts: Long,
+    /** A listing someone paid Ghaly to feature gets pinned to the top of
+     *  the Market feed. Nothing here enforces payment — that's arranged
+     *  the same way his other client work is, by contacting him directly —
+     *  this flag is just what makes a paid-for listing actually stand out. */
+    val promoted: Boolean = false
 )
 
 /** A spot the user marked themselves — their own current position, a

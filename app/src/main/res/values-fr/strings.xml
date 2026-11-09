@@ -129,4 +129,22 @@
     <string name="report_known_miners">Téléphones connus :</string>
 
     <string name="choose_language">Choisir la langue</string>
+
+    <string name="feed_tab_community">Communauté</string>
+    <string name="feed_tab_market">Marché</string>
+    <string name="listing_title_hint">Que proposez-vous ?</string>
+    <string name="listing_price_hint">Prix (facultatif)</string>
+    <string name="listing_details_hint">Détails</string>
+    <string name="listing_post_button">Publier l\'annonce</string>
+    <string name="no_listings">Aucune annonce pour l\'instant</string>
+    <string name="listing_posted">Annonce publiée</string>
+    <string name="sponsored_badge">★ SPONSORISÉ</string>
+    <string name="listing_action_promote">Marquer comme sponsorisé</string>
+    <string name="listing_action_unpromote">Retirer le marquage</string>
+    <string name="listing_action_delete">Supprimer</string>
+    <string-array name="listing_kind_labels">
+        <item>À vendre</item>
+        <item>Service proposé</item>
+        <item>Travail freelance</item>
+    </string-array>
 </resources>

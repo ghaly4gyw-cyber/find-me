@@ -8,6 +8,32 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:background="@color/sand_900">
+
+        <Button
+            android:id="@+id/tabFeedCommunity"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="@string/feed_tab_community"
+            android:textColor="@color/white" />
+
+        <Button
+            android:id="@+id/tabFeedMarket"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="@string/feed_tab_market"
+            android:textColor="@color/sand_300" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/communityComposer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:padding="8dp"
         android:background="@color/sand_700">
 
@@ -28,6 +54,56 @@
             android:text="@string/post_button" />
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/marketComposer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dp"
+        android:background="@color/sand_700"
+        android:visibility="gone">
+
+        <Spinner
+            android:id="@+id/listingKindSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <EditText
+            android:id="@+id/listingTitleInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/listing_title_hint"
+            android:textColor="@color/white"
+            android:textColorHint="@color/sand_300"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/listingPriceInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/listing_price_hint"
+            android:textColor="@color/white"
+            android:textColorHint="@color/sand_300"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/listingDetailsInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/listing_details_hint"
+            android:textColor="@color/white"
+            android:textColorHint="@color/sand_300"
+            android:inputType="textMultiLine"
+            android:minLines="2" />
+
+        <Button
+            android:id="@+id/postListingButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:text="@string/listing_post_button" />
+    </LinearLayout>
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -39,6 +115,14 @@
             android:clipToPadding="false"
             android:padding="8dp" />
 
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/marketList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:padding="8dp"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/noPostsText"
             android:layout_width="wrap_content"
@@ -46,6 +130,15 @@
             android:layout_gravity="center"
             android:text="@string/no_posts"
             android:textColor="@color/sand_300" />
+
+        <TextView
+            android:id="@+id/noListingsText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/no_listings"
+            android:textColor="@color/sand_300"
+            android:visibility="gone" />
     </FrameLayout>
 
 </LinearLayout>
