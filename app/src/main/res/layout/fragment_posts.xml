@@ -132,9 +132,14 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- 0dp+weight, not match_parent — a match_parent child here claims the
+         WHOLE parent's height on top of the tab row and composer above it,
+         which pushes its own bottom content off the bottom edge of the
+         screen instead of actually sharing the remaining space. -->
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/postsList"

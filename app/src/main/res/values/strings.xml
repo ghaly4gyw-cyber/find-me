@@ -151,6 +151,15 @@
     <string name="save_place_dialog_hint">Name (e.g. Zouérat camp, water point)</string>
     <string name="place_saved_fmt">Saved \"%s\"</string>
     <string name="no_location_yet">No GPS fix yet — wait for a position first.</string>
+    <string name="gps_accuracy_fmt">±%1$d m</string>
+    <string name="enter_coordinates_button">📍 Coordinates</string>
+    <string name="enter_coordinates_title">Enter coordinates</string>
+    <string name="coordinates_name_hint">Name (optional)</string>
+    <string name="coordinates_hint">Latitude, longitude (e.g. 20.9316, -17.0466)</string>
+    <string name="coordinates_go">Go</string>
+    <string name="coordinates_save_only">Save only</string>
+    <string name="invalid_coordinates">That doesn\'t look like valid coordinates — use latitude, longitude</string>
+    <string name="entered_location_default_name">Entered location</string>
     <string name="no_saved_places">No saved places yet. Use \"Save this spot\" on the map.</string>
     <string name="place_action_navigate">Navigate here (show direction line)</string>
     <string name="place_action_stop_navigating">Stop navigating</string>

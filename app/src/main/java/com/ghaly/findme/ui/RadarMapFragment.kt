@@ -44,6 +44,7 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
     private lateinit var radar: RadarMapView
     private lateinit var navigationHint: TextView
     private lateinit var daylightPill: TextView
+    private lateinit var accuracyPill: TextView
     private var sensorManager: SensorManager? = null
     private var rotationSensor: Sensor? = null
     private val rotationMatrix = FloatArray(9)
@@ -54,6 +55,7 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         radar = view.findViewById(R.id.radarView)
         navigationHint = view.findViewById(R.id.navigationHint)
         daylightPill = view.findViewById(R.id.daylightPill)
+        accuracyPill = view.findViewById(R.id.accuracyPill)
         val emptyText = view.findViewById<View>(R.id.mapEmptyText)
 
         sensorManager = requireContext().getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -93,6 +95,9 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         view.findViewById<Button>(R.id.myPlacesButton).setOnClickListener {
             showPlacesListDialog(radar)
         }
+        view.findViewById<Button>(R.id.enterCoordinatesButton).setOnClickListener {
+            showEnterCoordinatesDialog(radar)
+        }
         // Long-press is deliberately the only way to clear the trail — this is
         // the one way back for someone who's actually lost, so it shouldn't be
         // a single careless tap away from being wiped.
@@ -129,6 +134,7 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                     radar.myLocation = mine
                     updateNavigationHint()
                     updateDaylightPill(mine)
+                    updateAccuracyPill(mesh?.myAccuracyM())
                     // The service itself is asked (in onResume/onPause below) to take
                     // GPS fixes every 5s while this screen is up, instead of its normal
                     // battery-saving 30-120s — poll in step with that so a fresh fix
@@ -183,6 +189,90 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                 daylightPill.visibility = View.GONE
             }
         }
+    }
+
+    /** The dot on the radar looks exactly as confident whether the fix behind
+     *  it is accurate to 5 meters or 200 — this is the one honest signal of
+     *  how much to trust it. Colors mirror the daylight pill: calm when the
+     *  fix is tight, escalating as it gets fuzzy enough that "you are here"
+     *  starts being a rough guess rather than a fact. */
+    private fun updateAccuracyPill(accuracyM: Float?) {
+        if (accuracyM == null) {
+            accuracyPill.visibility = View.GONE
+            return
+        }
+        accuracyPill.text = getString(R.string.gps_accuracy_fmt, accuracyM.toInt())
+        accuracyPill.setTextColor(
+            resources.getColor(
+                when {
+                    accuracyM <= 20f -> R.color.sand_900
+                    accuracyM <= 75f -> R.color.amber_500
+                    else -> R.color.sos_red
+                },
+                null
+            )
+        )
+        accuracyPill.visibility = View.VISIBLE
+    }
+
+    /** Accepts "lat, lon" or "lat lon" in plain decimal degrees — e.g.
+     *  "20.9316, -17.0466" — and rejects anything else outright rather than
+     *  guessing at a different format, since a silently-misparsed coordinate
+     *  out here is far worse than an error asking the person to re-type it. */
+    private fun parseCoordinates(raw: String): Pair<Double, Double>? {
+        val parts = raw.trim().split(Regex("[,\\s]+")).filter { it.isNotBlank() }
+        if (parts.size != 2) return null
+        val lat = parts[0].toDoubleOrNull() ?: return null
+        val lon = parts[1].toDoubleOrNull() ?: return null
+        if (lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0) return null
+        return lat to lon
+    }
+
+    /** Lets someone punch in a coordinate heard over the radio or read off a
+     *  paper map — rather than only ever being able to mark "where I'm
+     *  standing right now" — and either just keep it for later ("Save") or
+     *  start navigating to it immediately ("Go"). Both reuse the exact same
+     *  saved-place machinery (radar dot, nav pill, stop-navigating) as a
+     *  place marked by standing on it, so nothing else needs to know the
+     *  difference. */
+    private fun showEnterCoordinatesDialog(radar: RadarMapView) {
+        val nameInput = EditText(requireContext())
+        nameInput.hint = getString(R.string.coordinates_name_hint)
+        val coordsInput = EditText(requireContext())
+        coordsInput.hint = getString(R.string.coordinates_hint)
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        val container = android.widget.LinearLayout(requireContext())
+        container.orientation = android.widget.LinearLayout.VERTICAL
+        container.setPadding(padding, padding / 2, padding, 0)
+        container.addView(nameInput)
+        container.addView(coordsInput)
+
+        fun savedPlaceFrom(): SavedPlace? {
+            val coords = parseCoordinates(coordsInput.text?.toString().orEmpty())
+            if (coords == null) {
+                Toast.makeText(requireContext(), R.string.invalid_coordinates, Toast.LENGTH_SHORT).show()
+                return null
+            }
+            val name = nameInput.text?.toString()?.trim().orEmpty()
+                .ifEmpty { getString(R.string.entered_location_default_name) }
+            return SavedPlaceRepository.add(name, coords.first, coords.second, null)
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.enter_coordinates_title)
+            .setView(container)
+            .setPositiveButton(R.string.coordinates_go) { _, _ ->
+                val place = savedPlaceFrom() ?: return@setPositiveButton
+                radar.followedPlaceId = place.id
+                updateNavigationHint()
+                Toast.makeText(requireContext(), getString(R.string.now_navigating_fmt, place.name), Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton(R.string.coordinates_save_only) { _, _ ->
+                val place = savedPlaceFrom() ?: return@setNeutralButton
+                Toast.makeText(requireContext(), getString(R.string.place_saved_fmt, place.name), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun showClearTrailDialog() {
@@ -307,8 +397,7 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
      *  "water point", wherever. Purely local; works the same whether the spot
      *  is a few meters away or you'll later be hundreds of km from it. */
     private fun showSavePlaceDialog(radar: RadarMapView) {
-        val location = radar.myLocation
-        if (location == null) {
+        if (radar.myLocation == null) {
             Toast.makeText(requireContext(), R.string.no_location_yet, Toast.LENGTH_SHORT).show()
             return
         }
@@ -326,6 +415,17 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
             .setTitle(R.string.save_place_dialog_title)
             .setView(container)
             .setPositiveButton(R.string.save) { _, _ ->
+                // Re-read the location HERE, not when the dialog opened — the
+                // person may spend several seconds typing a name, and GPS can
+                // easily have moved on to a better (or just different) fix by
+                // the time they actually confirm. Using the stale fix from
+                // dialog-open time is exactly what was making a saved place
+                // land somewhere other than where the person actually was.
+                val location = radar.myLocation
+                if (location == null) {
+                    Toast.makeText(requireContext(), R.string.no_location_yet, Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
                 val name = input.text?.toString()?.trim().orEmpty()
                     .ifEmpty { getString(R.string.map_center_you) }
                 val mesh = (requireActivity() as? MainActivity)?.mesh

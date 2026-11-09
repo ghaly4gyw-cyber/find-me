@@ -145,8 +145,9 @@ class MeshForegroundService : Service() {
         }
         mesh.onSosReceived = { senderName -> notifySosReceived(senderName) }
         mesh.onLiveLocationBoost = { active -> setLiveLocationBoost(active) }
-        locationTracker = LocationTracker(applicationContext) { lat, lon ->
+        locationTracker = LocationTracker(applicationContext) { lat, lon, accuracyM ->
             mesh.sendPosition(lat, lon, currentBatteryPct())
+            mesh.updateMyAccuracy(accuracyM)
             com.ghaly.findme.repo.TrailRepository.record(lat, lon)
         }
         fallDetector = FallDetector(applicationContext) { onPossibleFallDetected() }

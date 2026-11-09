@@ -592,9 +592,22 @@ class MeshManager(private val context: Context) {
     @Volatile private var lastLon: Double = 0.0
     @Volatile private var hasFix: Boolean = false
     @Volatile private var lastBatteryPct: Int? = null
+    @Volatile private var lastAccuracyM: Float? = null
 
     /** My own last known GPS fix, or null if we don't have one yet. */
     fun myLocation(): Pair<Double, Double>? = if (hasFix) lastLat to lastLon else null
+
+    /** Horizontal accuracy radius (meters) of the last fix — purely local, this
+     *  never goes out over the mesh, it's just so the map can show how much to
+     *  trust the dot instead of drawing it as if it were exact. */
+    fun myAccuracyM(): Float? = lastAccuracyM
+
+    /** Call whenever a fresh GPS fix comes in, whether or not it's good enough
+     *  to broadcast as a position — the accuracy figure itself is useful to
+     *  show even for a fix the rest of [sendPosition]'s callers might not use. */
+    fun updateMyAccuracy(accuracyM: Float) {
+        lastAccuracyM = accuracyM
+    }
 
     /** Call whenever we get a fresh GPS fix; broadcasts it and remembers it for new connections. */
     fun sendPosition(lat: Double, lon: Double, batteryPct: Int? = null) {

@@ -17,7 +17,10 @@ import com.google.android.gms.location.Priority
  */
 class LocationTracker(
     private val context: Context,
-    private val onLocation: (lat: Double, lon: Double) -> Unit
+    // accuracyM is the fix's horizontal accuracy radius in meters, straight from
+    // Android (Location.getAccuracy()) — lets the UI show how much to trust a
+    // fix instead of just plotting a dot with no sense of how fuzzy it is.
+    private val onLocation: (lat: Double, lon: Double, accuracyM: Float) -> Unit
 ) {
     private val client: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
@@ -33,7 +36,7 @@ class LocationTracker(
         val cb = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 val loc = result.lastLocation ?: return
-                onLocation(loc.latitude, loc.longitude)
+                onLocation(loc.latitude, loc.longitude, loc.accuracy)
             }
         }
         callback = cb
