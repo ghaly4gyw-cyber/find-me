@@ -107,6 +107,9 @@
     <string name="fall_notification_channel">Possible fall detected</string>
     <string name="fall_notification_title">Possible fall detected</string>
     <string name="fall_notification_text">Open Find Me if you\'re okay — this alert clears the moment you touch your phone.</string>
+    <string name="sos_received_notification_channel">SOS alert</string>
+    <string name="sos_received_notification_title">Someone needs help</string>
+    <string name="sos_received_notification_text_fmt">%s needs help — open the SOS tab for their location.</string>
 
     <string name="tools_dialog_title">Tools</string>
     <string name="tools_notes">📝 Notes</string>

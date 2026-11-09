@@ -294,6 +294,13 @@ class MeshManager(private val context: Context) {
      *  [sendRing] — "make some noise so I can find you." */
     var onRingReceived: (() -> Unit)? = null
 
+    /** Set by the service to push a loud, attention-grabbing notification
+     *  the moment someone else's SOS first reaches this phone — not just a
+     *  quiet new row in the SOS tab's list, which only whoever already has
+     *  that tab open would notice. Fires once per genuinely new SOS, not on
+     *  every carrier-pigeon replay of one already known. */
+    var onSosReceived: ((senderName: String) -> Unit)? = null
+
     private val payloadCallback = object : PayloadCallback() {
         override fun onPayloadReceived(endpointId: String, payload: Payload) {
             if (payload.type != Payload.Type.BYTES) return
@@ -392,6 +399,14 @@ class MeshManager(private val context: Context) {
             }
             MsgType.SOS -> {
                 val obj = JSONObject(envelope.payload)
+                // A carrier-pigeon replay of an SOS we already know about mints a
+                // fresh envelope id every time it's relayed to a newly-connected
+                // phone, so this handler runs again on every reconnect while the
+                // alert stays active. Only alert the person for a genuinely new
+                // or newly-reactivated SOS — not someone else's phone reconnecting
+                // to us — by checking whether it was already active before this
+                // upsert, and never for an echo of our own SOS.
+                val wasAlreadyActive = SosRepository.alerts.value[envelope.originId]?.active == true
                 SosRepository.upsert(
                     SosAlert(
                         id = envelope.id,
@@ -403,6 +418,9 @@ class MeshManager(private val context: Context) {
                         active = true
                     )
                 )
+                if (!wasAlreadyActive && envelope.originId != myId) {
+                    onSosReceived?.invoke(envelope.originName)
+                }
             }
             MsgType.SOS_CLEAR -> {
                 SosRepository.clear(envelope.originId)

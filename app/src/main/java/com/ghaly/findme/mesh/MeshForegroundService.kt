@@ -34,9 +34,11 @@ class MeshForegroundService : Service() {
         private const val CHANNEL_ID = "find_me_mesh"
         private const val FALL_CHANNEL_ID = "find_me_fall"
         private const val WEATHER_CHANNEL_ID = "find_me_weather"
+        private const val SOS_RECEIVED_CHANNEL_ID = "find_me_sos_received"
         private const val NOTIFICATION_ID = 1001
         private const val FALL_NOTIFICATION_ID = 1002
         private const val WEATHER_NOTIFICATION_ID = 1004
+        private const val SOS_RECEIVED_NOTIFICATION_ID = 1007
         private const val WATCHDOG_INTERVAL_MS = 60_000L
         private const val RING_DURATION_MS = 15_000L
         private const val INACTIVITY_THRESHOLD_MS = 20 * 60_000L // 20 minutes of no touches
@@ -139,6 +141,7 @@ class MeshForegroundService : Service() {
                 ringSignal.stop()
             }
         }
+        mesh.onSosReceived = { senderName -> notifySosReceived(senderName) }
         locationTracker = LocationTracker(applicationContext) { lat, lon ->
             mesh.sendPosition(lat, lon, currentBatteryPct())
             com.ghaly.findme.repo.TrailRepository.record(lat, lon)
@@ -285,6 +288,50 @@ class MeshForegroundService : Service() {
         } catch (e: SecurityException) {
             // POST_NOTIFICATIONS not granted — the mesh alert itself still went
             // out to teammates, this notification is just a local nice-to-have.
+        }
+    }
+
+    /** The loud, impossible-to-miss alert for someone ELSE's SOS — a quiet
+     *  new row in the SOS tab's list isn't enough if nobody happens to have
+     *  that tab open. High-priority channel with its own vibration pattern
+     *  and alarm category, so it pops up and gets noticed even with the
+     *  phone in someone's pocket, the same urgency the fall alert already
+     *  gets for your own phone. */
+    private fun notifySosReceived(senderName: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                SOS_RECEIVED_CHANNEL_ID,
+                getString(R.string.sos_received_notification_channel),
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 400, 200, 400, 200, 400)
+                enableLights(true)
+            }
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+        val openAppIntent = PendingIntent.getActivity(
+            this, 6, Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val notification = NotificationCompat.Builder(this, SOS_RECEIVED_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(getString(R.string.sos_received_notification_title))
+            .setContentText(getString(R.string.sos_received_notification_text_fmt, senderName))
+            .setContentIntent(openAppIntent)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVibrate(longArrayOf(0, 400, 200, 400, 200, 400))
+            .setAutoCancel(true)
+            .build()
+        try {
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.notify(SOS_RECEIVED_NOTIFICATION_ID, notification)
+        } catch (e: SecurityException) {
+            // POST_NOTIFICATIONS not granted — the SOS itself still landed in
+            // the SOS tab, this notification is just what would have pushed it
+            // in front of the person right away.
         }
     }
 

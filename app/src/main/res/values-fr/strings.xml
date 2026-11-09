@@ -104,6 +104,9 @@
     <string name="fall_notification_channel">Chute possible détectée</string>
     <string name="fall_notification_title">Chute possible détectée</string>
     <string name="fall_notification_text">Ouvrez Trouve-Moi si vous allez bien — cette alerte s\'annule dès que vous touchez votre téléphone.</string>
+    <string name="sos_received_notification_channel">Alerte de détresse</string>
+    <string name="sos_received_notification_title">Quelqu\'un a besoin d\'aide</string>
+    <string name="sos_received_notification_text_fmt">%s a besoin d\'aide — ouvrez l\'onglet Détresse pour sa position.</string>
 
     <string name="tools_dialog_title">Outils</string>
     <string name="tools_notes">📝 Notes</string>

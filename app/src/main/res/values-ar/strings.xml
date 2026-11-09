@@ -104,6 +104,9 @@
     <string name="fall_notification_channel">احتمال وقوع سقوط</string>
     <string name="fall_notification_title">احتمال وقوع سقوط</string>
     <string name="fall_notification_text">افتح إيجادني إذا كنت بخير، ستُلغى هذه التنبيه فور لمسك للهاتف.</string>
+    <string name="sos_received_notification_channel">تنبيه نجدة</string>
+    <string name="sos_received_notification_title">شخص ما يحتاج إلى مساعدة</string>
+    <string name="sos_received_notification_text_fmt">%s يحتاج إلى مساعدة — افتح تبويب النجدة لمعرفة موقعه.</string>
 
     <string name="tools_dialog_title">أدوات</string>
     <string name="tools_notes">📝 ملاحظات</string>
