@@ -105,6 +105,18 @@
     <string name="fall_notification_title">Possible fall detected</string>
     <string name="fall_notification_text">Open Find Me if you\'re okay — this alert clears the moment you touch your phone.</string>
 
+    <string name="hydration_notification_channel">Hydration reminder</string>
+    <string name="hydration_notification_title">Time to drink water</string>
+    <string name="hydration_notification_text">Take a water break and rest in the shade if you can.</string>
+    <string name="hydration_dialog_title">Hydration reminders</string>
+    <string-array name="hydration_interval_options">
+        <item>Off</item>
+        <item>Every 30 min</item>
+        <item>Every 60 min</item>
+        <item>Every 90 min</item>
+        <item>Every 120 min</item>
+    </string-array>
+
     <string name="physical_signal_hint">No phone or mesh needed: blink the flashlight and beep the speaker in Morse SOS, in case someone can see or hear you nearby.</string>
     <string name="physical_signal_start">Start light &amp; sound signal</string>
     <string name="physical_signal_stop">Stop signal</string>

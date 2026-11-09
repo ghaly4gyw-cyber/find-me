@@ -139,6 +139,7 @@ class MainActivity : AppCompatActivity() {
         nameButton.setOnClickListener { showEditProfileDialog(nameButton) }
 
         findViewById<TextView>(R.id.languageButton).setOnClickListener { showLanguageDialog() }
+        findViewById<TextView>(R.id.hydrationButton).setOnClickListener { showHydrationDialog() }
 
         tabButtons = listOf(
             findViewById(R.id.tabPeers),
@@ -251,6 +252,36 @@ class MainActivity : AppCompatActivity() {
             .setTitle(R.string.choose_language)
             .setSingleChoiceItems(names, checkedIndex) { dialog, index ->
                 AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tags[index]))
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** A single-choice list doubling as both the on/off switch and the
+     *  interval picker — "Off" is just the first option, no separate toggle
+     *  needed. Off by default; nothing fires until the person opens this and
+     *  actively picks an interval. */
+    private fun showHydrationDialog() {
+        val options = resources.getStringArray(R.array.hydration_interval_options)
+        val minutesForIndex = intArrayOf(0, 30, 60, 90, 120)
+        val currentMinutes = if (com.ghaly.findme.mesh.HydrationReminder.enabled(this)) {
+            com.ghaly.findme.mesh.HydrationReminder.intervalMinutes(this)
+        } else {
+            0
+        }
+        val checkedIndex = minutesForIndex.indexOf(currentMinutes).let { if (it < 0) 0 else it }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.hydration_dialog_title)
+            .setSingleChoiceItems(options, checkedIndex) { dialog, index ->
+                val minutes = minutesForIndex[index]
+                if (minutes == 0) {
+                    com.ghaly.findme.mesh.HydrationReminder.setEnabled(this, false)
+                } else {
+                    com.ghaly.findme.mesh.HydrationReminder.setIntervalMinutes(this, minutes)
+                    com.ghaly.findme.mesh.HydrationReminder.setEnabled(this, true)
+                }
                 dialog.dismiss()
             }
             .setNegativeButton(android.R.string.cancel, null)
