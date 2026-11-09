@@ -131,3 +131,13 @@ data class TrailPoint(
     val lon: Double,
     val ts: Long
 )
+
+/** One entry in the radio's on-screen "who just talked" log — direct,
+ *  in-range push-to-talk only, never relayed, so this is purely a log of
+ *  what THIS phone itself heard or sent. Not persisted: it's only meant to
+ *  tell you who spoke recently, not a permanent record. */
+data class RadioTransmission(
+    val senderName: String,
+    val ts: Long,
+    val mine: Boolean
+)

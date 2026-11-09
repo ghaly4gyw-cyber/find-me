@@ -51,6 +51,12 @@
     <string name="edit_profile">تعديل الملف الشخصي</string>
     <string name="tab_map">الخريطة</string>
     <string name="map_center_you">أنت</string>
+    <string name="compass_label_north">شمال</string>
+    <string name="compass_label_south">جنوب</string>
+    <string name="compass_label_east">شرق</string>
+    <string name="compass_label_west">غرب</string>
+    <string name="qibla_button">القبلة</string>
+    <string name="qibla_map_label">القبلة</string>
     <string name="peer_action_view_profile">عرض الملف الشخصي</string>
     <string name="peer_action_follow">تتبّع (خط يوضح الاتجاه)</string>
     <string name="peer_action_stop_following">إيقاف التتبّع</string>
@@ -126,6 +132,11 @@
     <string name="trail_cleared">تم حذف المسار</string>
     <string name="daylight_remaining_fmt">ضوء النهار: باقٍ %s</string>
     <string name="night_until_sunrise_fmt">ظلام · الشروق بعد %s</string>
+    <string name="radio_status_fmt">الراديو · %d في المدى</string>
+    <string name="radio_you">أنت</string>
+    <string name="radio_unknown_sender">غير معروف</string>
+    <string name="radio_log_empty">لا توجد مكالمات بعد</string>
+    <string name="radio_log_entry_fmt">%1$s · %2$s</string>
 
     <string name="export_report">مشاركة التقرير</string>
     <string name="report_title">إيجادني — تقرير السلامة</string>

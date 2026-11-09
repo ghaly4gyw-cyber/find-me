@@ -7,6 +7,7 @@ import com.ghaly.findme.model.ListingKind
 import com.ghaly.findme.model.MarketListing
 import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.model.Post
+import com.ghaly.findme.model.RadioTransmission
 import com.ghaly.findme.model.PostComment
 import com.ghaly.findme.model.Profile
 import com.ghaly.findme.model.SavedPlace
@@ -829,5 +830,21 @@ object TrailRepository {
         } catch (e: Exception) {
             // best-effort cache
         }
+    }
+}
+
+/** The radio's "who just talked" log — in-memory only, not persisted. Direct
+ *  push-to-talk clips never travel past direct Bluetooth/Wi-Fi range and
+ *  aren't flood-relayed, so this is purely what THIS phone itself sent or
+ *  heard; it's a short-lived convenience, not a record worth saving across
+ *  restarts. */
+object RadioLogRepository {
+    private const val MAX_ENTRIES = 20
+
+    private val _log = MutableStateFlow<List<RadioTransmission>>(emptyList())
+    val log: StateFlow<List<RadioTransmission>> = _log
+
+    fun record(senderName: String, mine: Boolean) {
+        _log.update { (it + RadioTransmission(senderName, System.currentTimeMillis(), mine)).takeLast(MAX_ENTRIES) }
     }
 }

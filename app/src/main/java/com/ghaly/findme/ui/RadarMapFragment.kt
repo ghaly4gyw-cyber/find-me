@@ -61,6 +61,16 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         }
         radar.headingOf = { deviceId -> PeerRepository.headingOf(deviceId) }
 
+        val qiblaButton = view.findViewById<Button>(R.id.qiblaButton)
+        qiblaButton.setOnClickListener {
+            radar.showQibla = !radar.showQibla
+            qiblaButton.backgroundTintList = if (radar.showQibla) {
+                android.content.res.ColorStateList.valueOf(resources.getColor(R.color.teal_400, null))
+            } else {
+                null
+            }
+        }
+
         view.findViewById<Button>(R.id.savePlaceButton).setOnClickListener {
             showSavePlaceDialog(radar)
         }

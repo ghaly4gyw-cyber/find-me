@@ -51,6 +51,12 @@
     <string name="edit_profile">Modifier le profil</string>
     <string name="tab_map">Carte</string>
     <string name="map_center_you">Vous</string>
+    <string name="compass_label_north">N</string>
+    <string name="compass_label_south">S</string>
+    <string name="compass_label_east">E</string>
+    <string name="compass_label_west">O</string>
+    <string name="qibla_button">Qibla</string>
+    <string name="qibla_map_label">Qibla</string>
     <string name="peer_action_view_profile">Voir le profil</string>
     <string name="peer_action_follow">Suivre (ligne de direction)</string>
     <string name="peer_action_stop_following">Arrêter de suivre</string>
@@ -126,6 +132,11 @@
     <string name="trail_cleared">Trajet effacé</string>
     <string name="daylight_remaining_fmt">Lumière du jour : %s restant</string>
     <string name="night_until_sunrise_fmt">Nuit · lever du soleil dans %s</string>
+    <string name="radio_status_fmt">Radio · %d à portée</string>
+    <string name="radio_you">Vous</string>
+    <string name="radio_unknown_sender">Inconnu</string>
+    <string name="radio_log_empty">Aucune transmission pour l\'instant</string>
+    <string name="radio_log_entry_fmt">%1$s · %2$s</string>
 
     <string name="export_report">Partager le rapport</string>
     <string name="report_title">Find Me — Rapport de sécurité</string>

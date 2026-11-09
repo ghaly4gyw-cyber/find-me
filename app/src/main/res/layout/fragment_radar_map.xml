@@ -62,6 +62,17 @@
         android:orientation="vertical">
 
         <Button
+            android:id="@+id/qiblaButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_button_pill"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:textColor="@color/sand_900"
+            android:text="@string/qibla_button" />
+
+        <Button
             android:id="@+id/myPlacesButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

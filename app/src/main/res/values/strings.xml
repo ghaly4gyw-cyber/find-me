@@ -51,6 +51,12 @@
     <string name="edit_profile">Edit profile</string>
     <string name="tab_map">Map</string>
     <string name="map_center_you">You</string>
+    <string name="compass_label_north">N</string>
+    <string name="compass_label_south">S</string>
+    <string name="compass_label_east">E</string>
+    <string name="compass_label_west">W</string>
+    <string name="qibla_button">Qibla</string>
+    <string name="qibla_map_label">Qibla</string>
     <string name="peer_action_view_profile">View profile</string>
     <string name="peer_action_follow">Follow (show direction line)</string>
     <string name="peer_action_stop_following">Stop following</string>
@@ -129,6 +135,11 @@
     <string name="trail_cleared">Trail cleared</string>
     <string name="daylight_remaining_fmt">Daylight: %s left</string>
     <string name="night_until_sunrise_fmt">Dark · sunrise in %s</string>
+    <string name="radio_status_fmt">Radio · %d in range</string>
+    <string name="radio_you">You</string>
+    <string name="radio_unknown_sender">Unknown</string>
+    <string name="radio_log_empty">No transmissions yet</string>
+    <string name="radio_log_entry_fmt">%1$s · %2$s</string>
 
     <string name="export_report">Share report</string>
     <string name="report_title">Find Me — Safety Report</string>

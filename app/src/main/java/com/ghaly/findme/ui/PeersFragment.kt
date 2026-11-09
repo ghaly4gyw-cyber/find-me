@@ -17,9 +17,11 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ghaly.findme.R
+import com.ghaly.findme.mesh.DeviceIdentity
 import com.ghaly.findme.mesh.VoiceRecorder
 import com.ghaly.findme.repo.InactivityRepository
 import com.ghaly.findme.repo.PeerRepository
+import com.ghaly.findme.repo.RadioLogRepository
 import com.ghaly.findme.repo.SosRepository
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -32,6 +34,7 @@ class PeersFragment : Fragment(R.layout.fragment_peers) {
         showPeerProfileDialog(peer, (requireActivity() as? MainActivity)?.mesh?.myLocation())
     })
     private var recorder: VoiceRecorder? = null
+    private lateinit var radioLogText: TextView
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -43,6 +46,7 @@ class PeersFragment : Fragment(R.layout.fragment_peers) {
 
         view.findViewById<TextView>(R.id.exportReportButton).setOnClickListener { shareSafetyReport() }
 
+        radioLogText = view.findViewById(R.id.radioLogText)
         recorder = VoiceRecorder(requireContext())
         val pttButton = view.findViewById<Button>(R.id.pttButton)
         pttButton.setOnTouchListener { _, event ->
@@ -70,16 +74,50 @@ class PeersFragment : Fragment(R.layout.fragment_peers) {
         }
 
         // Refresh direction arrows periodically — my own position moves even when
-        // nothing else about the peer list changes.
+        // nothing else about the peer list changes. Also drives the radio's
+        // "N in range" count, since that's a live property of the direct
+        // mesh connections, not something any repository flow tells us about.
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 while (true) {
                     val mesh = (requireActivity() as? MainActivity)?.mesh
                     adapter.myLocation = mesh?.myLocation()
+                    radioInRangeCount = mesh?.directPeerCount() ?: 0
+                    renderRadioStatus()
                     kotlinx.coroutines.delay(10_000L)
                 }
             }
         }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                RadioLogRepository.log.collect {
+                    recentRadioLog = it
+                    renderRadioStatus()
+                }
+            }
+        }
+    }
+
+    private var radioInRangeCount = 0
+    private var recentRadioLog: List<com.ghaly.findme.model.RadioTransmission> = emptyList()
+
+    /** "Radio · N in range" plus the last couple of transmissions, e.g.
+     *  "You · just now" / "Ahmed · 2m ago" — enough to see the channel is
+     *  alive without needing a full scrolling history for what's meant to be
+     *  a quick glance above the talk button. */
+    private fun renderRadioStatus() {
+        val sb = StringBuilder(getString(R.string.radio_status_fmt, radioInRangeCount))
+        val recent = recentRadioLog.takeLast(2)
+        if (recent.isEmpty()) {
+            sb.append('\n').append(getString(R.string.radio_log_empty))
+        } else {
+            for (entry in recent.reversed()) {
+                val who = if (entry.mine) getString(R.string.radio_you) else entry.senderName
+                sb.append('\n').append(getString(R.string.radio_log_entry_fmt, who, timeAgo(requireContext(), entry.ts)))
+            }
+        }
+        radioLogText.text = sb.toString()
     }
 
     private fun startTalking(button: Button) {
@@ -106,6 +144,7 @@ class PeersFragment : Fragment(R.layout.fragment_peers) {
         val mesh = (requireActivity() as? MainActivity)?.mesh ?: return
         val sent = mesh.sendVoiceClip(bytes)
         val message = if (sent) {
+            RadioLogRepository.record(DeviceIdentity.name(requireContext()), mine = true)
             getString(R.string.voice_sent, mesh.directPeerCount())
         } else {
             getString(R.string.voice_in_range_only)

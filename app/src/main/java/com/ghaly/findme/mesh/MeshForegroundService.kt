@@ -73,7 +73,11 @@ class MeshForegroundService : Service() {
         com.ghaly.findme.repo.MarketRepository.init(applicationContext)
         com.ghaly.findme.repo.TrailRepository.init(applicationContext)
         mesh = MeshManager(applicationContext)
-        mesh.onVoiceClip = { bytes -> VoicePlayer.play(applicationContext, bytes) }
+        mesh.onVoiceClip = { bytes, senderName ->
+            VoicePlayer.play(applicationContext, bytes)
+            val fallback = applicationContext.getString(com.ghaly.findme.R.string.radio_unknown_sender)
+            com.ghaly.findme.repo.RadioLogRepository.record(senderName ?: fallback, mine = false)
+        }
         locationTracker = LocationTracker(applicationContext) { lat, lon ->
             mesh.sendPosition(lat, lon)
             com.ghaly.findme.repo.TrailRepository.record(lat, lon)

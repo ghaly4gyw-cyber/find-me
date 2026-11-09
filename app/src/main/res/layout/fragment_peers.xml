@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -36,15 +37,38 @@
         android:text="@string/no_peers"
         android:textColor="@color/sand_300" />
 
-    <Button
-        android:id="@+id/pttButton"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:layout_margin="12dp"
-        android:backgroundTint="@color/amber_500"
-        android:textColor="@color/sand_900"
-        android:textStyle="bold"
-        android:text="@string/voice_hold_to_talk" />
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/radioLogText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/bg_button_pill"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:textColor="@color/sand_300"
+            android:textSize="12sp"
+            android:gravity="center"
+            tools:text="Radio · 2 in range\nAhmed · just now" />
+
+        <Button
+            android:id="@+id/pttButton"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:backgroundTint="@color/amber_500"
+            android:textColor="@color/sand_900"
+            android:textStyle="bold"
+            android:text="@string/voice_hold_to_talk" />
+
+    </LinearLayout>
 
 </FrameLayout>

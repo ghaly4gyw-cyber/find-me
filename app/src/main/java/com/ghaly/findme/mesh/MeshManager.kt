@@ -283,8 +283,12 @@ class MeshManager(private val context: Context) {
 
     // ---------------------------------------------------------------------- payload
 
-    /** Set by the UI to get notified the instant a push-to-talk clip arrives. */
-    var onVoiceClip: ((bytes: ByteArray) -> Unit)? = null
+    /** Set by the UI to get notified the instant a push-to-talk clip arrives.
+     *  [senderName] is best-effort — null if we haven't yet learned who's on
+     *  the other end of that direct link (shouldn't normally happen, since a
+     *  position/chat envelope is what establishes that mapping in the first
+     *  place and phones are usually connected for a while before anyone talks). */
+    var onVoiceClip: ((bytes: ByteArray, senderName: String?) -> Unit)? = null
 
     private val payloadCallback = object : PayloadCallback() {
         override fun onPayloadReceived(endpointId: String, payload: Payload) {
@@ -301,8 +305,10 @@ class MeshManager(private val context: Context) {
                     Log.w(TAG, "bad payload from $endpointId", e)
                 }
             } else {
+                val senderDeviceId = endpointToDevice[endpointId]
+                val senderName = senderDeviceId?.let { com.ghaly.findme.repo.PeerRepository.peers.value[it]?.name }
                 report("Voice clip received (${bytes.size} bytes) — playing…")
-                onVoiceClip?.invoke(bytes)
+                onVoiceClip?.invoke(bytes, senderName)
             }
         }
 

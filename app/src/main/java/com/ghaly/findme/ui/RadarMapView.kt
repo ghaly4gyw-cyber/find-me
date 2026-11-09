@@ -32,6 +32,16 @@ class RadarMapView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
 ) : View(context, attrs) {
 
+    companion object {
+        /** The Kaaba, Mecca — published coordinates (21.4225°N, 39.8262°E),
+         *  the same precision used by widely-referenced Qibla calculators.
+         *  At thousands of kilometers' distance, sub-100m uncertainty in this
+         *  point moves the computed bearing by a negligible fraction of a
+         *  degree, well under what a phone's own compass can resolve. */
+        private const val KAABA_LAT = 21.4225
+        private const val KAABA_LON = 39.8262
+    }
+
     var myLocation: Pair<Double, Double>? = null
         set(value) {
             field = value
@@ -86,6 +96,20 @@ class RadarMapView @JvmOverloads constructor(
         }
 
     var maxRangeMeters: Float = 2000f
+
+    /** Toggled on/off by the fragment. When on, draws a fixed-direction arrow
+     *  toward the Kaaba (Mecca) using the exact same geodesic bearing
+     *  computation ([Location.distanceBetween]) already used for every other
+     *  bearing in this view (peers, saved places, the follow lines) — just
+     *  pointed at the Kaaba's published coordinates instead of another
+     *  phone's GPS fix. Like every bearing drawn here, its on-screen accuracy
+     *  still depends on the phone's own compass/magnetometer being correctly
+     *  calibrated — that's a property of the device, not of this calculation. */
+    var showQibla: Boolean = false
+        set(value) {
+            field = value
+            invalidate()
+        }
 
     /** The compass heading the phone is currently pointing, 0 = true/magnetic
      *  north, fed by the fragment from the rotation-vector sensor. When this is
@@ -163,6 +187,20 @@ class RadarMapView @JvmOverloads constructor(
         style = Paint.Style.STROKE
         strokeWidth = 4f
         pathEffect = android.graphics.DashPathEffect(floatArrayOf(18f, 14f), 0f)
+    }
+    /** A solid, distinct-colored line for the Qibla direction — deliberately
+     *  not dashed like the follow lines, so it doesn't read as "navigating
+     *  to a person/place" (which it isn't: it never moves and always points
+     *  the same real-world direction regardless of distance). */
+    private val qiblaLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#39C5BB")
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
+    private val qiblaLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#39C5BB")
+        textSize = 24f
+        textAlign = Paint.Align.CENTER
     }
     private val placeLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#39C5BB")
@@ -275,18 +313,43 @@ class RadarMapView @JvmOverloads constructor(
         canvas.drawCircle(ccx, ccy, radius, sweepPaint)
         canvas.restore()
 
-        // North's position on screen rotates with the phone's own heading in
-        // heading-up mode (deviceHeadingDeg != 0) instead of always sitting at
-        // the top — it's the one fixed reference point letting the user check
-        // the view still makes sense.
-        run {
-            val northAngleRad = Math.toRadians((0 - deviceHeadingDeg - 90).toDouble())
-            val nx = ccx + ((radius + 24f) * cos(northAngleRad)).toFloat()
-            val ny = ccy + ((radius + 24f) * sin(northAngleRad)).toFloat()
-            canvas.drawText("N", nx, ny + 8f, northPaint)
+        // All four cardinal points rotate with the phone's own heading in
+        // heading-up mode (deviceHeadingDeg != 0) instead of sitting fixed on
+        // screen — they're the reference points letting the user check the
+        // view still makes sense, and line up with a real compass without
+        // needing to know which way true north is first.
+        for ((bearingDeg, labelRes) in listOf(
+            0f to com.ghaly.findme.R.string.compass_label_north,
+            90f to com.ghaly.findme.R.string.compass_label_east,
+            180f to com.ghaly.findme.R.string.compass_label_south,
+            270f to com.ghaly.findme.R.string.compass_label_west
+        )) {
+            val angleRad = Math.toRadians((bearingDeg - deviceHeadingDeg - 90).toDouble())
+            val lx = ccx + ((radius + 24f) * cos(angleRad)).toFloat()
+            val ly = ccy + ((radius + 24f) * sin(angleRad)).toFloat()
+            canvas.drawText(context.getString(labelRes), lx, ly + 8f, northPaint)
         }
 
         val mine = myLocation
+
+        // Qibla direction — a fixed real-world bearing to the Kaaba, computed
+        // with the same Location.distanceBetween geodesic bearing used for
+        // every peer/place in this view. Always drawn at the very edge
+        // (there's no meaningful "distance to clamp" for something this far
+        // away), as a solid line distinct from the dashed follow lines.
+        if (mine != null && showQibla) {
+            val results = FloatArray(2)
+            Location.distanceBetween(mine.first, mine.second, KAABA_LAT, KAABA_LON, results)
+            val bearingDeg = results[1]
+            val angleRad = Math.toRadians((bearingDeg - deviceHeadingDeg - 90).toDouble())
+            val qx = ccx + (radius * cos(angleRad)).toFloat()
+            val qy = ccy + (radius * sin(angleRad)).toFloat()
+            canvas.drawLine(ccx, ccy, qx, qy, qiblaLinePaint)
+            val lx = ccx + ((radius + 24f) * cos(angleRad)).toFloat()
+            val ly = ccy + ((radius + 24f) * sin(angleRad)).toFloat()
+            canvas.drawText(context.getString(com.ghaly.findme.R.string.qibla_map_label), lx, ly + 8f, qiblaLabelPaint)
+        }
+
         val dots = mutableListOf<DotHit>()
         var followPx: Float? = null
         var followPy: Float? = null
