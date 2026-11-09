@@ -1,6 +1,8 @@
 package com.ghaly.findme.mesh
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.ghaly.findme.model.ChatMessage
 import com.ghaly.findme.model.Envelope
@@ -93,6 +95,7 @@ class MeshManager(private val context: Context) {
         report("Starting mesh…")
         startAdvertising()
         startDiscovery()
+        watchdogHandler.postDelayed(connectionWatchdog, 5_000L)
     }
 
     private fun report(message: String) {
@@ -131,6 +134,8 @@ class MeshManager(private val context: Context) {
 
     fun stop() {
         running = false
+        watchdogHandler.removeCallbacks(connectionWatchdog)
+        pendingConnectionAtMs.clear()
         connectionsClient.stopAdvertising()
         connectionsClient.stopDiscovery()
         connectionsClient.stopAllEndpoints()
@@ -168,16 +173,60 @@ class MeshManager(private val context: Context) {
 
     private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
+            // P2P_CLUSTER has every phone both advertising AND discovering at once, so
+            // when two phones find each other around the same moment, BOTH can call
+            // requestConnection() on each other simultaneously. Nearby Connections
+            // handles that race badly — the handshake can get stuck at "connecting"
+            // forever instead of either succeeding or failing cleanly, which is
+            // exactly the symptom reported: two real phones a few meters apart,
+            // status frozen on "Found ... — connecting…". The fix is a simple
+            // deterministic tie-breaker: only the phone whose own name sorts lower
+            // initiates the request; the other just waits to receive it — nothing is
+            // lost since it's still advertising, so the incoming request still
+            // reaches it normally via onConnectionInitiated below.
+            if (myName >= info.endpointName) {
+                report("Found a nearby phone (${info.endpointName}) — waiting for it to connect to us…")
+                return
+            }
             report("Found a nearby phone (${info.endpointName}) — connecting…")
+            pendingConnectionAtMs[endpointId] = System.currentTimeMillis()
             connectionsClient.requestConnection(myName, endpointId, connectionLifecycleCallback)
                 .addOnFailureListener { e ->
                     Log.w(TAG, "requestConnection failed", e)
+                    pendingConnectionAtMs.remove(endpointId)
                     report("Connect to ${info.endpointName} FAILED: ${errorText(e)}")
                 }
         }
 
         override fun onEndpointLost(endpointId: String) {
+            pendingConnectionAtMs.remove(endpointId)
             handleDisconnect(endpointId)
+        }
+    }
+
+    /** endpointId -> when we called requestConnection on it, for the stuck-connection
+     *  watchdog below. A handshake that never resolves either way (no documented
+     *  Nearby Connections timeout fires in practice on some devices/OEM radios)
+     *  would otherwise leave that phone invisible to this one forever, with no
+     *  error ever shown — this is what actually retries it. */
+    private val pendingConnectionAtMs = ConcurrentHashMap<String, Long>()
+    private val watchdogHandler = Handler(Looper.getMainLooper())
+    private val CONNECTION_STUCK_TIMEOUT_MS = 20_000L
+
+    private val connectionWatchdog = object : Runnable {
+        override fun run() {
+            val now = System.currentTimeMillis()
+            val stuck = pendingConnectionAtMs.entries
+                .filter { now - it.value > CONNECTION_STUCK_TIMEOUT_MS }
+                .map { it.key }
+            for (endpointId in stuck) {
+                pendingConnectionAtMs.remove(endpointId)
+                if (!connectedEndpoints.contains(endpointId)) {
+                    report("Connection attempt timed out — retrying…")
+                    connectionsClient.disconnectFromEndpoint(endpointId)
+                }
+            }
+            if (running) watchdogHandler.postDelayed(this, 5_000L)
         }
     }
 
@@ -191,6 +240,7 @@ class MeshManager(private val context: Context) {
         }
 
         override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
+            pendingConnectionAtMs.remove(endpointId)
             if (!result.status.isSuccess) {
                 Log.d(TAG, "connection to $endpointId failed: ${result.status}")
                 report("Connection FAILED: ${statusText(result.status.statusCode)}")
@@ -222,6 +272,7 @@ class MeshManager(private val context: Context) {
         endpointToDevice.values.contains(deviceId)
 
     private fun handleDisconnect(endpointId: String) {
+        pendingConnectionAtMs.remove(endpointId)
         connectedEndpoints.remove(endpointId)
         val deviceId = endpointToDevice.remove(endpointId)
         if (deviceId != null) {
