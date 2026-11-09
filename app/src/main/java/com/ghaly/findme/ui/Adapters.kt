@@ -158,7 +158,7 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.VH>() {
     }
 }
 
-class SosAdapter : RecyclerView.Adapter<SosAdapter.VH>() {
+class SosAdapter(private val onClick: (SosAlert) -> Unit = {}) : RecyclerView.Adapter<SosAdapter.VH>() {
     var items: List<SosAlert> = emptyList()
         set(value) {
             field = value.filter { it.active }.sortedByDescending { it.ts }
@@ -166,6 +166,7 @@ class SosAdapter : RecyclerView.Adapter<SosAdapter.VH>() {
         }
 
     class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val root: View = v
         val name: android.widget.TextView = v.findViewById(R.id.sosName)
         val coordsView: android.widget.TextView = v.findViewById(R.id.sosCoords)
     }
@@ -183,10 +184,11 @@ class SosAdapter : RecyclerView.Adapter<SosAdapter.VH>() {
         val context = holder.name.context
         holder.name.text = context.getString(R.string.sos_needs_help, s.senderName)
         holder.coordsView.text = "${coords(s.lat, s.lon)} · ${timeAgo(context, s.ts)}"
+        holder.root.setOnClickListener { onClick(s) }
     }
 }
 
-class InactiveAdapter : RecyclerView.Adapter<InactiveAdapter.VH>() {
+class InactiveAdapter(private val onClick: (InactivityAlert) -> Unit = {}) : RecyclerView.Adapter<InactiveAdapter.VH>() {
     var items: List<InactivityAlert> = emptyList()
         set(value) {
             field = value.filter { it.active }.sortedByDescending { it.ts }
@@ -194,6 +196,7 @@ class InactiveAdapter : RecyclerView.Adapter<InactiveAdapter.VH>() {
         }
 
     class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val root: View = v
         val name: android.widget.TextView = v.findViewById(R.id.sosName)
         val coordsView: android.widget.TextView = v.findViewById(R.id.sosCoords)
     }
@@ -211,6 +214,7 @@ class InactiveAdapter : RecyclerView.Adapter<InactiveAdapter.VH>() {
         val context = holder.name.context
         holder.name.text = context.getString(R.string.inactive_alert, a.senderName)
         holder.coordsView.text = "${coords(a.lat, a.lon)} · ${context.getString(R.string.last_seen_fmt, timeAgo(context, a.ts))}"
+        holder.root.setOnClickListener { onClick(a) }
     }
 }
 

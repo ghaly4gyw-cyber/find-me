@@ -30,6 +30,17 @@ import java.time.ZonedDateTime
 
 class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListener {
 
+    companion object {
+        private const val ARG_FOLLOW_DEVICE_ID = "follow_device_id"
+
+        /** A plain tab switch uses the no-arg constructor (same as every other
+         *  tab). This one is for arriving already pointed at someone — from an
+         *  SOS card, say — without waiting for the peer list to load first. */
+        fun newInstance(followDeviceId: String): RadarMapFragment = RadarMapFragment().apply {
+            arguments = Bundle().apply { putString(ARG_FOLLOW_DEVICE_ID, followDeviceId) }
+        }
+    }
+
     private lateinit var radar: RadarMapView
     private lateinit var navigationHint: TextView
     private lateinit var daylightPill: TextView
@@ -52,6 +63,11 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         // them directly here too (harmless no-op if the service already has).
         SavedPlaceRepository.init(requireContext())
         TrailRepository.init(requireContext())
+
+        // Arrived here already pointed at someone (from an SOS/inactivity
+        // card) — set it before the peer list even loads; updateNavigationHint
+        // re-resolves it from PeerRepository as soon as that collect fires.
+        arguments?.getString(ARG_FOLLOW_DEVICE_ID)?.let { radar.followedDeviceId = it }
 
         radar.onPeerTap = { peer ->
             showPeerActionMenu(radar, peer)

@@ -28,8 +28,12 @@ import kotlinx.coroutines.launch
 
 class SosFragment : Fragment(R.layout.fragment_sos) {
 
-    private val adapter = SosAdapter()
-    private val inactiveAdapter = InactiveAdapter()
+    private val adapter = SosAdapter { alert ->
+        (requireActivity() as? MainActivity)?.followOnMap(alert.senderId)
+    }
+    private val inactiveAdapter = InactiveAdapter { alert ->
+        (requireActivity() as? MainActivity)?.followOnMap(alert.senderId)
+    }
     private var sosActive = false
     private var pulseAnimator: ValueAnimator? = null
     private var physicalSignal: PhysicalSignal? = null

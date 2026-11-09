@@ -6,7 +6,9 @@
     android:orientation="vertical"
     android:background="@drawable/bg_card_sos"
     android:padding="12dp"
-    android:layout_marginBottom="8dp">
+    android:layout_marginBottom="8dp"
+    android:clickable="true"
+    android:focusable="true">
 
     <TextView
         android:id="@+id/sosName"

@@ -441,4 +441,14 @@ class MainActivity : AppCompatActivity() {
             )
         }
     }
+
+    /** Jumps straight to the map, already pointed at [deviceId] — the same
+     *  "direction line + bearing/distance" state tapping their dot and
+     *  choosing Follow would leave the map in, just reached in one tap from
+     *  an SOS or inactivity card instead of having to switch tabs and find
+     *  them by hand. Map tab index is 1, same as the click listener below. */
+    fun followOnMap(deviceId: String) {
+        selectTab(1)
+        showFragment(RadarMapFragment.newInstance(deviceId))
+    }
 }
