@@ -23,10 +23,8 @@ import com.ghaly.findme.model.SavedPlace
 import com.ghaly.findme.repo.PeerRepository
 import com.ghaly.findme.repo.SavedPlaceRepository
 import com.ghaly.findme.repo.TrailRepository
-import com.ghaly.findme.util.SunCalculator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.time.ZonedDateTime
 
 class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListener {
 
@@ -43,7 +41,6 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
 
     private lateinit var radar: RadarMapView
     private lateinit var navigationHint: TextView
-    private lateinit var daylightPill: TextView
     private lateinit var accuracyPill: TextView
     private var sensorManager: SensorManager? = null
     private var rotationSensor: Sensor? = null
@@ -54,7 +51,6 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         super.onViewCreated(view, savedInstanceState)
         radar = view.findViewById(R.id.radarView)
         navigationHint = view.findViewById(R.id.navigationHint)
-        daylightPill = view.findViewById(R.id.daylightPill)
         accuracyPill = view.findViewById(R.id.accuracyPill)
         val emptyText = view.findViewById<View>(R.id.mapEmptyText)
 
@@ -133,7 +129,6 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                     val mine = mesh?.myLocation()
                     radar.myLocation = mine
                     updateNavigationHint()
-                    updateDaylightPill(mine)
                     updateAccuracyPill(mesh?.myAccuracyM())
                     // The service itself is asked (in onResume/onPause below) to take
                     // GPS fixes every 5s while this screen is up, instead of its normal
@@ -150,43 +145,6 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                 TrailRepository.points.collect { points ->
                     radar.trail = points.map { it.lat to it.lon }
                 }
-            }
-        }
-    }
-
-    /** Updates the daylight pill from the phone's current GPS fix. Colors
-     *  escalate the closer sunset gets, since that's the moment this is
-     *  actually meant to prompt someone to head back or make camp — a quiet
-     *  neutral color the rest of the time would bury the one time it matters. */
-    private fun updateDaylightPill(mine: Pair<Double, Double>?) {
-        if (mine == null) {
-            daylightPill.visibility = View.GONE
-            return
-        }
-        val state = SunCalculator.compute(mine.first, mine.second, ZonedDateTime.now())
-        when (state) {
-            is SunCalculator.DaylightState.Daylight -> {
-                val minutes = state.remaining.toMinutes()
-                daylightPill.text = getString(R.string.daylight_remaining_fmt, SunCalculator.format(state.remaining))
-                daylightPill.setTextColor(
-                    resources.getColor(
-                        when {
-                            minutes <= 30 -> R.color.sos_red
-                            minutes <= 90 -> R.color.amber_500
-                            else -> R.color.sand_900
-                        },
-                        null
-                    )
-                )
-                daylightPill.visibility = View.VISIBLE
-            }
-            is SunCalculator.DaylightState.Night -> {
-                daylightPill.text = getString(R.string.night_until_sunrise_fmt, SunCalculator.format(state.remaining))
-                daylightPill.setTextColor(resources.getColor(R.color.sos_red, null))
-                daylightPill.visibility = View.VISIBLE
-            }
-            is SunCalculator.DaylightState.Unknown -> {
-                daylightPill.visibility = View.GONE
             }
         }
     }

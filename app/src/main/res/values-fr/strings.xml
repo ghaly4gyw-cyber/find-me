@@ -174,6 +174,8 @@
     <string name="trail_cleared">Trajet effacé</string>
     <string name="daylight_remaining_fmt">Lumière du jour : %s restant</string>
     <string name="night_until_sunrise_fmt">Nuit · lever du soleil dans %s</string>
+    <string name="daylight_header_fmt">☼ %s</string>
+    <string name="night_header_fmt">☾ %s</string>
     <string name="radio_status_fmt">Radio · %d à portée</string>
     <string name="radio_you">Vous</string>
     <string name="radio_unknown_sender">Inconnu</string>

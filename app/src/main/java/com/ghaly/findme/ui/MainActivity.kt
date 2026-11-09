@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity() {
     // bind reference on every app foreground/background cycle.
     private var meshBindRequested = false
     private lateinit var meshStatus: TextView
+    private lateinit var daylightHeaderPill: TextView
     private lateinit var permissionBar: android.view.View
     private lateinit var batteryBar: android.view.View
     private lateinit var locationServicesBar: android.view.View
@@ -86,6 +87,46 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.mesh_connected_none)
         }
         meshStatus.text = if (lastMeshEvent.isEmpty()) countText else "$countText · $lastMeshEvent"
+    }
+
+    /** Lives in the always-visible header, not floating over the map, so
+     *  "how much daylight is left" stays in view no matter which tab is
+     *  open — the whole point of a desert-safety readout is that it's
+     *  useless if you only see it while you happen to be looking at the
+     *  radar. Color escalates the closer sunset gets, same as the map's
+     *  own daylight pill used to. */
+    private fun refreshDaylightHeaderPill() {
+        val mine = mesh?.myLocation()
+        if (mine == null) {
+            daylightHeaderPill.visibility = android.view.View.GONE
+            return
+        }
+        val state = com.ghaly.findme.util.SunCalculator.compute(mine.first, mine.second, java.time.ZonedDateTime.now())
+        when (state) {
+            is com.ghaly.findme.util.SunCalculator.DaylightState.Daylight -> {
+                val minutes = state.remaining.toMinutes()
+                daylightHeaderPill.text = getString(R.string.daylight_header_fmt, com.ghaly.findme.util.SunCalculator.format(state.remaining))
+                daylightHeaderPill.setTextColor(
+                    resources.getColor(
+                        when {
+                            minutes <= 30 -> R.color.sos_red
+                            minutes <= 90 -> R.color.amber_500
+                            else -> R.color.sand_900
+                        },
+                        null
+                    )
+                )
+                daylightHeaderPill.visibility = android.view.View.VISIBLE
+            }
+            is com.ghaly.findme.util.SunCalculator.DaylightState.Night -> {
+                daylightHeaderPill.text = getString(R.string.night_header_fmt, com.ghaly.findme.util.SunCalculator.format(state.remaining))
+                daylightHeaderPill.setTextColor(resources.getColor(R.color.sos_red, null))
+                daylightHeaderPill.visibility = android.view.View.VISIBLE
+            }
+            is com.ghaly.findme.util.SunCalculator.DaylightState.Unknown -> {
+                daylightHeaderPill.visibility = android.view.View.GONE
+            }
+        }
     }
 
     private val connection = object : ServiceConnection {
@@ -127,6 +168,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         meshStatus = findViewById(R.id.meshStatus)
+        daylightHeaderPill = findViewById(R.id.daylightHeaderPill)
         permissionBar = findViewById(R.id.permissionBar)
         batteryBar = findViewById(R.id.batteryBar)
         locationServicesBar = findViewById(R.id.locationServicesBar)
@@ -194,6 +236,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             while (true) {
                 refreshMeshStatusLine()
+                refreshDaylightHeaderPill()
                 delay(5_000L)
             }
         }

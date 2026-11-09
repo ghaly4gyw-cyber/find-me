@@ -177,6 +177,8 @@
     <string name="trail_cleared">Trail cleared</string>
     <string name="daylight_remaining_fmt">Daylight: %s left</string>
     <string name="night_until_sunrise_fmt">Dark · sunrise in %s</string>
+    <string name="daylight_header_fmt">☼ %s</string>
+    <string name="night_header_fmt">☾ %s</string>
     <string name="radio_status_fmt">Radio · %d in range</string>
     <string name="radio_you">You</string>
     <string name="radio_unknown_sender">Unknown</string>

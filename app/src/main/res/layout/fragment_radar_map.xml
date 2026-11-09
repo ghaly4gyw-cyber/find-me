@@ -26,36 +26,21 @@
         android:visibility="gone"
         tools:text="↑ Straight ahead · 340 m" />
 
-    <TextView
-        android:id="@+id/daylightPill"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|start"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:background="@drawable/bg_button_pill"
-        android:paddingStart="14dp"
-        android:paddingEnd="14dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
-        android:textColor="@color/sand_900"
-        android:textStyle="bold"
-        android:textSize="13sp"
-        android:visibility="gone"
-        tools:text="☼ 2h 14m left" />
-
     <!-- How much to trust the "you are here" dot — color escalates the same
-         way the daylight pill does, since a wide accuracy radius silently
-         misplacing someone by 50-100m is exactly the kind of thing that
-         should be visible, not hidden behind a dot that looks just as
-         confident whether it's accurate to 5m or 200m. -->
+         way the header's daylight pill does, since a wide accuracy radius
+         silently misplacing someone by 50-100m is exactly the kind of thing
+         that should be visible, not hidden behind a dot that looks just as
+         confident whether it's accurate to 5m or 200m. (The daylight pill
+         itself moved into the app's top bar — visible on every tab now,
+         not just this one — so this takes the spot it used to sit in,
+         leaving the radar underneath it uncovered.) -->
     <TextView
         android:id="@+id/accuracyPill"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="top|start"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="56dp"
+        android:layout_marginTop="16dp"
         android:background="@drawable/bg_button_pill"
         android:paddingStart="14dp"
         android:paddingEnd="14dp"
