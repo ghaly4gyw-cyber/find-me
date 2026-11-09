@@ -21,4 +21,32 @@
         <item name="android:background">@drawable/bg_tab_item</item>
         <item name="android:stateListAnimator">@animator/press_scale</item>
     </style>
+
+    <!-- Calculator keypad: a plain digit key, a teal operator key, and an
+         amber equals key — same three-tier visual language as the rest of
+         the app (card / selected-tab / primary-pill colors). -->
+    <style name="CalcButtonBase" parent="android:Widget.Material.Button.Borderless">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:stateListAnimator">@animator/press_scale</item>
+    </style>
+
+    <style name="CalcButtonDigit" parent="CalcButtonBase">
+        <item name="android:background">@drawable/bg_card_ripple</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="CalcButtonOp" parent="CalcButtonBase">
+        <item name="android:background">@drawable/bg_tab_item_selected</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="CalcButtonEquals" parent="CalcButtonBase">
+        <item name="android:background">@drawable/bg_button_pill</item>
+        <item name="android:textColor">@color/sand_900</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 </resources>

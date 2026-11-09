@@ -5,6 +5,7 @@ import com.ghaly.findme.model.ChatMessage
 import com.ghaly.findme.model.InactivityAlert
 import com.ghaly.findme.model.ListingKind
 import com.ghaly.findme.model.MarketListing
+import com.ghaly.findme.model.Note
 import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.model.Post
 import com.ghaly.findme.model.RadioTransmission
@@ -848,5 +849,70 @@ object RadioLogRepository {
 
     fun record(senderName: String, mine: Boolean) {
         _log.update { (it + RadioTransmission(senderName, System.currentTimeMillis(), mine)).takeLast(MAX_ENTRIES) }
+    }
+}
+
+/** Plain personal notes — purely local, same SharedPreferences+JSON pattern
+ *  as [SavedPlaceRepository]. Never touches the mesh; nobody else ever sees
+ *  these. */
+object NotesRepository {
+    private const val PREFS = "find_me_notes"
+    private const val KEY_DATA = "notes_json"
+
+    private var appContext: Context? = null
+    private val _notes = MutableStateFlow<List<Note>>(emptyList())
+    val notes: StateFlow<List<Note>> = _notes
+
+    fun init(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        loadFromDisk()
+    }
+
+    fun add(text: String) {
+        val note = Note(id = java.util.UUID.randomUUID().toString(), text = text, ts = System.currentTimeMillis())
+        _notes.update { listOf(note) + it }
+        saveToDisk()
+    }
+
+    fun remove(id: String) {
+        _notes.update { list -> list.filter { it.id != id } }
+        saveToDisk()
+    }
+
+    private fun loadFromDisk() {
+        val ctx = appContext ?: return
+        try {
+            val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(KEY_DATA, null) ?: return
+            val arr = JSONArray(json)
+            val loaded = mutableListOf<Note>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                loaded += Note(
+                    id = o.getString("id"),
+                    text = o.getString("text"),
+                    ts = o.optLong("ts", System.currentTimeMillis())
+                )
+            }
+            _notes.value = loaded
+        } catch (e: Exception) {
+            // corrupted/old cache format — just start empty, nothing to recover
+        }
+    }
+
+    private fun saveToDisk() {
+        val ctx = appContext ?: return
+        try {
+            val arr = JSONArray()
+            for (n in _notes.value) {
+                arr.put(JSONObject().put("id", n.id).put("text", n.text).put("ts", n.ts))
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY_DATA, arr.toString())
+                .apply()
+        } catch (e: Exception) {
+            // best-effort cache — losing it just means the notes are gone
+        }
     }
 }

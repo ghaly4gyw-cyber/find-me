@@ -146,3 +146,12 @@ data class RadioTransmission(
     val ts: Long,
     val mine: Boolean
 )
+
+/** A plain personal note — purely local, never sent over the mesh or seen
+ *  by anyone else. For jotting down anything worth remembering: a price, a
+ *  phone number, where something was left. */
+data class Note(
+    val id: String,
+    val text: String,
+    val ts: Long
+)

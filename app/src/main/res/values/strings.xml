@@ -108,17 +108,14 @@
     <string name="fall_notification_title">Possible fall detected</string>
     <string name="fall_notification_text">Open Find Me if you\'re okay — this alert clears the moment you touch your phone.</string>
 
-    <string name="hydration_notification_channel">Hydration reminder</string>
-    <string name="hydration_notification_title">Time to drink water</string>
-    <string name="hydration_notification_text">Take a water break and rest in the shade if you can.</string>
-    <string name="hydration_dialog_title">Hydration reminders</string>
-    <string-array name="hydration_interval_options">
-        <item>Off</item>
-        <item>Every 30 min</item>
-        <item>Every 60 min</item>
-        <item>Every 90 min</item>
-        <item>Every 120 min</item>
-    </string-array>
+    <string name="tools_dialog_title">Tools</string>
+    <string name="tools_notes">📝 Notes</string>
+    <string name="tools_calculator">🧮 Calculator</string>
+    <string name="notes_empty">No notes yet</string>
+    <string name="notes_hint">Write a note…</string>
+    <string name="notes_delete_title">Delete this note?</string>
+    <string name="notes_delete_confirm">Delete</string>
+    <string name="calc_error">Error</string>
     <string name="weather_notification_channel">Pressure drop notice</string>
     <string name="weather_notification_title">Pressure falling fast</string>
     <string name="weather_notification_text_fmt">Dropped %.1f hPa in the last %d min — often a sign the weather is about to change.</string>

@@ -139,7 +139,7 @@ class MainActivity : AppCompatActivity() {
         nameButton.setOnClickListener { showEditProfileDialog(nameButton) }
 
         findViewById<TextView>(R.id.languageButton).setOnClickListener { showLanguageDialog() }
-        findViewById<TextView>(R.id.hydrationButton).setOnClickListener { showHydrationDialog() }
+        findViewById<TextView>(R.id.toolsButton).setOnClickListener { showToolsDialog() }
         findViewById<TextView>(R.id.buddyCheckinButton).setOnClickListener { showBuddyCheckInDialog() }
 
         tabButtons = listOf(
@@ -259,38 +259,32 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    /** A single-choice list doubling as both the on/off switch and the
-     *  interval picker — "Off" is just the first option, no separate toggle
-     *  needed. Off by default; nothing fires until the person opens this and
-     *  actively picks an interval. */
-    private fun showHydrationDialog() {
-        val options = resources.getStringArray(R.array.hydration_interval_options)
-        val minutesForIndex = intArrayOf(0, 30, 60, 90, 120)
-        val currentMinutes = if (com.ghaly.findme.mesh.HydrationReminder.enabled(this)) {
-            com.ghaly.findme.mesh.HydrationReminder.intervalMinutes(this)
-        } else {
-            0
-        }
-        val checkedIndex = minutesForIndex.indexOf(currentMinutes).let { if (it < 0) 0 else it }
-
+    /** Offline, personal utilities — nothing here touches the mesh or anyone
+     *  else's phone. One entry point that opens into its own full screen
+     *  (so the list stays short no matter how many little tools get added
+     *  here later), rather than a button per tool crowding the top bar. */
+    private fun showToolsDialog() {
+        val options = arrayOf(getString(R.string.tools_notes), getString(R.string.tools_calculator))
         AlertDialog.Builder(this)
-            .setTitle(R.string.hydration_dialog_title)
-            .setSingleChoiceItems(options, checkedIndex) { dialog, index ->
-                val minutes = minutesForIndex[index]
-                if (minutes == 0) {
-                    com.ghaly.findme.mesh.HydrationReminder.setEnabled(this, false)
-                } else {
-                    com.ghaly.findme.mesh.HydrationReminder.setIntervalMinutes(this, minutes)
-                    com.ghaly.findme.mesh.HydrationReminder.setEnabled(this, true)
-                }
-                dialog.dismiss()
+            .setTitle(R.string.tools_dialog_title)
+            .setItems(options) { _, which ->
+                val fragment = if (which == 0) NotesFragment() else CalculatorFragment()
+                supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+                supportFragmentManager.beginTransaction()
+                    .setCustomAnimations(
+                        R.anim.slide_in_right, R.anim.slide_out_left,
+                        R.anim.slide_in_right, R.anim.slide_out_left
+                    )
+                    .replace(R.id.contentContainer, fragment)
+                    .addToBackStack(null)
+                    .commit()
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
-    /** Same "Off is just the first option" pattern as the hydration dialog
-     *  above. Needs POST_NOTIFICATIONS to actually show the "You OK?" prompt
+    /** "Off is just the first option" — no separate toggle needed. Needs
+     *  POST_NOTIFICATIONS to actually show the "You OK?" prompt
      *  (requested elsewhere at startup, same as every other alert in this
      *  app), but turning the feature on never depends on that having been
      *  granted — if it's missing, the grace-window alert still fires on

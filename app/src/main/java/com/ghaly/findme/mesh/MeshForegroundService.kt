@@ -205,7 +205,6 @@ class MeshForegroundService : Service() {
                 adjustBeaconFrequency()
                 checkInactivity()
                 SmsBridge.maybeAutoSend(applicationContext, mesh.myLocation())
-                HydrationReminder.maybeRemind(applicationContext)
                 BuddyCheckIn.tick(applicationContext) { raiseInactiveAlert() }
                 delay(WATCHDOG_INTERVAL_MS)
             }

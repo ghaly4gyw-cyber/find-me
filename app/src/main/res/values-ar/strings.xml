@@ -105,17 +105,14 @@
     <string name="fall_notification_title">احتمال وقوع سقوط</string>
     <string name="fall_notification_text">افتح إيجادني إذا كنت بخير، ستُلغى هذه التنبيه فور لمسك للهاتف.</string>
 
-    <string name="hydration_notification_channel">تذكير بشرب الماء</string>
-    <string name="hydration_notification_title">حان وقت شرب الماء</string>
-    <string name="hydration_notification_text">خذ قسطًا من الراحة واشرب الماء، واستظل إن أمكن.</string>
-    <string name="hydration_dialog_title">تذكير شرب الماء</string>
-    <string-array name="hydration_interval_options">
-        <item>معطّل</item>
-        <item>كل 30 دقيقة</item>
-        <item>كل 60 دقيقة</item>
-        <item>كل 90 دقيقة</item>
-        <item>كل 120 دقيقة</item>
-    </string-array>
+    <string name="tools_dialog_title">أدوات</string>
+    <string name="tools_notes">📝 ملاحظات</string>
+    <string name="tools_calculator">🧮 آلة حاسبة</string>
+    <string name="notes_empty">لا توجد ملاحظات بعد</string>
+    <string name="notes_hint">اكتب ملاحظة…</string>
+    <string name="notes_delete_title">حذف هذه الملاحظة؟</string>
+    <string name="notes_delete_confirm">حذف</string>
+    <string name="calc_error">خطأ</string>
     <string name="weather_notification_channel">تنبيه انخفاض الضغط الجوي</string>
     <string name="weather_notification_title">انخفاض سريع في الضغط الجوي</string>
     <string name="weather_notification_text_fmt">انخفض %.1f هكتوباسكال خلال آخر %d دقيقة — غالبًا علامة على تغيّر قادم في الطقس.</string>

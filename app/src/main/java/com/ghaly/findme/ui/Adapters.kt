@@ -11,6 +11,7 @@ import com.ghaly.findme.model.Group
 import com.ghaly.findme.model.InactivityAlert
 import com.ghaly.findme.model.ListingKind
 import com.ghaly.findme.model.MarketListing
+import com.ghaly.findme.model.Note
 import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.model.Post
 import com.ghaly.findme.model.PostComment
@@ -378,5 +379,34 @@ class CommentAdapter : RecyclerView.Adapter<CommentAdapter.VH>() {
         val c = items[position]
         holder.sender.text = c.authorName
         holder.text.text = c.text
+    }
+}
+
+class NoteAdapter(private val onLongClick: (Note) -> Unit = {}) : RecyclerView.Adapter<NoteAdapter.VH>() {
+    var items: List<Note> = emptyList()
+        set(value) {
+            field = value.sortedByDescending { it.ts }
+            notifyDataSetChanged()
+        }
+
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val root: View = v
+        val text: android.widget.TextView = v.findViewById(R.id.noteText)
+        val time: android.widget.TextView = v.findViewById(R.id.noteTime)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_note, parent, false)
+        return VH(v)
+    }
+
+    override fun getItemCount() = items.size
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val n = items[position]
+        holder.text.text = n.text
+        holder.time.text = timeAgo(holder.time.context, n.ts)
+        holder.root.setOnLongClickListener { onLongClick(n); true }
     }
 }
