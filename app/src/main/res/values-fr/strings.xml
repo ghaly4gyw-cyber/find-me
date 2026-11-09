@@ -113,6 +113,17 @@
     <string name="tools_dialog_title">Outils</string>
     <string name="tools_notes">📝 Notes</string>
     <string name="tools_calculator">🧮 Calculatrice</string>
+    <string name="tools_check_for_updates">⬇️ Vérifier les mises à jour</string>
+    <string name="update_no_internet">Pas de connexion internet pour le moment — réessayez avec du réseau ou du Wi-Fi.</string>
+    <string name="update_up_to_date">Vous avez déjà la dernière version.</string>
+    <string name="update_available_title">Mise à jour disponible</string>
+    <string name="update_available_message">La version %s est prête à être installée.</string>
+    <string name="update_install_button">Installer</string>
+    <string name="update_later_button">Plus tard</string>
+    <string name="update_downloading_title">Téléchargement de la mise à jour…</string>
+    <string name="update_downloading_message">Ça ne prendra pas longtemps. L\'application vous proposera de l\'installer une fois terminé.</string>
+    <string name="update_download_failed">Impossible de télécharger la mise à jour. Vérifiez votre connexion et réessayez.</string>
+    <string name="update_allow_install_toast">Activez \"Autoriser depuis cette source\" pour Trouve-Moi, puis revenez.</string>
     <string name="notes_empty">Aucune note pour l\'instant</string>
     <string name="notes_hint">Écrire une note…</string>
     <string name="notes_delete_title">Supprimer cette note ?</string>

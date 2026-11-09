@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Covers the downloaded update APK, written to the app's own cache dir
+     (see UpdateChecker.downloadApk). -->
+<paths>
+    <cache-path name="updates" path="." />
+</paths>

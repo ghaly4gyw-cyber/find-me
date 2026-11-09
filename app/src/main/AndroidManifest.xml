@@ -41,6 +41,13 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Lets the app hand a downloaded update APK straight to the system
+         installer, so updating doesn't mean leaving the app to re-download a
+         file from a browser. Nothing about the app's offline mesh features
+         uses this — it's only reached from the explicit "check for updates"
+         action. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
     <application
@@ -79,6 +86,19 @@
             android:name=".mesh.MeshForegroundService"
             android:foregroundServiceType="connectedDevice|location"
             android:exported="false" />
+
+        <!-- Hands a downloaded update APK to the system installer via a
+             content:// Uri instead of a raw file:// path, which newer
+             Android refuses to open. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

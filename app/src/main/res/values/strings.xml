@@ -116,6 +116,17 @@
     <string name="tools_dialog_title">Tools</string>
     <string name="tools_notes">📝 Notes</string>
     <string name="tools_calculator">🧮 Calculator</string>
+    <string name="tools_check_for_updates">⬇️ Check for updates</string>
+    <string name="update_no_internet">No internet connection right now — try again when you have signal or Wi-Fi.</string>
+    <string name="update_up_to_date">You already have the latest version.</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_message">Version %s is ready to install.</string>
+    <string name="update_install_button">Install</string>
+    <string name="update_later_button">Later</string>
+    <string name="update_downloading_title">Downloading update…</string>
+    <string name="update_downloading_message">This won\'t take long. The app will ask you to install once it\'s done.</string>
+    <string name="update_download_failed">Couldn\'t download the update. Check your connection and try again.</string>
+    <string name="update_allow_install_toast">Turn on \"Allow from this source\" for Find Me, then come back.</string>
     <string name="notes_empty">No notes yet</string>
     <string name="notes_hint">Write a note…</string>
     <string name="notes_delete_title">Delete this note?</string>

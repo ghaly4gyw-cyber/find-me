@@ -113,6 +113,17 @@
     <string name="tools_dialog_title">أدوات</string>
     <string name="tools_notes">📝 ملاحظات</string>
     <string name="tools_calculator">🧮 آلة حاسبة</string>
+    <string name="tools_check_for_updates">⬇️ التحقق من التحديثات</string>
+    <string name="update_no_internet">لا يوجد اتصال بالإنترنت الآن — حاول مرة أخرى عندما تتوفر شبكة أو واي فاي.</string>
+    <string name="update_up_to_date">لديك أحدث إصدار من التطبيق.</string>
+    <string name="update_available_title">يوجد تحديث جديد</string>
+    <string name="update_available_message">الإصدار %s جاهز للتثبيت.</string>
+    <string name="update_install_button">تثبيت</string>
+    <string name="update_later_button">لاحقًا</string>
+    <string name="update_downloading_title">جارٍ تحميل التحديث…</string>
+    <string name="update_downloading_message">لن يستغرق هذا وقتًا طويلاً. سيطلب منك التطبيق تثبيته بعد انتهاء التحميل.</string>
+    <string name="update_download_failed">تعذّر تحميل التحديث. تحقق من اتصالك وحاول مرة أخرى.</string>
+    <string name="update_allow_install_toast">فعّل \"السماح من هذا المصدر\" لتطبيق إيجادني، ثم عد إلى هنا.</string>
     <string name="notes_empty">لا توجد ملاحظات بعد</string>
     <string name="notes_hint">اكتب ملاحظة…</string>
     <string name="notes_delete_title">حذف هذه الملاحظة؟</string>

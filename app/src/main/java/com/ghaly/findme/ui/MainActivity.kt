@@ -31,14 +31,22 @@ import com.ghaly.findme.mesh.MeshForegroundService
 import com.ghaly.findme.mesh.MeshManager
 import com.ghaly.findme.mesh.Permissions
 import com.ghaly.findme.mesh.ProfileStore
+import com.ghaly.findme.update.UpdateChecker
+import com.ghaly.findme.update.UpdateInstaller
 import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
     var mesh: MeshManager? = null
         private set
+
+    /** Set only while waiting on the "allow installs from this app" settings
+     *  screen the person was just sent to; picked back up in onStart(). */
+    private var pendingUpdate: UpdateChecker.UpdateInfo? = null
 
     private var bound = false
     // Guards against calling bindService() more than once per onCreate..onStop
@@ -232,6 +240,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         refreshPermissionState()
+        checkForUpdates(manual = false)
 
         lifecycleScope.launch {
             while (true) {
@@ -248,6 +257,16 @@ class MainActivity : AppCompatActivity() {
         refreshBatteryState()
         refreshLocationServicesState()
         // refreshPermissionState() above already calls startMesh() when granted.
+
+        // Coming back from the "allow installs from this app" settings
+        // screen lands here — pick the update flow back up instead of
+        // leaving the person to find "Check for updates" again themselves.
+        pendingUpdate?.let { update ->
+            if (!UpdateInstaller.needsInstallPermission(this)) {
+                pendingUpdate = null
+                startUpdateDownload(update)
+            }
+        }
     }
 
     override fun onStop() {
@@ -333,10 +352,18 @@ class MainActivity : AppCompatActivity() {
      *  (so the list stays short no matter how many little tools get added
      *  here later), rather than a button per tool crowding the top bar. */
     private fun showToolsDialog() {
-        val options = arrayOf(getString(R.string.tools_notes), getString(R.string.tools_calculator))
+        val options = arrayOf(
+            getString(R.string.tools_notes),
+            getString(R.string.tools_calculator),
+            getString(R.string.tools_check_for_updates)
+        )
         AlertDialog.Builder(this)
             .setTitle(R.string.tools_dialog_title)
             .setItems(options) { _, which ->
+                if (which == 2) {
+                    checkForUpdates(manual = true)
+                    return@setItems
+                }
                 val fragment = if (which == 0) NotesFragment() else CalculatorFragment()
                 supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
                 supportFragmentManager.beginTransaction()
@@ -350,6 +377,75 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    /** True only when the phone currently has some live network path at all
+     *  (Wi-Fi, mobile data, anything) — lets a startup check skip straight
+     *  past a doomed connection attempt instead of waiting out a timeout,
+     *  which is the common case for this app out in the desert. */
+    private fun hasActiveNetwork(): Boolean {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+            ?: return false
+        val network = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(network) ?: return false
+        return caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    /** Looks for a newer build on the project's GitHub release and offers to
+     *  install it in place, so getting an update no longer means leaving the
+     *  app to download an APK from a browser. [manual] is true only when the
+     *  person tapped "Check for updates" themselves — it's the only case
+     *  that talks back with a "you're up to date" / "no internet" message;
+     *  the quiet startup check stays silent unless it actually finds
+     *  something. */
+    private fun checkForUpdates(manual: Boolean) {
+        if (!hasActiveNetwork()) {
+            if (manual) Toast.makeText(this, R.string.update_no_internet, Toast.LENGTH_SHORT).show()
+            return
+        }
+        lifecycleScope.launch {
+            val update = withContext(Dispatchers.IO) { UpdateChecker.check(this@MainActivity) }
+            if (update == null) {
+                if (manual) Toast.makeText(this@MainActivity, R.string.update_up_to_date, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle(R.string.update_available_title)
+                .setMessage(getString(R.string.update_available_message, update.versionName))
+                .setPositiveButton(R.string.update_install_button) { _, _ -> startUpdateDownload(update) }
+                .setNegativeButton(R.string.update_later_button, null)
+                .show()
+        }
+    }
+
+    private fun startUpdateDownload(update: UpdateChecker.UpdateInfo) {
+        if (UpdateInstaller.needsInstallPermission(this)) {
+            pendingUpdate = update
+            Toast.makeText(this, R.string.update_allow_install_toast, Toast.LENGTH_LONG).show()
+            try {
+                startActivity(UpdateInstaller.requestInstallPermissionIntent(this))
+            } catch (e: Exception) {
+                // some OEM skins don't have this exact settings screen
+            }
+            return
+        }
+        val progressDialog = AlertDialog.Builder(this)
+            .setTitle(R.string.update_downloading_title)
+            .setMessage(R.string.update_downloading_message)
+            .setCancelable(false)
+            .show()
+        lifecycleScope.launch {
+            try {
+                val apkFile = withContext(Dispatchers.IO) {
+                    UpdateChecker.downloadApk(this@MainActivity, update.apkUrl)
+                }
+                progressDialog.dismiss()
+                UpdateInstaller.install(this@MainActivity, apkFile)
+            } catch (e: Exception) {
+                progressDialog.dismiss()
+                Toast.makeText(this@MainActivity, R.string.update_download_failed, Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     /** "Off is just the first option" — no separate toggle needed. Needs

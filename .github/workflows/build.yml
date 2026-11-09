@@ -38,6 +38,13 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
 
+      - name: Generate version.json for in-app update checks
+        run: |
+          VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' app/build.gradle.kts)
+          VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          echo "{\"versionCode\": $VERSION_CODE, \"versionName\": \"$VERSION_NAME\"}" > app/build/outputs/apk/debug/version.json
+          cat app/build/outputs/apk/debug/version.json
+
       - name: Upload APK as build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -49,8 +56,10 @@ jobs:
         with:
           tag_name: latest
           name: Latest build
-          body: Automatic build from the latest push to main. Download app-debug.apk below and install it.
+          body: Automatic build from the latest push to main. The app can install this update on itself (Tools → Check for updates), or download app-debug.apk below and install it manually.
           prerelease: true
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/debug/version.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

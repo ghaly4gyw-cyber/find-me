@@ -11,8 +11,14 @@ android {
         applicationId = "com.ghaly.findme"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        // Bump BOTH of these with every change that ships: CI publishes them
+        // in version.json alongside the APK, and that's how a phone already
+        // running the app recognizes a newer build exists (see
+        // com.ghaly.findme.update.UpdateChecker) and offers to install it
+        // in-app, instead of someone having to go back to GitHub and
+        // download the APK by hand every time.
+        versionCode = 2
+        versionName = "0.2.0"
     }
 
     // Without this, every CI build gets signed with a throwaway key that
