@@ -15,6 +15,25 @@ android {
         versionName = "0.1.0"
     }
 
+    // Without this, every CI build gets signed with a throwaway key that
+    // Android's build tools auto-generate on whatever fresh runner happens to
+    // build it — a different one each time. Installing a newer APK over an
+    // older one only counts as an "update" (keeping all of a user's local
+    // data — saved places, chat history, notes, profile) when both are
+    // signed with the SAME key; otherwise Android refuses the install until
+    // the old app is uninstalled first, wiping everything. Pointing debug
+    // builds at one committed keystore (keystore/debug.keystore — a debug-
+    // only key, safe to commit, not used to publish anywhere) makes every
+    // build from here on share one signature, so updates actually update.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("../keystore/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
