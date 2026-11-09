@@ -56,6 +56,15 @@ class RadarMapView @JvmOverloads constructor(
 
     var onPlaceTap: ((SavedPlace) -> Unit)? = null
 
+    /** Where this phone has physically walked, oldest first — purely local,
+     *  recorded from GPS fixes regardless of mesh/SOS state, so there's
+     *  always a way back even if nothing else went wrong. */
+    var trail: List<Pair<Double, Double>> = emptyList()
+        set(value) {
+            field = value
+            invalidate()
+        }
+
     /** Device id of the peer currently being "followed" — a live line is drawn
      *  from you to them for as long as they're in the last-known peer list.
      *  Set/cleared by the fragment from the tap menu. */
@@ -169,6 +178,15 @@ class RadarMapView @JvmOverloads constructor(
         color = Color.parseColor("#0E1B1D")
         style = Paint.Style.STROKE
         strokeWidth = 3f
+    }
+    /** The breadcrumb trail of where you've physically walked — a thin dotted
+     *  line, distinct from the solid-dash "follow"/"navigate to" lines, since
+     *  this one isn't pointing anywhere, it's just showing where you've been. */
+    private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#88AFC9C7")
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        pathEffect = android.graphics.DashPathEffect(floatArrayOf(6f, 8f), 0f)
     }
 
     /** last drawn dot positions, for hit testing on tap */
@@ -339,6 +357,25 @@ class RadarMapView @JvmOverloads constructor(
             }
         }
         lastPlaceDots = placeDots
+
+        // breadcrumb trail of where you've walked — same bearing/distance/clamp
+        // transform as everything else, connected point-to-point. Drawn before
+        // the follow lines and center dot so those sit on top of it.
+        if (mine != null && trail.size >= 2) {
+            val path = android.graphics.Path()
+            var started = false
+            for ((lat, lon) in trail) {
+                val results = FloatArray(2)
+                Location.distanceBetween(mine.first, mine.second, lat, lon, results)
+                val clamped = min(results[0], maxRangeMeters)
+                val r = (clamped / maxRangeMeters) * radius
+                val angleRad = Math.toRadians((results[1] - deviceHeadingDeg - 90).toDouble())
+                val px = ccx + (r * cos(angleRad)).toFloat()
+                val py = ccy + (r * sin(angleRad)).toFloat()
+                if (!started) { path.moveTo(px, py); started = true } else path.lineTo(px, py)
+            }
+            canvas.drawPath(path, trailPaint)
+        }
 
         // the "follow"/"navigate to" lines — drawn before the center dot so it sits on top
         if (followPx != null && followPy != null) {

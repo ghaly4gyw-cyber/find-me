@@ -11,6 +11,7 @@ import com.ghaly.findme.model.PostComment
 import com.ghaly.findme.model.Profile
 import com.ghaly.findme.model.SavedPlace
 import com.ghaly.findme.model.SosAlert
+import com.ghaly.findme.model.TrailPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -752,6 +753,81 @@ object SavedPlaceRepository {
                 .apply()
         } catch (e: Exception) {
             // best-effort cache — losing it just means the saved places are gone
+        }
+    }
+}
+
+/** This phone's own breadcrumb trail of where it has physically walked —
+ *  purely local like a saved place, recorded straight from GPS fixes so it's
+ *  there automatically with nothing to remember to turn on. Only records a
+ *  new point once the phone has actually moved a meaningful distance, so
+ *  standing still for an hour doesn't fill the trail with the same spot —
+ *  and caps the total so a multi-day trip doesn't grow this file forever. */
+object TrailRepository {
+    private const val PREFS = "find_me_trail"
+    private const val KEY_DATA = "trail_json"
+    private const val MIN_MOVE_METERS = 15f
+    private const val MAX_POINTS = 1000
+
+    private var appContext: Context? = null
+    private val _points = MutableStateFlow<List<TrailPoint>>(emptyList())
+    val points: StateFlow<List<TrailPoint>> = _points
+
+    fun init(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        loadFromDisk()
+    }
+
+    fun record(lat: Double, lon: Double) {
+        val last = _points.value.lastOrNull()
+        if (last != null) {
+            val results = FloatArray(1)
+            android.location.Location.distanceBetween(last.lat, last.lon, lat, lon, results)
+            if (results[0] < MIN_MOVE_METERS) return
+        }
+        _points.update { (it + TrailPoint(lat, lon, System.currentTimeMillis())).takeLast(MAX_POINTS) }
+        saveToDisk()
+    }
+
+    fun clear() {
+        _points.value = emptyList()
+        saveToDisk()
+    }
+
+    private fun loadFromDisk() {
+        val ctx = appContext ?: return
+        try {
+            val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(KEY_DATA, null) ?: return
+            val arr = JSONArray(json)
+            val loaded = mutableListOf<TrailPoint>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                loaded += TrailPoint(
+                    lat = o.getDouble("lat"),
+                    lon = o.getDouble("lon"),
+                    ts = o.optLong("ts", System.currentTimeMillis())
+                )
+            }
+            _points.value = loaded
+        } catch (e: Exception) {
+            // corrupted/old cache format — just start empty, nothing to recover
+        }
+    }
+
+    private fun saveToDisk() {
+        val ctx = appContext ?: return
+        try {
+            val arr = JSONArray()
+            for (p in _points.value) {
+                arr.put(JSONObject().put("lat", p.lat).put("lon", p.lon).put("ts", p.ts))
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY_DATA, arr.toString())
+                .apply()
+        } catch (e: Exception) {
+            // best-effort cache
         }
     }
 }

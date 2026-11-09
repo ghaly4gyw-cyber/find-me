@@ -121,6 +121,9 @@
     <string name="share_with_team">Partager avec l\'équipe</string>
     <string name="shared_by_fmt">partagé par %s</string>
     <string name="place_shared_fmt">\"%s\" partagé avec l\'équipe</string>
+    <string name="clear_trail_dialog_title">Effacer le trajet</string>
+    <string name="clear_trail_dialog_message">Cela supprime votre trajet enregistré de la carte sur ce téléphone. Action irréversible.</string>
+    <string name="trail_cleared">Trajet effacé</string>
 
     <string name="export_report">Partager le rapport</string>
     <string name="report_title">Find Me — Rapport de sécurité</string>

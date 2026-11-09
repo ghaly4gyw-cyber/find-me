@@ -123,3 +123,11 @@ data class SavedPlace(
      *  be this same device, if the user chose to share one of their own). */
     val sharedByName: String? = null
 )
+
+/** One fix in this phone's own breadcrumb trail — where it has physically
+ *  been, not where anyone else is. Purely local, never sent over the mesh. */
+data class TrailPoint(
+    val lat: Double,
+    val lon: Double,
+    val ts: Long
+)

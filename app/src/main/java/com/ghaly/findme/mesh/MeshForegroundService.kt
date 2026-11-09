@@ -70,10 +70,13 @@ class MeshForegroundService : Service() {
         com.ghaly.findme.repo.SosRepository.init(applicationContext)
         com.ghaly.findme.repo.InactivityRepository.init(applicationContext)
         com.ghaly.findme.repo.PostRepository.init(applicationContext)
+        com.ghaly.findme.repo.MarketRepository.init(applicationContext)
+        com.ghaly.findme.repo.TrailRepository.init(applicationContext)
         mesh = MeshManager(applicationContext)
         mesh.onVoiceClip = { bytes -> VoicePlayer.play(applicationContext, bytes) }
         locationTracker = LocationTracker(applicationContext) { lat, lon ->
             mesh.sendPosition(lat, lon)
+            com.ghaly.findme.repo.TrailRepository.record(lat, lon)
         }
         fallDetector = FallDetector(applicationContext) { onPossibleFallDetected() }
     }

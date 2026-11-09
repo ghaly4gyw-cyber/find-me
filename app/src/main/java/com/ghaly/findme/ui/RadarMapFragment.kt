@@ -22,6 +22,7 @@ import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.model.SavedPlace
 import com.ghaly.findme.repo.PeerRepository
 import com.ghaly.findme.repo.SavedPlaceRepository
+import com.ghaly.findme.repo.TrailRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -46,6 +47,7 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         // Saved places are purely local — not tied to the mesh service, so load
         // them directly here too (harmless no-op if the service already has).
         SavedPlaceRepository.init(requireContext())
+        TrailRepository.init(requireContext())
 
         radar.onPeerTap = { peer ->
             showPeerActionMenu(radar, peer)
@@ -60,6 +62,13 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         }
         view.findViewById<Button>(R.id.myPlacesButton).setOnClickListener {
             showPlacesListDialog(radar)
+        }
+        // Long-press is deliberately the only way to clear the trail — this is
+        // the one way back for someone who's actually lost, so it shouldn't be
+        // a single careless tap away from being wiped.
+        view.findViewById<Button>(R.id.myPlacesButton).setOnLongClickListener {
+            showClearTrailDialog()
+            true
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -92,6 +101,26 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                 }
             }
         }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                TrailRepository.points.collect { points ->
+                    radar.trail = points.map { it.lat to it.lon }
+                }
+            }
+        }
+    }
+
+    private fun showClearTrailDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.clear_trail_dialog_title)
+            .setMessage(R.string.clear_trail_dialog_message)
+            .setPositiveButton(R.string.place_action_delete) { _, _ ->
+                TrailRepository.clear()
+                Toast.makeText(requireContext(), R.string.trail_cleared, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     override fun onResume() {
