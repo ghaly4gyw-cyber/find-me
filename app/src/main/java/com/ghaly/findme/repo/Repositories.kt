@@ -3,6 +3,8 @@ package com.ghaly.findme.repo
 import android.content.Context
 import com.ghaly.findme.model.ChatMessage
 import com.ghaly.findme.model.InactivityAlert
+import com.ghaly.findme.model.ListingKind
+import com.ghaly.findme.model.MarketListing
 import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.model.Post
 import com.ghaly.findme.model.PostComment
