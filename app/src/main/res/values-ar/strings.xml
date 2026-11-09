@@ -119,5 +119,11 @@
     <string name="stopped_navigating_fmt">تم إيقاف التوجّه إلى %s</string>
     <string name="place_deleted_fmt">تم حذف \"%s\"</string>
 
+    <string name="export_report">مشاركة التقرير</string>
+    <string name="report_title">إيجادني — تقرير السلامة</string>
+    <string name="report_active_sos">نداء استغاثة نشط:</string>
+    <string name="report_inactive">قد يكون غير نشط:</string>
+    <string name="report_known_miners">الهواتف المعروفة:</string>
+
     <string name="choose_language">اختر اللغة</string>
 </resources>

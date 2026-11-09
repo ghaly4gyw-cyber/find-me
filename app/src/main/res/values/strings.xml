@@ -122,6 +122,12 @@
     <string name="stopped_navigating_fmt">Stopped navigating to %s</string>
     <string name="place_deleted_fmt">Deleted \"%s\"</string>
 
+    <string name="export_report">Share report</string>
+    <string name="report_title">Find Me — Safety Report</string>
+    <string name="report_active_sos">ACTIVE SOS:</string>
+    <string name="report_inactive">POSSIBLY INACTIVE:</string>
+    <string name="report_known_miners">Known phones:</string>
+
     <string name="choose_language">Choose language</string>
     <string-array name="language_names">
         <item>العربية</item>

@@ -119,5 +119,11 @@
     <string name="stopped_navigating_fmt">Navigation arrêtée vers %s</string>
     <string name="place_deleted_fmt">\"%s\" supprimé</string>
 
+    <string name="export_report">Partager le rapport</string>
+    <string name="report_title">Find Me — Rapport de sécurité</string>
+    <string name="report_active_sos">SOS ACTIF :</string>
+    <string name="report_inactive">PEUT-ÊTRE INACTIF :</string>
+    <string name="report_known_miners">Téléphones connus :</string>
+
     <string name="choose_language">Choisir la langue</string>
 </resources>

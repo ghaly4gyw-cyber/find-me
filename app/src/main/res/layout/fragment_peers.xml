@@ -11,6 +11,22 @@
         android:padding="8dp" />
 
     <TextView
+        android:id="@+id/exportReportButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="12dp"
+        android:background="@drawable/bg_button_pill"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:textColor="@color/sand_900"
+        android:textStyle="bold"
+        android:textSize="13sp"
+        android:text="@string/export_report" />
+
+    <TextView
         android:id="@+id/emptyText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
