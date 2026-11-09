@@ -129,7 +129,12 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                     radar.myLocation = mine
                     updateNavigationHint()
                     updateDaylightPill(mine)
-                    delay(10_000L)
+                    // The service itself is asked (in onResume/onPause below) to take
+                    // GPS fixes every 5s while this screen is up, instead of its normal
+                    // battery-saving 30-120s — poll in step with that so a fresh fix
+                    // actually reaches the screen promptly instead of sitting around
+                    // for up to 10s before the UI notices it.
+                    delay(3_000L)
                 }
             }
         }
@@ -198,11 +203,17 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         // on the battery than GAME/FASTEST — this needs to run for hours in
         // someone's pocket, not just look good in a demo.
         rotationSensor?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
+        // Someone's actually looking at the distance/bearing readout right now —
+        // switch GPS fixes to a short, frequent cadence so it feels live instead
+        // of jumping once every 30-120s. Reverted in onPause so an idle phone
+        // goes right back to the battery-aware schedule.
+        (requireActivity() as? MainActivity)?.mesh?.setLiveLocationBoost(true)
     }
 
     override fun onPause() {
         super.onPause()
         sensorManager?.unregisterListener(this)
+        (requireActivity() as? MainActivity)?.mesh?.setLiveLocationBoost(false)
     }
 
     override fun onSensorChanged(event: SensorEvent) {

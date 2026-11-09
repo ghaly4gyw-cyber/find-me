@@ -73,6 +73,8 @@ class MeshForegroundService : Service() {
     private var currentIntervalMs = 30_000L
     private var inactiveAlertSent = false
     private var lowBatteryBeaconSent = false
+    // Set while the map screen is actually visible — see onLiveLocationBoost above.
+    private var liveLocationBoostActive = false
 
     /** Catches the OS's own low-battery threshold (~15% on most Android
      *  builds) to push one extra, out-of-cycle position beacon right away —
@@ -142,6 +144,7 @@ class MeshForegroundService : Service() {
             }
         }
         mesh.onSosReceived = { senderName -> notifySosReceived(senderName) }
+        mesh.onLiveLocationBoost = { active -> setLiveLocationBoost(active) }
         locationTracker = LocationTracker(applicationContext) { lat, lon ->
             mesh.sendPosition(lat, lon, currentBatteryPct())
             com.ghaly.findme.repo.TrailRepository.record(lat, lon)
@@ -220,17 +223,38 @@ class MeshForegroundService : Service() {
     }
 
     private fun adjustBeaconFrequency() {
-        val pct = currentBatteryPct()
-        val desiredIntervalMs = when {
-            pct >= 50 -> 30_000L
-            pct >= 20 -> 60_000L
-            else -> 120_000L
-        }
+        // The map screen has its own, faster cadence in effect right now —
+        // don't let this periodic battery-based check fight it every minute.
+        if (liveLocationBoostActive) return
+        val desiredIntervalMs = batteryBasedIntervalMs()
         if (desiredIntervalMs != currentIntervalMs) {
             currentIntervalMs = desiredIntervalMs
             locationTracker.stop()
             locationTracker.start(currentIntervalMs)
         }
+    }
+
+    private fun batteryBasedIntervalMs(): Long {
+        val pct = currentBatteryPct()
+        return when {
+            pct >= 50 -> 30_000L
+            pct >= 20 -> 60_000L
+            else -> 120_000L
+        }
+    }
+
+    /** Called (via [MeshManager.onLiveLocationBoost]) whenever the map screen
+     *  becomes visible or hidden. A short fixed interval while someone's
+     *  actually looking at the distance/bearing readout makes it feel live;
+     *  reverting the moment they leave keeps an idle phone on the normal
+     *  battery-aware schedule instead of draining it for a screen no one's
+     *  watching. */
+    private fun setLiveLocationBoost(active: Boolean) {
+        if (liveLocationBoostActive == active) return
+        liveLocationBoostActive = active
+        currentIntervalMs = if (active) 5_000L else batteryBasedIntervalMs()
+        locationTracker.stop()
+        locationTracker.start(currentIntervalMs)
     }
 
     private fun checkInactivity() {

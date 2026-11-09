@@ -301,6 +301,18 @@ class MeshManager(private val context: Context) {
      *  every carrier-pigeon replay of one already known. */
     var onSosReceived: ((senderName: String) -> Unit)? = null
 
+    /** Set by the service to switch GPS fix frequency between the normal
+     *  battery-conserving cadence (30-120s, scaled by battery level) and a
+     *  short, frequent one — the map screen calls [setLiveLocationBoost]
+     *  while it's actually on screen, since that's the one moment someone is
+     *  staring at a distance/bearing readout wanting it to feel live, and
+     *  reverts the instant they leave so idle phones keep sipping battery. */
+    var onLiveLocationBoost: ((active: Boolean) -> Unit)? = null
+
+    fun setLiveLocationBoost(active: Boolean) {
+        onLiveLocationBoost?.invoke(active)
+    }
+
     private val payloadCallback = object : PayloadCallback() {
         override fun onPayloadReceived(endpointId: String, payload: Payload) {
             if (payload.type != Payload.Type.BYTES) return

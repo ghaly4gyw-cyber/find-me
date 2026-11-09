@@ -21,6 +21,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.ghaly.findme.R
 import com.ghaly.findme.mesh.ActivityWatcher
@@ -51,6 +53,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var permissionBar: android.view.View
     private lateinit var batteryBar: android.view.View
     private lateinit var locationServicesBar: android.view.View
+    // The permission/battery/location banners are important but not urgent —
+    // on a shorter screen they can eat enough fixed vertical space that a
+    // fragment's own input row (the chat box, say) gets squeezed down to
+    // nothing or pushed off the bottom of the window once the keyboard is
+    // also open. Collapsing them for as long as the keyboard is up gives that
+    // input row back the room it needs; refreshPermissionState() and friends
+    // restore them to their real state the moment the keyboard closes.
+    private var bannersHiddenForKeyboard = false
     private lateinit var tabButtons: List<Button>
     private var selectedTabIndex = 0
 
@@ -132,6 +142,22 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 // some OEM skins don't have this exact settings screen
             }
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.rootLayout)) { _, insets ->
+            val keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            if (keyboardVisible && !bannersHiddenForKeyboard) {
+                bannersHiddenForKeyboard = true
+                permissionBar.visibility = android.view.View.GONE
+                batteryBar.visibility = android.view.View.GONE
+                locationServicesBar.visibility = android.view.View.GONE
+            } else if (!keyboardVisible && bannersHiddenForKeyboard) {
+                bannersHiddenForKeyboard = false
+                refreshPermissionState()
+                refreshBatteryState()
+                refreshLocationServicesState()
+            }
+            insets
         }
 
         val nameButton = findViewById<TextView>(R.id.myNameButton)
