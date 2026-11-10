@@ -118,6 +118,8 @@
     <string name="tools_calculator">🧮 Calculator</string>
     <string name="tools_accounts">💰 Accounts</string>
     <string name="tools_check_for_updates">⬇️ Check for updates</string>
+    <string name="tools_share_debug_log">🪵 Share debug log</string>
+    <string name="debug_log_empty">No log recorded yet</string>
 
     <string name="account_add_button">+ Add</string>
     <string name="account_search_hint">Search accounts or phone numbers…</string>

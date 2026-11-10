@@ -31,9 +31,11 @@ import com.ghaly.findme.mesh.MeshForegroundService
 import com.ghaly.findme.mesh.MeshManager
 import com.ghaly.findme.mesh.Permissions
 import com.ghaly.findme.mesh.ProfileStore
+import com.ghaly.findme.export.LedgerExport
 import com.ghaly.findme.update.UpdateChecker
 import com.ghaly.findme.update.UpdateInstaller
 import com.ghaly.findme.util.AnrWatchdog
+import com.ghaly.findme.util.AppLog
 import com.ghaly.findme.util.CrashLog
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
@@ -175,6 +177,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppLog.log("MainActivity", "onCreate (savedInstanceState=${savedInstanceState != null})")
         setContentView(R.layout.activity_main)
 
         // If the app died last time, this is the one place that can show the
@@ -259,6 +262,7 @@ class MainActivity : AppCompatActivity() {
                     refreshMeshStatusLine()
                     refreshDaylightHeaderPill()
                 } catch (e: Throwable) {
+                    AppLog.log("MainActivity", "periodic header refresh threw: ${e}")
                     CrashLog.writeHandled(this@MainActivity, "periodic header refresh", e)
                 }
                 checkWindowHealth()
@@ -285,6 +289,13 @@ class MainActivity : AppCompatActivity() {
         val displayHeight = resources.displayMetrics.heightPixels
         val decorWidth = decorView.width
         val decorHeight = decorView.height
+        val contentContainer = findViewById<android.widget.FrameLayout?>(R.id.contentContainer)
+        AppLog.log(
+            "WindowHealth",
+            "window=${decorWidth}x${decorHeight}px display=${displayWidth}x${displayHeight}px " +
+                "contentContainer=${contentContainer?.width}x${contentContainer?.height}px " +
+                "multiWindow=$isInMultiWindowMode pip=$isInPictureInPictureMode hasFocus=${hasWindowFocus()}"
+        )
         val shrunkHeight = decorHeight in 1 until (displayHeight / 2)
         val shrunkWidth = decorWidth in 1 until (displayWidth / 2)
         if (shrunkHeight || shrunkWidth) {
@@ -295,6 +306,7 @@ class MainActivity : AppCompatActivity() {
                 append("multi-window mode: $isInMultiWindowMode\n")
                 append("in picture-in-picture: ${isInPictureInPictureMode}")
             }
+            AppLog.log("WindowHealth", "SHRINK DETECTED — $details")
             CrashLog.writeHandled(this, "window-health", RuntimeException(details))
             android.widget.Toast.makeText(this, details, android.widget.Toast.LENGTH_LONG).show()
         }
@@ -302,6 +314,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        AppLog.log("MainActivity", "onStart")
         refreshPermissionState()
         refreshBatteryState()
         refreshLocationServicesState()
@@ -320,11 +333,55 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        AppLog.log("MainActivity", "onStop")
         if (bound) {
             unbindService(connection)
             bound = false
         }
         meshBindRequested = false
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppLog.log("MainActivity", "onResume")
+    }
+
+    override fun onPause() {
+        super.onPause()
+        AppLog.log("MainActivity", "onPause")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        AppLog.log("MainActivity", "onDestroy (isFinishing=$isFinishing, isChangingConfigurations=$isChangingConfigurations)")
+    }
+
+    /** Fires on things like a locale switch (the 🌐 button recreates the
+     *  activity) or a rotation — exactly the kind of moment the reported
+     *  break seems to cluster around ("it works right after switching the
+     *  language, then breaks a second later"), so this is worth a line of
+     *  its own rather than folding it into onCreate's. */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        AppLog.log("MainActivity", "onConfigurationChanged — orientation=${newConfig.orientation}, screenWidthDp=${newConfig.screenWidthDp}, screenHeightDp=${newConfig.screenHeightDp}, density=${newConfig.densityDpi}")
+    }
+
+    /** The window losing/gaining focus is exactly what a system overlay, a
+     *  gesture-triggered floating/split-screen mode, or a stuck resize
+     *  animation would show up as — this has never been logged before. */
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        val decorView = window?.decorView
+        AppLog.log(
+            "MainActivity",
+            "onWindowFocusChanged — hasFocus=$hasFocus, decorView=${decorView?.width}x${decorView?.height}px, " +
+                "display=${resources.displayMetrics.widthPixels}x${resources.displayMetrics.heightPixels}px"
+        )
+    }
+
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        AppLog.log("MainActivity", "onMultiWindowModeChanged — isInMultiWindowMode=$isInMultiWindowMode")
     }
 
     private fun refreshPermissionState() {
@@ -416,6 +473,7 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(R.string.choose_language)
             .setSingleChoiceItems(names, checkedIndex) { dialog, index ->
+                AppLog.log("MainActivity", "language switched to ${tags[index]} — activity recreate expected next")
                 AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tags[index]))
                 dialog.dismiss()
             }
@@ -432,13 +490,18 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.tools_notes),
             getString(R.string.tools_calculator),
             getString(R.string.tools_accounts),
-            getString(R.string.tools_check_for_updates)
+            getString(R.string.tools_check_for_updates),
+            getString(R.string.tools_share_debug_log)
         )
         AlertDialog.Builder(this)
             .setTitle(R.string.tools_dialog_title)
             .setItems(options) { _, which ->
                 if (which == 3) {
                     checkForUpdates(manual = true)
+                    return@setItems
+                }
+                if (which == 4) {
+                    shareDebugLog()
                     return@setItems
                 }
                 val fragment = when (which) {
@@ -450,6 +513,18 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    /** Hands over the continuous log (see AppLog) instead of asking whoever's
+     *  using the app to describe or screenshot what happened — the log
+     *  already has the real sequence of events written down as it occurred. */
+    private fun shareDebugLog() {
+        val file = AppLog.logFile(this)
+        if (!file.exists() || file.length() == 0L) {
+            Toast.makeText(this, R.string.debug_log_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        LedgerExport.shareFile(this, file, "text/plain")
     }
 
     /** True only when the phone currently has some live network path at all
@@ -656,6 +731,7 @@ class MainActivity : AppCompatActivity() {
      *  screen as readable text immediately, with no relaunch, no waiting,
      *  and nothing for whoever's using the app to interpret or describe. */
     private fun replaceContentSafely(fragment: androidx.fragment.app.Fragment, addToBackStack: Boolean) {
+        AppLog.log("MainActivity", "switching screen to ${fragment::class.simpleName}")
         try {
             supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
             val transaction = supportFragmentManager.beginTransaction()
@@ -669,6 +745,7 @@ class MainActivity : AppCompatActivity() {
             supportFragmentManager.executePendingTransactions()
             checkForLayoutShrink(fragment)
         } catch (e: Throwable) {
+            AppLog.log("MainActivity", "replaceContentSafely threw for ${fragment::class.simpleName}: $e")
             showInlineContentError(fragment::class.simpleName ?: "screen", e)
         }
     }
@@ -693,6 +770,10 @@ class MainActivity : AppCompatActivity() {
             val viewWidth = fragmentView.width
             val heightShrunk = containerHeight > 0 && viewHeight in 1 until (containerHeight / 4)
             val widthShrunk = containerWidth > 0 && viewWidth in 1 until (containerWidth / 4)
+            AppLog.log(
+                "MainActivity",
+                "${fragment::class.simpleName} opened — container=${containerWidth}x${containerHeight}px view=${viewWidth}x${viewHeight}px shrunk=${heightShrunk || widthShrunk}"
+            )
             if (heightShrunk || widthShrunk) {
                 val label = fragment::class.simpleName ?: "screen"
                 val rootHeight = findViewById<android.view.View>(R.id.rootLayout).height

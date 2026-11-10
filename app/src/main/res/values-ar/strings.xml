@@ -115,6 +115,8 @@
     <string name="tools_calculator">🧮 آلة حاسبة</string>
     <string name="tools_accounts">💰 الحسابات</string>
     <string name="tools_check_for_updates">⬇️ التحقق من التحديثات</string>
+    <string name="tools_share_debug_log">🪵 مشاركة سجل الأخطاء</string>
+    <string name="debug_log_empty">لا يوجد سجل بعد</string>
 
     <string name="account_add_button">+ إضافة</string>
     <string name="account_search_hint">ابحث باسم الحساب أو رقم الهاتف…</string>

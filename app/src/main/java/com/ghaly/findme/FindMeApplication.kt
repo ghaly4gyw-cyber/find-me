@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.ghaly.findme.util.AnrWatchdog
+import com.ghaly.findme.util.AppLog
 import com.ghaly.findme.util.CrashLog
 
 /** Most of the people who will ever install this app read Arabic first, so the
@@ -20,6 +21,10 @@ class FindMeApplication : Application() {
         // A reported freeze that never showed a crash popup isn't a normal
         // exception — it's the main thread stuck. This catches that case too.
         AnrWatchdog.install(this)
+        // Targeted checks for a crash and a freeze haven't explained the
+        // reported "shrinking" — this writes down everything, continuously,
+        // so the next report is a real sequence of events instead of a guess.
+        AppLog.install(this)
         if (AppCompatDelegate.getApplicationLocales().isEmpty) {
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("ar"))
         }

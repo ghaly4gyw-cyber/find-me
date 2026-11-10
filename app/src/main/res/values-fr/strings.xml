@@ -115,6 +115,8 @@
     <string name="tools_calculator">🧮 Calculatrice</string>
     <string name="tools_accounts">💰 Comptes</string>
     <string name="tools_check_for_updates">⬇️ Vérifier les mises à jour</string>
+    <string name="tools_share_debug_log">🪵 Partager le journal de débogage</string>
+    <string name="debug_log_empty">Aucun journal enregistré pour l\'instant</string>
 
     <string name="account_add_button">+ Ajouter</string>
     <string name="account_search_hint">Rechercher un compte ou un numéro…</string>

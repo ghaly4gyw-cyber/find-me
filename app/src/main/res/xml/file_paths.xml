@@ -3,4 +3,7 @@
      (see UpdateChecker.downloadApk). -->
 <paths>
     <cache-path name="updates" path="." />
+    <!-- Covers CrashLog/AnrWatchdog/AppLog's files, all written to the
+         app's own filesDir, so the debug log can be shared the same way. -->
+    <files-path name="diagnostics" path="." />
 </paths>
