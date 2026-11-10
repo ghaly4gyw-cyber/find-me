@@ -283,6 +283,22 @@ class RadarMapView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        // Everything below is computed from live GPS fixes and whatever
+        // peers/saved places/trail happen to be in memory right now — any one
+        // bad value (a stray NaN from a malformed coordinate, say) used to be
+        // able to crash this draw call, and because it's the view redrawing
+        // on every tick, that meant the map was unusable every single time it
+        // was opened rather than just a one-off glitch. One bad frame now
+        // just gets skipped; the next tick tries again with whatever's
+        // changed by then.
+        try {
+            drawRadar(canvas)
+        } catch (e: Exception) {
+            // skip this frame — see comment above
+        }
+    }
+
+    private fun drawRadar(canvas: Canvas) {
         val w = width.toFloat()
         val h = height.toFloat()
         val cx = w / 2f

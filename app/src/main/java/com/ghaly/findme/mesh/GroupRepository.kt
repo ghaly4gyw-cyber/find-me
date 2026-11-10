@@ -41,26 +41,42 @@ object GroupRepository {
 
     private var loaded = false
 
+    /** Every other disk-cached repository in this app wraps its load in a
+     *  try/catch (a corrupted or old-format cache should mean "start empty",
+     *  never "crash on every launch") — this one didn't, so a single
+     *  malformed or pre-this-format group record made the Groups tab a
+     *  permanent, un-recoverable crash the moment it loaded, surviving every
+     *  restart since the bad record was sitting on disk the whole time.
+     *  Guarded the same way now, with each record parsed on its own so one
+     *  bad entry only drops that one group instead of wiping the list. */
     private fun ensureLoaded(context: Context) {
         if (loaded) return
         loaded = true
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val json = prefs.getString(KEY_GROUPS, null) ?: return
-        val array = JSONArray(json)
-        val list = mutableListOf<Group>()
-        for (i in 0 until array.length()) {
-            val o = array.getJSONObject(i)
-            val code = o.optString("code", "").ifEmpty { "——————" }
-            list += Group(
-                id = o.getString("id"),
-                name = o.getString("name"),
-                keyBase64 = o.getString("key"),
-                adminId = o.getString("admin"),
-                createdTs = o.optLong("ts", System.currentTimeMillis()),
-                code = code
-            )
+        try {
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val json = prefs.getString(KEY_GROUPS, null) ?: return
+            val array = JSONArray(json)
+            val list = mutableListOf<Group>()
+            for (i in 0 until array.length()) {
+                try {
+                    val o = array.getJSONObject(i)
+                    val code = o.optString("code", "").ifEmpty { "——————" }
+                    list += Group(
+                        id = o.getString("id"),
+                        name = o.getString("name"),
+                        keyBase64 = o.getString("key"),
+                        adminId = o.optString("admin", ""),
+                        createdTs = o.optLong("ts", System.currentTimeMillis()),
+                        code = code
+                    )
+                } catch (e: Exception) {
+                    // this one record is malformed/old-format — skip it, keep the rest
+                }
+            }
+            _groups.value = list
+        } catch (e: Exception) {
+            // corrupted/old cache format entirely — just start empty, nothing to recover
         }
-        _groups.value = list
     }
 
     private fun persist(context: Context) {
