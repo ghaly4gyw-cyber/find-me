@@ -127,6 +127,10 @@
     <string name="account_phone_hint">رقم الهاتف (اختياري)</string>
     <string name="account_name_required">أدخل اسمًا لهذا الحساب</string>
     <string name="account_delete_confirm">هل تريد حذف هذا الحساب وكل ما هو مسجل عليه؟</string>
+    <string name="account_export_menu_title">تصدير</string>
+    <string name="account_export_pdf">📄 تصدير كملف PDF</string>
+    <string name="account_export_excel">📊 تصدير كملف إكسل (CSV)</string>
+    <string name="account_export_failed">تعذّر إنشاء ملف التصدير.</string>
 
     <string name="account_add_entry_button">+ تسجيل عملية</string>
     <string name="account_add_entry_title">تسجيل عملية</string>

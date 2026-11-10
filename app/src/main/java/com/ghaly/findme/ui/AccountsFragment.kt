@@ -19,6 +19,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ghaly.findme.R
+import com.ghaly.findme.export.LedgerExport
 import com.ghaly.findme.model.LedgerAccount
 import com.ghaly.findme.model.LedgerCurrency
 import com.ghaly.findme.repo.LedgerRepository
@@ -61,6 +62,7 @@ class AccountsFragment : Fragment(R.layout.fragment_accounts) {
         val searchInput = view.findViewById<EditText>(R.id.accountsSearchInput)
 
         view.findViewById<TextView>(R.id.addAccountButton).setOnClickListener { showAddAccountDialog() }
+        view.findViewById<TextView>(R.id.accountsExportButton).setOnClickListener { showExportMenu() }
 
         var allAccounts: List<LedgerAccount> = emptyList()
         fun applyFilter() {
@@ -105,6 +107,35 @@ class AccountsFragment : Fragment(R.layout.fragment_accounts) {
             .replace(R.id.contentContainer, AccountDetailFragment.newInstance(account.id))
             .addToBackStack(null)
             .commit()
+    }
+
+    /** Both options cover every account, not just what's currently filtered
+     *  by the search box — a statement meant to be shared should hold the
+     *  whole record, not whatever happened to be on screen. */
+    private fun showExportMenu() {
+        val accounts = LedgerRepository.accounts.value
+        if (accounts.isEmpty()) {
+            Toast.makeText(requireContext(), R.string.accounts_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val options = arrayOf(getString(R.string.account_export_pdf), getString(R.string.account_export_excel))
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.account_export_menu_title)
+            .setItems(options) { _, which ->
+                try {
+                    if (which == 0) {
+                        val file = LedgerExport.exportPdf(requireContext(), accounts, getString(R.string.app_name))
+                        LedgerExport.shareFile(requireContext(), file, "application/pdf")
+                    } else {
+                        val file = LedgerExport.exportCsv(requireContext(), accounts)
+                        LedgerExport.shareFile(requireContext(), file, "text/csv")
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), R.string.account_export_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun showDeleteAccountConfirm(account: LedgerAccount) {

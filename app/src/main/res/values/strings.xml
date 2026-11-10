@@ -130,6 +130,10 @@
     <string name="account_phone_hint">Phone number (optional)</string>
     <string name="account_name_required">Enter a name for this account</string>
     <string name="account_delete_confirm">Delete this account and everything recorded against it?</string>
+    <string name="account_export_menu_title">Export</string>
+    <string name="account_export_pdf">📄 Export as PDF</string>
+    <string name="account_export_excel">📊 Export as Excel (CSV)</string>
+    <string name="account_export_failed">Couldn\'t create the export file.</string>
 
     <string name="account_add_entry_button">+ Record a transaction</string>
     <string name="account_add_entry_title">Record a transaction</string>
