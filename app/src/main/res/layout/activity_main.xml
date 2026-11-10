@@ -28,8 +28,17 @@
                 android:text="@string/app_name"
                 android:textColor="@color/amber_500"
                 android:textSize="22sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
+            <!-- maxLines/ellipsize: a log finally caught this row's own
+                 height ballooning to nearly the full screen at random,
+                 swallowing every other view below it - this TextView's text
+                 (device/mesh status, which can vary) is the most likely
+                 thing to have wrapped into dozens of lines when that
+                 happened. Capping it to one line makes that structurally
+                 impossible from here on, whatever exactly triggered it. -->
             <TextView
                 android:id="@+id/meshStatus"
                 android:layout_width="wrap_content"
@@ -37,7 +46,9 @@
                 android:layout_marginTop="2dp"
                 android:text="@string/mesh_status_off"
                 android:textColor="@color/sand_300"
-                android:textSize="13sp" />
+                android:textSize="13sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
         </LinearLayout>
 
         <!-- Lives here instead of floating over the map so it's visible on
@@ -56,6 +67,8 @@
             android:textStyle="bold"
             android:textSize="12sp"
             android:visibility="gone"
+            android:maxLines="1"
+            android:ellipsize="end"
             tools:text="☼ 5h 15m" />
 
         <TextView
@@ -67,7 +80,8 @@
             android:textSize="18sp"
             android:paddingHorizontal="12dp"
             android:paddingVertical="8dp"
-            android:background="@drawable/bg_tab_item_selected" />
+            android:background="@drawable/bg_tab_item_selected"
+            android:maxLines="1" />
 
         <TextView
             android:id="@+id/buddyCheckinButton"
@@ -78,7 +92,8 @@
             android:textSize="18sp"
             android:paddingHorizontal="12dp"
             android:paddingVertical="8dp"
-            android:background="@drawable/bg_tab_item_selected" />
+            android:background="@drawable/bg_tab_item_selected"
+            android:maxLines="1" />
 
         <TextView
             android:id="@+id/languageButton"
@@ -89,7 +104,8 @@
             android:textSize="18sp"
             android:paddingHorizontal="12dp"
             android:paddingVertical="8dp"
-            android:background="@drawable/bg_tab_item_selected" />
+            android:background="@drawable/bg_tab_item_selected"
+            android:maxLines="1" />
 
         <TextView
             android:id="@+id/myNameButton"
@@ -100,6 +116,8 @@
             android:paddingHorizontal="14dp"
             android:paddingVertical="8dp"
             android:background="@drawable/bg_tab_item_selected"
+            android:maxLines="1"
+            android:ellipsize="end"
             tools:text="Miner-3F2A ✎" />
     </LinearLayout>
 

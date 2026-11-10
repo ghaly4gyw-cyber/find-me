@@ -315,6 +315,19 @@ class MainActivity : AppCompatActivity() {
                 "multiWindow=$isInMultiWindowMode pip=$isInPictureInPictureMode hasFocus=${hasWindowFocus()}"
         )
         logRootLayoutChildren()
+        // The real bug, confirmed from a real log: the window itself never
+        // shrinks, but contentContainer — the part the current screen
+        // actually lives in — can drop to 0 while the window stays full
+        // size, and it stays that way instead of correcting itself. A fresh
+        // requestLayout() is a safe, side-effect-free way to ask Android to
+        // re-measure everything from scratch, which is worth trying
+        // automatically rather than leaving the screen stuck until a
+        // restart, on top of the maxLines caps that should prevent the
+        // likely cause (a header text view wrapping to dozens of lines).
+        if (contentContainer != null && contentContainer.height == 0 && decorHeight > 0) {
+            AppLog.log("WindowHealth", "contentContainer collapsed to 0 — requesting a fresh layout pass to self-heal")
+            findViewById<android.view.View>(R.id.rootLayout).requestLayout()
+        }
         val shrunkHeight = decorHeight in 1 until (displayHeight / 2)
         val shrunkWidth = decorWidth in 1 until (displayWidth / 2)
         if (shrunkHeight || shrunkWidth) {
