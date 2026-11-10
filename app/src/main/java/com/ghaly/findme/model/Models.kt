@@ -157,3 +157,49 @@ data class Note(
     val text: String,
     val ts: Long
 )
+
+/** Which of two currencies a ledger amount is tracked in. The app never
+ *  touches real money transfers — it just remembers who owes what, in
+ *  whichever currency the deal was actually made in. */
+enum class LedgerCurrency { LOCAL, USD }
+
+/** Which way a ledger amount runs. */
+enum class LedgerDirection { THEY_OWE_ME, I_OWE_THEM }
+
+/** One recorded transaction against a ledger account — credit given, a
+ *  payment received, goods handed over, etc. — with an optional note and
+ *  photo as the record of it (a receipt, a photo of the goods). Purely
+ *  local, never sent over the mesh. */
+data class LedgerEntry(
+    val id: String,
+    val amount: Double,
+    val currency: LedgerCurrency,
+    val direction: LedgerDirection,
+    val details: String,
+    val photoBase64: String?,
+    val ts: Long
+)
+
+/** A running account with one contact — a customer, a supplier, a fellow
+ *  miner — tracking everything owed between the device's owner and them,
+ *  across any number of entries. This is the app's own offline bookkeeping
+ *  ledger, for recording deals made out in the field where there's no bank,
+ *  no signal, and often no paper either. Never sent over the mesh. */
+data class LedgerAccount(
+    val id: String,
+    val name: String,
+    val phone: String?,
+    val entries: List<LedgerEntry>,
+    val ts: Long
+) {
+    /** Net balance in [currency]: positive means they owe the device's
+     *  owner; negative means the device's owner owes them. */
+    fun balance(currency: LedgerCurrency): Double {
+        var net = 0.0
+        for (e in entries) {
+            if (e.currency != currency) continue
+            net += if (e.direction == LedgerDirection.THEY_OWE_ME) e.amount else -e.amount
+        }
+        return net
+    }
+}

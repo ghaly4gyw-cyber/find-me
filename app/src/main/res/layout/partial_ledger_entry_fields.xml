@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared fields for recording one ledger transaction — included by both
+     "add account" (which bundles an opening entry) and "add entry" dialogs,
+     so the two stay in sync automatically. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/entryAmountInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="@string/account_amount_hint"
+            android:inputType="numberDecimal" />
+
+        <TextView
+            android:id="@+id/entryCurrencyToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_tab_item_selected"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="8dp"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true"
+            android:text="@string/ledger_currency_local" />
+    </LinearLayout>
+
+    <RadioGroup
+        android:id="@+id/entryDirectionGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/entryDirectionTheyOweMe"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:checked="true"
+            android:textColor="@color/white"
+            android:text="@string/ledger_they_owe_radio" />
+
+        <RadioButton
+            android:id="@+id/entryDirectionIOweThem"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/white"
+            android:text="@string/ledger_i_owe_radio" />
+    </RadioGroup>
+
+    <TextView
+        android:id="@+id/entryDateInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_card_ripple"
+        android:padding="12dp"
+        android:textColor="@color/white"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <EditText
+        android:id="@+id/entryDetailsInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="@string/account_details_hint"
+        android:inputType="textMultiLine|textCapSentences"
+        android:maxLines="3" />
+
+    <ImageView
+        android:id="@+id/entryPhotoPreview"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="8dp"
+        android:background="@color/sand_700"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
+        android:contentDescription="@string/ledger_entry_photo" />
+
+    <TextView
+        android:id="@+id/entryChoosePhotoText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/choose_photo"
+        android:textColor="@color/amber_500"
+        android:clickable="true"
+        android:focusable="true" />
+
+</merge>

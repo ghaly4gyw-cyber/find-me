@@ -3,6 +3,10 @@ package com.ghaly.findme.repo
 import android.content.Context
 import com.ghaly.findme.model.ChatMessage
 import com.ghaly.findme.model.InactivityAlert
+import com.ghaly.findme.model.LedgerAccount
+import com.ghaly.findme.model.LedgerCurrency
+import com.ghaly.findme.model.LedgerDirection
+import com.ghaly.findme.model.LedgerEntry
 import com.ghaly.findme.model.ListingKind
 import com.ghaly.findme.model.MarketListing
 import com.ghaly.findme.model.Note
@@ -913,6 +917,159 @@ object NotesRepository {
                 .apply()
         } catch (e: Exception) {
             // best-effort cache — losing it just means the notes are gone
+        }
+    }
+}
+
+/** Local bookkeeping ledger — who owes the device's owner, and who they owe,
+ *  per contact/account. Unlike everything else in this file, this never
+ *  touches the mesh at all; it's purely the phone's own private record,
+ *  modeled on the kind of paper or app "accounts notebook" traders already
+ *  keep, so recording a deal in the field doesn't need a second app or a
+ *  signal. */
+object LedgerRepository {
+    private const val PREFS = "find_me_ledger"
+    private const val KEY_DATA = "accounts_json"
+
+    private var appContext: Context? = null
+    private val _accounts = MutableStateFlow<List<LedgerAccount>>(emptyList())
+    val accounts: StateFlow<List<LedgerAccount>> = _accounts
+
+    fun init(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        loadFromDisk()
+    }
+
+    fun addAccount(name: String, phone: String?): LedgerAccount {
+        val account = LedgerAccount(
+            id = UUID.randomUUID().toString(),
+            name = name,
+            phone = phone?.takeIf { it.isNotBlank() },
+            entries = emptyList(),
+            ts = System.currentTimeMillis()
+        )
+        _accounts.update { it + account }
+        saveToDisk()
+        return account
+    }
+
+    fun removeAccount(id: String) {
+        _accounts.update { list -> list.filter { it.id != id } }
+        saveToDisk()
+    }
+
+    fun addEntry(
+        accountId: String,
+        amount: Double,
+        currency: LedgerCurrency,
+        direction: LedgerDirection,
+        details: String,
+        photoBase64: String?,
+        ts: Long = System.currentTimeMillis()
+    ) {
+        val entry = LedgerEntry(
+            id = UUID.randomUUID().toString(),
+            amount = amount,
+            currency = currency,
+            direction = direction,
+            details = details,
+            photoBase64 = photoBase64,
+            ts = ts
+        )
+        _accounts.update { list ->
+            list.map { if (it.id == accountId) it.copy(entries = it.entries + entry) else it }
+        }
+        saveToDisk()
+    }
+
+    fun removeEntry(accountId: String, entryId: String) {
+        _accounts.update { list ->
+            list.map { acc ->
+                if (acc.id == accountId) acc.copy(entries = acc.entries.filter { it.id != entryId }) else acc
+            }
+        }
+        saveToDisk()
+    }
+
+    fun account(id: String): LedgerAccount? = _accounts.value.find { it.id == id }
+
+    /** Sum of every account's balance in [currency]. Positive means, on the
+     *  whole, more is owed to the device's owner than they owe out. */
+    fun totalBalance(currency: LedgerCurrency): Double =
+        _accounts.value.sumOf { it.balance(currency) }
+
+    private fun loadFromDisk() {
+        val ctx = appContext ?: return
+        try {
+            val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(KEY_DATA, null) ?: return
+            val arr = JSONArray(json)
+            val loaded = mutableListOf<LedgerAccount>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val entriesArr = o.optJSONArray("entries") ?: JSONArray()
+                val entries = mutableListOf<LedgerEntry>()
+                for (j in 0 until entriesArr.length()) {
+                    val eo = entriesArr.getJSONObject(j)
+                    entries += LedgerEntry(
+                        id = eo.getString("id"),
+                        amount = eo.getDouble("amount"),
+                        currency = runCatching { LedgerCurrency.valueOf(eo.optString("currency", "LOCAL")) }
+                            .getOrDefault(LedgerCurrency.LOCAL),
+                        direction = runCatching { LedgerDirection.valueOf(eo.optString("direction", "THEY_OWE_ME")) }
+                            .getOrDefault(LedgerDirection.THEY_OWE_ME),
+                        details = eo.optString("details", ""),
+                        photoBase64 = eo.optString("photoBase64", "").takeIf { it.isNotEmpty() },
+                        ts = eo.optLong("ts", System.currentTimeMillis())
+                    )
+                }
+                loaded += LedgerAccount(
+                    id = o.getString("id"),
+                    name = o.getString("name"),
+                    phone = o.optString("phone", "").takeIf { it.isNotEmpty() },
+                    entries = entries,
+                    ts = o.optLong("ts", System.currentTimeMillis())
+                )
+            }
+            _accounts.value = loaded
+        } catch (e: Exception) {
+            // corrupted/old cache format — just start empty, nothing to recover
+        }
+    }
+
+    private fun saveToDisk() {
+        val ctx = appContext ?: return
+        try {
+            val arr = JSONArray()
+            for (acc in _accounts.value) {
+                val entriesArr = JSONArray()
+                for (e in acc.entries) {
+                    entriesArr.put(
+                        JSONObject()
+                            .put("id", e.id)
+                            .put("amount", e.amount)
+                            .put("currency", e.currency.name)
+                            .put("direction", e.direction.name)
+                            .put("details", e.details)
+                            .put("photoBase64", e.photoBase64 ?: "")
+                            .put("ts", e.ts)
+                    )
+                }
+                arr.put(
+                    JSONObject()
+                        .put("id", acc.id)
+                        .put("name", acc.name)
+                        .put("phone", acc.phone ?: "")
+                        .put("entries", entriesArr)
+                        .put("ts", acc.ts)
+                )
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY_DATA, arr.toString())
+                .apply()
+        } catch (e: Exception) {
+            // best-effort cache — losing it just means the ledger is gone
         }
     }
 }

@@ -116,7 +116,39 @@
     <string name="tools_dialog_title">Tools</string>
     <string name="tools_notes">📝 Notes</string>
     <string name="tools_calculator">🧮 Calculator</string>
+    <string name="tools_accounts">💰 Accounts</string>
     <string name="tools_check_for_updates">⬇️ Check for updates</string>
+
+    <string name="account_add_button">+ Add</string>
+    <string name="account_search_hint">Search accounts or phone numbers…</string>
+    <string name="accounts_empty">No accounts yet — add one to start tracking what\'s owed.</string>
+    <string name="accounts_total_they_owe_fmt">Owed to you: %1$s %2$s</string>
+    <string name="accounts_total_i_owe_fmt">You owe: %1$s %2$s</string>
+
+    <string name="account_add_title">Add account</string>
+    <string name="account_name_hint">Account name</string>
+    <string name="account_phone_hint">Phone number (optional)</string>
+    <string name="account_name_required">Enter a name for this account</string>
+    <string name="account_delete_confirm">Delete this account and everything recorded against it?</string>
+
+    <string name="account_add_entry_button">+ Record a transaction</string>
+    <string name="account_add_entry_title">Record a transaction</string>
+    <string name="account_amount_hint">Amount</string>
+    <string name="account_details_hint">Details (optional)</string>
+    <string name="account_amount_required">Enter an amount</string>
+    <string name="account_delete_entry_title">Delete this transaction?</string>
+    <string name="account_detail_empty">No transactions recorded yet.</string>
+    <string name="account_detail_balance_they_owe_fmt">Balance — owed to you: %1$s %2$s</string>
+    <string name="account_detail_balance_i_owe_fmt">Balance — you owe: %1$s %2$s</string>
+
+    <string name="ledger_currency_local">Local</string>
+    <string name="ledger_currency_usd">USD</string>
+    <string name="ledger_they_owe_fmt">Owed to you: %1$s %2$s</string>
+    <string name="ledger_i_owe_fmt">You owe: %1$s %2$s</string>
+    <string name="ledger_settled_fmt">Settled (%1$s)</string>
+    <string name="ledger_they_owe_radio">They owe me</string>
+    <string name="ledger_i_owe_radio">I owe them</string>
+    <string name="ledger_entry_photo">Transaction photo</string>
     <string name="update_no_internet">No internet connection right now — try again when you have signal or Wi-Fi.</string>
     <string name="update_up_to_date">You already have the latest version.</string>
     <string name="update_available_title">Update available</string>

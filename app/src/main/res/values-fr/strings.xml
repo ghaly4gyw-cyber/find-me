@@ -113,7 +113,39 @@
     <string name="tools_dialog_title">Outils</string>
     <string name="tools_notes">📝 Notes</string>
     <string name="tools_calculator">🧮 Calculatrice</string>
+    <string name="tools_accounts">💰 Comptes</string>
     <string name="tools_check_for_updates">⬇️ Vérifier les mises à jour</string>
+
+    <string name="account_add_button">+ Ajouter</string>
+    <string name="account_search_hint">Rechercher un compte ou un numéro…</string>
+    <string name="accounts_empty">Aucun compte pour l\'instant — ajoutez-en un pour suivre ce qui est dû.</string>
+    <string name="accounts_total_they_owe_fmt">On vous doit : %1$s %2$s</string>
+    <string name="accounts_total_i_owe_fmt">Vous devez : %1$s %2$s</string>
+
+    <string name="account_add_title">Ajouter un compte</string>
+    <string name="account_name_hint">Nom du compte</string>
+    <string name="account_phone_hint">Numéro de téléphone (facultatif)</string>
+    <string name="account_name_required">Entrez un nom pour ce compte</string>
+    <string name="account_delete_confirm">Supprimer ce compte et tout ce qui y est enregistré ?</string>
+
+    <string name="account_add_entry_button">+ Enregistrer une opération</string>
+    <string name="account_add_entry_title">Enregistrer une opération</string>
+    <string name="account_amount_hint">Montant</string>
+    <string name="account_details_hint">Détails (facultatif)</string>
+    <string name="account_amount_required">Entrez un montant</string>
+    <string name="account_delete_entry_title">Supprimer cette opération ?</string>
+    <string name="account_detail_empty">Aucune opération enregistrée pour l\'instant.</string>
+    <string name="account_detail_balance_they_owe_fmt">Solde — on vous doit : %1$s %2$s</string>
+    <string name="account_detail_balance_i_owe_fmt">Solde — vous devez : %1$s %2$s</string>
+
+    <string name="ledger_currency_local">Local</string>
+    <string name="ledger_currency_usd">USD</string>
+    <string name="ledger_they_owe_fmt">On vous doit : %1$s %2$s</string>
+    <string name="ledger_i_owe_fmt">Vous devez : %1$s %2$s</string>
+    <string name="ledger_settled_fmt">Soldé (%1$s)</string>
+    <string name="ledger_they_owe_radio">On me doit</string>
+    <string name="ledger_i_owe_radio">Je dois</string>
+    <string name="ledger_entry_photo">Photo de l\'opération</string>
     <string name="update_no_internet">Pas de connexion internet pour le moment — réessayez avec du réseau ou du Wi-Fi.</string>
     <string name="update_up_to_date">Vous avez déjà la dernière version.</string>
     <string name="update_available_title">Mise à jour disponible</string>

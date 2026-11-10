@@ -9,6 +9,10 @@ import com.ghaly.findme.R
 import com.ghaly.findme.model.ChatMessage
 import com.ghaly.findme.model.Group
 import com.ghaly.findme.model.InactivityAlert
+import com.ghaly.findme.model.LedgerAccount
+import com.ghaly.findme.model.LedgerCurrency
+import com.ghaly.findme.model.LedgerDirection
+import com.ghaly.findme.model.LedgerEntry
 import com.ghaly.findme.model.ListingKind
 import com.ghaly.findme.model.MarketListing
 import com.ghaly.findme.model.Note
@@ -428,5 +432,151 @@ class NoteAdapter(private val onLongClick: (Note) -> Unit = {}) : RecyclerView.A
         holder.text.text = n.text
         holder.time.text = timeAgo(holder.time.context, n.ts)
         holder.root.setOnLongClickListener { onLongClick(n); true }
+    }
+}
+
+/** "150" instead of "150.0", but "150.5" kept as-is — ledger amounts are
+ *  usually whole numbers and look cluttered with a trailing ".0". */
+internal fun formatLedgerAmount(amount: Double): String {
+    return if (amount == amount.toLong().toDouble()) {
+        amount.toLong().toString()
+    } else {
+        String.format(Locale.US, "%.2f", amount)
+    }
+}
+
+internal fun currencyLabel(context: Context, currency: LedgerCurrency): String = context.getString(
+    if (currency == LedgerCurrency.LOCAL) R.string.ledger_currency_local else R.string.ledger_currency_usd
+)
+
+/** List of accounts on the main Accounts screen — one row per contact, with
+ *  their net balance in whichever currencies actually have entries, and how
+ *  many transactions are on file. */
+class AccountAdapter(
+    private val onClick: (LedgerAccount) -> Unit,
+    private val onLongClick: (LedgerAccount) -> Unit = {}
+) : RecyclerView.Adapter<AccountAdapter.VH>() {
+    var items: List<LedgerAccount> = emptyList()
+        set(value) {
+            field = value.sortedByDescending { it.ts }
+            notifyDataSetChanged()
+        }
+
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val root: View = v
+        val name: android.widget.TextView = v.findViewById(R.id.accountName)
+        val phone: android.widget.TextView = v.findViewById(R.id.accountPhone)
+        val balanceLocal: android.widget.TextView = v.findViewById(R.id.accountBalanceLocal)
+        val balanceUsd: android.widget.TextView = v.findViewById(R.id.accountBalanceUsd)
+        val entryCount: android.widget.TextView = v.findViewById(R.id.accountEntryCount)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_account, parent, false)
+        return VH(v)
+    }
+
+    override fun getItemCount() = items.size
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val ctx = holder.root.context
+        val acc = items[position]
+        holder.name.text = acc.name
+        if (acc.phone.isNullOrBlank()) {
+            holder.phone.visibility = View.GONE
+        } else {
+            holder.phone.visibility = View.VISIBLE
+            holder.phone.text = acc.phone
+        }
+        bindBalance(holder.balanceLocal, ctx, acc.balance(LedgerCurrency.LOCAL), LedgerCurrency.LOCAL)
+        val usdBalance = acc.balance(LedgerCurrency.USD)
+        if (usdBalance == 0.0 && acc.entries.none { it.currency == LedgerCurrency.USD }) {
+            holder.balanceUsd.visibility = View.GONE
+        } else {
+            holder.balanceUsd.visibility = View.VISIBLE
+            bindBalance(holder.balanceUsd, ctx, usdBalance, LedgerCurrency.USD)
+        }
+        holder.entryCount.text = acc.entries.size.toString()
+        holder.root.setOnClickListener { onClick(acc) }
+        holder.root.setOnLongClickListener { onLongClick(acc); true }
+    }
+
+    private fun bindBalance(view: android.widget.TextView, ctx: Context, balance: Double, currency: LedgerCurrency) {
+        val label = currencyLabel(ctx, currency)
+        val amountText = formatLedgerAmount(kotlin.math.abs(balance))
+        when {
+            balance > 0 -> {
+                view.text = ctx.getString(R.string.ledger_they_owe_fmt, amountText, label)
+                view.setTextColor(ctx.getColor(R.color.teal_400))
+            }
+            balance < 0 -> {
+                view.text = ctx.getString(R.string.ledger_i_owe_fmt, amountText, label)
+                view.setTextColor(ctx.getColor(R.color.sos_red))
+            }
+            else -> {
+                view.text = ctx.getString(R.string.ledger_settled_fmt, label)
+                view.setTextColor(ctx.getColor(R.color.sand_300))
+            }
+        }
+    }
+}
+
+/** One transaction inside an account's detail screen. */
+class LedgerEntryAdapter(
+    private val onLongClick: (LedgerEntry) -> Unit = {}
+) : RecyclerView.Adapter<LedgerEntryAdapter.VH>() {
+    var items: List<LedgerEntry> = emptyList()
+        set(value) {
+            field = value.sortedByDescending { it.ts }
+            notifyDataSetChanged()
+        }
+
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val root: View = v
+        val amount: android.widget.TextView = v.findViewById(R.id.entryAmount)
+        val details: android.widget.TextView = v.findViewById(R.id.entryDetails)
+        val time: android.widget.TextView = v.findViewById(R.id.entryTime)
+        val photo: android.widget.ImageView = v.findViewById(R.id.entryPhoto)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_ledger_entry, parent, false)
+        return VH(v)
+    }
+
+    override fun getItemCount() = items.size
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val ctx = holder.root.context
+        val e = items[position]
+        val label = currencyLabel(ctx, e.currency)
+        val amountText = formatLedgerAmount(e.amount)
+        if (e.direction == LedgerDirection.THEY_OWE_ME) {
+            holder.amount.text = ctx.getString(R.string.ledger_they_owe_fmt, amountText, label)
+            holder.amount.setTextColor(ctx.getColor(R.color.teal_400))
+        } else {
+            holder.amount.text = ctx.getString(R.string.ledger_i_owe_fmt, amountText, label)
+            holder.amount.setTextColor(ctx.getColor(R.color.sos_red))
+        }
+        if (e.details.isBlank()) {
+            holder.details.visibility = View.GONE
+        } else {
+            holder.details.visibility = View.VISIBLE
+            holder.details.text = e.details
+        }
+        holder.time.text = timeAgo(holder.time.context, e.ts)
+        if (e.photoBase64.isNullOrEmpty()) {
+            holder.photo.visibility = View.GONE
+        } else {
+            try {
+                val bytes = android.util.Base64.decode(e.photoBase64, android.util.Base64.NO_WRAP)
+                val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                holder.photo.setImageBitmap(bmp)
+                holder.photo.visibility = View.VISIBLE
+            } catch (ex: Exception) {
+                holder.photo.visibility = View.GONE
+            }
+        }
+        holder.root.setOnLongClickListener { onLongClick(e); true }
     }
 }

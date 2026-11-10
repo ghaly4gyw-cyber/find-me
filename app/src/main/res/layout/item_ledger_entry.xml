@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_card_ripple"
+    android:padding="12dp"
+    android:layout_marginBottom="8dp"
+    android:stateListAnimator="@animator/press_scale"
+    android:clickable="true"
+    android:focusable="true">
+
+    <ImageView
+        android:id="@+id/entryPhoto"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="10dp"
+        android:background="@color/sand_700"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
+        android:contentDescription="@string/ledger_entry_photo" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/entryAmount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            tools:text="50 محلي" />
+
+        <TextView
+            android:id="@+id/entryDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            tools:text="Phone credit" />
+
+        <TextView
+            android:id="@+id/entryTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/sand_300"
+            android:textSize="11sp"
+            tools:text="10 min ago" />
+    </LinearLayout>
+
+</LinearLayout>

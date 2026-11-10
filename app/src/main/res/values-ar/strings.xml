@@ -113,7 +113,39 @@
     <string name="tools_dialog_title">أدوات</string>
     <string name="tools_notes">📝 ملاحظات</string>
     <string name="tools_calculator">🧮 آلة حاسبة</string>
+    <string name="tools_accounts">💰 الحسابات</string>
     <string name="tools_check_for_updates">⬇️ التحقق من التحديثات</string>
+
+    <string name="account_add_button">+ إضافة</string>
+    <string name="account_search_hint">ابحث باسم الحساب أو رقم الهاتف…</string>
+    <string name="accounts_empty">لا توجد حسابات بعد — أضف حسابًا لبدء تسجيل الديون.</string>
+    <string name="accounts_total_they_owe_fmt">عليهم: %1$s %2$s</string>
+    <string name="accounts_total_i_owe_fmt">عليك: %1$s %2$s</string>
+
+    <string name="account_add_title">إضافة حساب جديد</string>
+    <string name="account_name_hint">إسم الحساب</string>
+    <string name="account_phone_hint">رقم الهاتف (اختياري)</string>
+    <string name="account_name_required">أدخل اسمًا لهذا الحساب</string>
+    <string name="account_delete_confirm">هل تريد حذف هذا الحساب وكل ما هو مسجل عليه؟</string>
+
+    <string name="account_add_entry_button">+ تسجيل عملية</string>
+    <string name="account_add_entry_title">تسجيل عملية</string>
+    <string name="account_amount_hint">المبلغ</string>
+    <string name="account_details_hint">التفاصيل (اختياري)</string>
+    <string name="account_amount_required">أدخل مبلغًا</string>
+    <string name="account_delete_entry_title">هل تريد حذف هذه العملية؟</string>
+    <string name="account_detail_empty">لا توجد عمليات مسجلة بعد.</string>
+    <string name="account_detail_balance_they_owe_fmt">الرصيد عليه: %1$s %2$s</string>
+    <string name="account_detail_balance_i_owe_fmt">الرصيد له: %1$s %2$s</string>
+
+    <string name="ledger_currency_local">محلي</string>
+    <string name="ledger_currency_usd">دولار</string>
+    <string name="ledger_they_owe_fmt">عليه: %1$s %2$s</string>
+    <string name="ledger_i_owe_fmt">له: %1$s %2$s</string>
+    <string name="ledger_settled_fmt">مسدد (%1$s)</string>
+    <string name="ledger_they_owe_radio">عليه</string>
+    <string name="ledger_i_owe_radio">له</string>
+    <string name="ledger_entry_photo">صورة العملية</string>
     <string name="update_no_internet">لا يوجد اتصال بالإنترنت الآن — حاول مرة أخرى عندما تتوفر شبكة أو واي فاي.</string>
     <string name="update_up_to_date">لديك أحدث إصدار من التطبيق.</string>
     <string name="update_available_title">يوجد تحديث جديد</string>

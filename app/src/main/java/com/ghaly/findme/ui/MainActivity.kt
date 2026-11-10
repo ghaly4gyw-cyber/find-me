@@ -355,16 +355,21 @@ class MainActivity : AppCompatActivity() {
         val options = arrayOf(
             getString(R.string.tools_notes),
             getString(R.string.tools_calculator),
+            getString(R.string.tools_accounts),
             getString(R.string.tools_check_for_updates)
         )
         AlertDialog.Builder(this)
             .setTitle(R.string.tools_dialog_title)
             .setItems(options) { _, which ->
-                if (which == 2) {
+                if (which == 3) {
                     checkForUpdates(manual = true)
                     return@setItems
                 }
-                val fragment = if (which == 0) NotesFragment() else CalculatorFragment()
+                val fragment = when (which) {
+                    0 -> NotesFragment()
+                    1 -> CalculatorFragment()
+                    else -> AccountsFragment()
+                }
                 supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
                 supportFragmentManager.beginTransaction()
                     .setCustomAnimations(
