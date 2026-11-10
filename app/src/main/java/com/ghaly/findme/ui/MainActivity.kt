@@ -74,6 +74,7 @@ class MainActivity : AppCompatActivity() {
     // input row back the room it needs; refreshPermissionState() and friends
     // restore them to their real state the moment the keyboard closes.
     private var bannersHiddenForKeyboard = false
+    private var lastLoggedChildHeights: List<Int>? = null
     private lateinit var tabButtons: List<Button>
     private var selectedTabIndex = 0
 
@@ -208,20 +209,37 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.rootLayout)) { _, insets ->
+        val rootLayoutView = findViewById<android.view.ViewGroup>(R.id.rootLayout)
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayoutView) { _, insets ->
             val keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            AppLog.log("Insets", "dispatch — imeVisible=$keyboardVisible, bannersHiddenForKeyboard=$bannersHiddenForKeyboard")
             if (keyboardVisible && !bannersHiddenForKeyboard) {
                 bannersHiddenForKeyboard = true
                 permissionBar.visibility = android.view.View.GONE
                 batteryBar.visibility = android.view.View.GONE
                 locationServicesBar.visibility = android.view.View.GONE
+                AppLog.log("Insets", "ime became visible — hid all 3 banners")
             } else if (!keyboardVisible && bannersHiddenForKeyboard) {
                 bannersHiddenForKeyboard = false
+                AppLog.log("Insets", "ime became hidden — re-checking the 3 banners")
                 refreshPermissionState()
                 refreshBatteryState()
                 refreshLocationServicesState()
             }
             insets
+        }
+
+        // Fine-grained, event-driven companion to the every-5-seconds check
+        // below — this fires on every actual layout pass, so it catches a
+        // collapse that comes and goes faster than a 5-second tick could
+        // ever see, and logs only when something actually changed so it
+        // doesn't flood the file.
+        rootLayoutView.viewTreeObserver.addOnGlobalLayoutListener {
+            val heights = (0 until rootLayoutView.childCount).map { rootLayoutView.getChildAt(it).height }
+            if (heights != lastLoggedChildHeights) {
+                lastLoggedChildHeights = heights
+                logRootLayoutChildren()
+            }
         }
 
         val nameButton = findViewById<TextView>(R.id.myNameButton)
@@ -296,6 +314,7 @@ class MainActivity : AppCompatActivity() {
                 "contentContainer=${contentContainer?.width}x${contentContainer?.height}px " +
                 "multiWindow=$isInMultiWindowMode pip=$isInPictureInPictureMode hasFocus=${hasWindowFocus()}"
         )
+        logRootLayoutChildren()
         val shrunkHeight = decorHeight in 1 until (displayHeight / 2)
         val shrunkWidth = decorWidth in 1 until (displayWidth / 2)
         if (shrunkHeight || shrunkWidth) {
@@ -310,6 +329,34 @@ class MainActivity : AppCompatActivity() {
             CrashLog.writeHandled(this, "window-health", RuntimeException(details))
             android.widget.Toast.makeText(this, details, android.widget.Toast.LENGTH_LONG).show()
         }
+    }
+
+    /** The window itself turned out NOT to be shrinking — a real log finally
+     *  showed decorView staying at a constant full size the whole time, while
+     *  contentContainer (the weight=1 child that the current screen actually
+     *  lives in) dropped from a normal height to exactly 0. In a vertical
+     *  LinearLayout, a weighted child only loses space to another child that
+     *  grew — so this lists every direct child of rootLayout with its own
+     *  height, every tick, to catch which one it is in the act rather than
+     *  inferring it after the fact. */
+    private fun logRootLayoutChildren() {
+        val root = findViewById<android.view.ViewGroup>(R.id.rootLayout)
+        val sb = StringBuilder("rootLayout height=${root.height}px, ${root.childCount} children:")
+        for (i in 0 until root.childCount) {
+            val child = root.getChildAt(i)
+            val idName = if (child.id != android.view.View.NO_ID) {
+                try { resources.getResourceEntryName(child.id) } catch (e: Exception) { child.id.toString() }
+            } else {
+                "no-id"
+            }
+            val vis = when (child.visibility) {
+                android.view.View.VISIBLE -> "VISIBLE"
+                android.view.View.GONE -> "GONE"
+                else -> "INVISIBLE"
+            }
+            sb.append(" [$i:${child::class.simpleName}/$idName $vis ${child.width}x${child.height}px]")
+        }
+        AppLog.log("RootLayout", sb.toString())
     }
 
     override fun onStart() {
@@ -386,6 +433,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshPermissionState() {
         val granted = Permissions.allGranted(this)
+        AppLog.log("MainActivity", "refreshPermissionState — granted=$granted")
         permissionBar.visibility = if (granted) android.view.View.GONE else android.view.View.VISIBLE
         if (granted) startMesh()
     }
@@ -396,6 +444,7 @@ class MainActivity : AppCompatActivity() {
     private fun refreshBatteryState() {
         val powerManager = getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
         val ignoring = powerManager?.isIgnoringBatteryOptimizations(packageName) ?: true
+        AppLog.log("MainActivity", "refreshBatteryState — ignoringOptimizations=$ignoring")
         batteryBar.visibility = if (ignoring) android.view.View.GONE else android.view.View.VISIBLE
     }
 
@@ -410,6 +459,7 @@ class MainActivity : AppCompatActivity() {
         val enabled = locationManager?.let {
             androidx.core.location.LocationManagerCompat.isLocationEnabled(it)
         } ?: true
+        AppLog.log("MainActivity", "refreshLocationServicesState — enabled=$enabled")
         locationServicesBar.visibility = if (enabled) android.view.View.GONE else android.view.View.VISIBLE
     }
 
