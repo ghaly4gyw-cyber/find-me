@@ -999,6 +999,34 @@ object LedgerRepository {
         saveToDisk()
     }
 
+    /** Corrects an existing transaction in place (amount, currency,
+     *  direction, details, photo, or date) rather than making the only fix
+     *  for a typo be deleting it and losing its id/position in the list. */
+    fun updateEntry(
+        accountId: String,
+        entryId: String,
+        amount: Double,
+        currency: LedgerCurrency,
+        direction: LedgerDirection,
+        details: String,
+        photoBase64: String?,
+        ts: Long
+    ) {
+        _accounts.update { list ->
+            list.map { acc ->
+                if (acc.id != accountId) return@map acc
+                acc.copy(entries = acc.entries.map { e ->
+                    if (e.id == entryId) {
+                        e.copy(amount = amount, currency = currency, direction = direction, details = details, photoBase64 = photoBase64, ts = ts)
+                    } else {
+                        e
+                    }
+                })
+            }
+        }
+        saveToDisk()
+    }
+
     fun account(id: String): LedgerAccount? = _accounts.value.find { it.id == id }
 
     /** Sum of every account's balance in [currency]. Positive means, on the

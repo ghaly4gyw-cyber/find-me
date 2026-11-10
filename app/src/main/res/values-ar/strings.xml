@@ -136,6 +136,7 @@
 
     <string name="account_add_entry_button">+ تسجيل عملية</string>
     <string name="account_add_entry_title">تسجيل عملية</string>
+    <string name="account_edit_entry_title">تعديل العملية</string>
     <string name="account_amount_hint">المبلغ</string>
     <string name="account_details_hint">التفاصيل (اختياري)</string>
     <string name="account_amount_required">أدخل مبلغًا</string>

@@ -22,6 +22,7 @@ import com.ghaly.findme.R
 import com.ghaly.findme.export.LedgerExport
 import com.ghaly.findme.model.LedgerAccount
 import com.ghaly.findme.model.LedgerCurrency
+import com.ghaly.findme.model.LedgerDirection
 import com.ghaly.findme.model.LedgerEntry
 import com.ghaly.findme.repo.LedgerRepository
 import java.io.ByteArrayOutputStream
@@ -33,7 +34,10 @@ import kotlinx.coroutines.launch
 class AccountDetailFragment : Fragment(R.layout.fragment_account_detail) {
 
     private val accountId: String by lazy { requireArguments().getString(ARG_ACCOUNT_ID)!! }
-    private val adapter = LedgerEntryAdapter(onLongClick = { entry -> showDeleteEntryConfirm(entry) })
+    private val adapter = LedgerEntryAdapter(
+        onClick = { entry -> showEditEntryDialog(entry) },
+        onLongClick = { entry -> showDeleteEntryConfirm(entry) }
+    )
 
     private var pendingPhotoBase64: String? = null
     private var pendingPhotoPreview: ImageView? = null
@@ -178,13 +182,43 @@ class AccountDetailFragment : Fragment(R.layout.fragment_account_detail) {
             .show()
     }
 
-    private fun showAddEntryDialog() {
-        pendingPhotoBase64 = null
-        pendingDateMillis = System.currentTimeMillis()
+    private fun showAddEntryDialog() = showEntryDialog(existing = null)
+
+    private fun showEditEntryDialog(entry: LedgerEntry) = showEntryDialog(existing = entry)
+
+    /** One dialog for both recording a new transaction and correcting an
+     *  existing one — [existing] null means "add", non-null means "edit
+     *  this entry in place" (same fields, pre-filled, writing back with the
+     *  same id instead of creating a new one). */
+    private fun showEntryDialog(existing: LedgerEntry?) {
+        pendingPhotoBase64 = existing?.photoBase64
+        pendingDateMillis = existing?.ts ?: System.currentTimeMillis()
 
         val view = layoutInflater.inflate(R.layout.dialog_add_ledger_entry, null)
         val fields = LedgerEntryFieldViews(view)
         pendingPhotoPreview = fields.photoPreview
+        if (existing != null) {
+            fields.amountInput.setText(formatLedgerAmount(existing.amount))
+            fields.detailsInput.setText(existing.details)
+            fields.currencyToggle.text = currencyLabel(requireContext(), existing.currency)
+            fields.directionGroup.check(
+                if (existing.direction == LedgerDirection.I_OWE_THEM) {
+                    R.id.entryDirectionIOweThem
+                } else {
+                    R.id.entryDirectionTheyOweMe
+                }
+            )
+            if (!existing.photoBase64.isNullOrEmpty()) {
+                try {
+                    val bytes = Base64.decode(existing.photoBase64, Base64.NO_WRAP)
+                    val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    fields.photoPreview.setImageBitmap(bmp)
+                    fields.photoPreview.visibility = View.VISIBLE
+                } catch (e: Exception) {
+                    // corrupted cached photo — just leave the preview empty
+                }
+            }
+        }
         wireLedgerEntryFields(
             requireContext(),
             fields,
@@ -194,7 +228,7 @@ class AccountDetailFragment : Fragment(R.layout.fragment_account_detail) {
         )
 
         AlertDialog.Builder(requireContext())
-            .setTitle(R.string.account_add_entry_title)
+            .setTitle(if (existing == null) R.string.account_add_entry_title else R.string.account_edit_entry_title)
             .setView(view)
             .setPositiveButton(R.string.save) { _, _ ->
                 val amount = fields.amountInput.text?.toString()?.trim()?.toDoubleOrNull()
@@ -202,15 +236,31 @@ class AccountDetailFragment : Fragment(R.layout.fragment_account_detail) {
                     Toast.makeText(requireContext(), R.string.account_amount_required, Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
-                LedgerRepository.addEntry(
-                    accountId = accountId,
-                    amount = amount,
-                    currency = currentLedgerCurrency(requireContext(), fields),
-                    direction = currentLedgerDirection(fields),
-                    details = fields.detailsInput.text?.toString()?.trim().orEmpty(),
-                    photoBase64 = pendingPhotoBase64,
-                    ts = pendingDateMillis
-                )
+                val currency = currentLedgerCurrency(requireContext(), fields)
+                val direction = currentLedgerDirection(fields)
+                val details = fields.detailsInput.text?.toString()?.trim().orEmpty()
+                if (existing == null) {
+                    LedgerRepository.addEntry(
+                        accountId = accountId,
+                        amount = amount,
+                        currency = currency,
+                        direction = direction,
+                        details = details,
+                        photoBase64 = pendingPhotoBase64,
+                        ts = pendingDateMillis
+                    )
+                } else {
+                    LedgerRepository.updateEntry(
+                        accountId = accountId,
+                        entryId = existing.id,
+                        amount = amount,
+                        currency = currency,
+                        direction = direction,
+                        details = details,
+                        photoBase64 = pendingPhotoBase64,
+                        ts = pendingDateMillis
+                    )
+                }
                 pendingPhotoPreview = null
             }
             .setNegativeButton(android.R.string.cancel) { _, _ -> pendingPhotoPreview = null }

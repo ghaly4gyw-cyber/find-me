@@ -139,6 +139,7 @@
 
     <string name="account_add_entry_button">+ Record a transaction</string>
     <string name="account_add_entry_title">Record a transaction</string>
+    <string name="account_edit_entry_title">Edit transaction</string>
     <string name="account_amount_hint">Amount</string>
     <string name="account_details_hint">Details (optional)</string>
     <string name="account_amount_required">Enter an amount</string>

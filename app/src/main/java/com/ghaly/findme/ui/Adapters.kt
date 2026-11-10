@@ -523,6 +523,7 @@ class AccountAdapter(
 
 /** One transaction inside an account's detail screen. */
 class LedgerEntryAdapter(
+    private val onClick: (LedgerEntry) -> Unit = {},
     private val onLongClick: (LedgerEntry) -> Unit = {}
 ) : RecyclerView.Adapter<LedgerEntryAdapter.VH>() {
     var items: List<LedgerEntry> = emptyList()
@@ -577,6 +578,7 @@ class LedgerEntryAdapter(
                 holder.photo.visibility = View.GONE
             }
         }
+        holder.root.setOnClickListener { onClick(e) }
         holder.root.setOnLongClickListener { onLongClick(e); true }
     }
 }

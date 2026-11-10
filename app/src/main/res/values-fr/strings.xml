@@ -136,6 +136,7 @@
 
     <string name="account_add_entry_button">+ Enregistrer une opération</string>
     <string name="account_add_entry_title">Enregistrer une opération</string>
+    <string name="account_edit_entry_title">Modifier l\'opération</string>
     <string name="account_amount_hint">Montant</string>
     <string name="account_details_hint">Détails (facultatif)</string>
     <string name="account_amount_required">Entrez un montant</string>
