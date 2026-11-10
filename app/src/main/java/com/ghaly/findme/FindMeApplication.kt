@@ -3,6 +3,7 @@ package com.ghaly.findme
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import com.ghaly.findme.util.CrashLog
 
 /** Most of the people who will ever install this app read Arabic first, so the
  *  app should open in Arabic out of the box — not whatever language the phone's
@@ -12,6 +13,9 @@ import androidx.core.os.LocaleListCompat
 class FindMeApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        // First thing, before anything else gets a chance to crash before
+        // this is listening.
+        CrashLog.install(this)
         if (AppCompatDelegate.getApplicationLocales().isEmpty) {
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("ar"))
         }

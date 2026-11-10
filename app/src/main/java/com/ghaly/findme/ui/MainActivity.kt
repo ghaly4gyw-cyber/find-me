@@ -33,6 +33,7 @@ import com.ghaly.findme.mesh.Permissions
 import com.ghaly.findme.mesh.ProfileStore
 import com.ghaly.findme.update.UpdateChecker
 import com.ghaly.findme.update.UpdateInstaller
+import com.ghaly.findme.util.CrashLog
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -174,6 +175,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // If the app died last time, this is the one place that can show the
+        // real error instead of another guess at it — read once, right after
+        // the restart it caused.
+        CrashLog.consumeLastCrash(this)?.let { showCrashDialog(it) }
 
         meshStatus = findViewById(R.id.meshStatus)
         daylightHeaderPill = findViewById(R.id.daylightHeaderPill)
@@ -325,6 +331,33 @@ class MainActivity : AppCompatActivity() {
         MeshForegroundService.start(this)
         val intent = Intent(this, MeshForegroundService::class.java)
         bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    }
+
+    /** Shows exactly what crashed last time, as plain selectable text with a
+     *  one-tap "Copy" — so whoever hit the crash can paste the real error
+     *  straight into a message instead of describing a black screen and
+     *  someone else having to guess at the cause from that description alone. */
+    private fun showCrashDialog(crashText: String) {
+        val scroll = android.widget.ScrollView(this)
+        val textView = TextView(this)
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        textView.setPadding(padding, padding, padding, padding)
+        textView.text = crashText
+        textView.textSize = 12f
+        textView.typeface = android.graphics.Typeface.MONOSPACE
+        textView.setTextIsSelectable(true)
+        scroll.addView(textView)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.crash_dialog_title)
+            .setView(scroll)
+            .setPositiveButton(R.string.crash_dialog_copy_button) { _, _ ->
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Find Me crash", crashText))
+                Toast.makeText(this, R.string.crash_copied_toast, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(android.R.string.ok, null)
+            .show()
     }
 
     /** Explicit in-app switcher — doesn't rely on the phone's system language,

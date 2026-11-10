@@ -172,6 +172,11 @@
     <string name="update_downloading_message">Ça ne prendra pas longtemps. L\'application vous proposera de l\'installer une fois terminé.</string>
     <string name="update_download_failed">Impossible de télécharger la mise à jour. Vérifiez votre connexion et réessayez.</string>
     <string name="update_allow_install_toast">Activez \"Autoriser depuis cette source\" pour Trouve-Moi, puis revenez.</string>
+
+    <string name="crash_dialog_title">L\'application a planté la dernière fois — voici pourquoi</string>
+    <string name="crash_dialog_copy_button">Copier</string>
+    <string name="crash_copied_toast">Copié — collez-le là où vous devez l\'envoyer.</string>
+
     <string name="notes_empty">Aucune note pour l\'instant</string>
     <string name="notes_hint">Écrire une note…</string>
     <string name="notes_delete_title">Supprimer cette note ?</string>

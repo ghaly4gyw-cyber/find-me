@@ -172,6 +172,11 @@
     <string name="update_downloading_message">لن يستغرق هذا وقتًا طويلاً. سيطلب منك التطبيق تثبيته بعد انتهاء التحميل.</string>
     <string name="update_download_failed">تعذّر تحميل التحديث. تحقق من اتصالك وحاول مرة أخرى.</string>
     <string name="update_allow_install_toast">فعّل \"السماح من هذا المصدر\" لتطبيق إيجادني، ثم عد إلى هنا.</string>
+
+    <string name="crash_dialog_title">توقف التطبيق في المرة الماضية — إليك السبب</string>
+    <string name="crash_dialog_copy_button">نسخ</string>
+    <string name="crash_copied_toast">تم النسخ — الصقه في المكان الذي تريد إرساله إليه.</string>
+
     <string name="notes_empty">لا توجد ملاحظات بعد</string>
     <string name="notes_hint">اكتب ملاحظة…</string>
     <string name="notes_delete_title">حذف هذه الملاحظة؟</string>
