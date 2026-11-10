@@ -75,6 +75,7 @@
             android:name=".ui.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
+            android:resizeableActivity="false"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

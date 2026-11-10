@@ -255,10 +255,48 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             while (true) {
-                refreshMeshStatusLine()
-                refreshDaylightHeaderPill()
+                try {
+                    refreshMeshStatusLine()
+                    refreshDaylightHeaderPill()
+                } catch (e: Throwable) {
+                    CrashLog.writeHandled(this@MainActivity, "periodic header refresh", e)
+                }
+                checkWindowHealth()
                 delay(5_000L)
             }
+        }
+    }
+
+    /** The reported "shrinking" happens on its own a few seconds after
+     *  opening any screen at all - Peers, Map, Groups, Accounts - which
+     *  points much more at this every-5-seconds loop than at any one
+     *  screen's code. Nothing in the loop was ever wrapped in a try/catch
+     *  before, so a failure in it could go unlogged. This also checks the
+     *  ACTIVITY'S OWN WINDOW, not just a view inside it, since what the
+     *  video actually shows - everything relocating to a small band with
+     *  black on both sides - looks like the window itself shrinking, not
+     *  any one screen's layout. A toast is used instead of the usual inline
+     *  banner because a toast draws through the window manager directly,
+     *  so it still shows up even if the activity's own content is what's
+     *  broken. */
+    private fun checkWindowHealth() {
+        val decorView = window?.decorView ?: return
+        val displayWidth = resources.displayMetrics.widthPixels
+        val displayHeight = resources.displayMetrics.heightPixels
+        val decorWidth = decorView.width
+        val decorHeight = decorView.height
+        val shrunkHeight = decorHeight in 1 until (displayHeight / 2)
+        val shrunkWidth = decorWidth in 1 until (displayWidth / 2)
+        if (shrunkHeight || shrunkWidth) {
+            val details = buildString {
+                append("Window shrink detected\n")
+                append("window: ${decorWidth}x${decorHeight}px\n")
+                append("display: ${displayWidth}x${displayHeight}px\n")
+                append("multi-window mode: $isInMultiWindowMode\n")
+                append("in picture-in-picture: ${isInPictureInPictureMode}")
+            }
+            CrashLog.writeHandled(this, "window-health", RuntimeException(details))
+            android.widget.Toast.makeText(this, details, android.widget.Toast.LENGTH_LONG).show()
         }
     }
 
