@@ -134,6 +134,15 @@
     <string name="account_export_excel">📊 تصدير كملف إكسل (CSV)</string>
     <string name="account_export_failed">تعذّر إنشاء ملف التصدير.</string>
 
+    <string name="accounts_book_switcher_fmt">📒 %1$s ▾</string>
+    <string name="book_picker_title">تبديل السجل</string>
+    <string name="book_add_new">+ سجل جديد</string>
+    <string name="book_name_hint">اسم السجل (مثل متجر أو صفقة)</string>
+    <string name="book_rename">✏️ إعادة تسمية السجل</string>
+    <string name="book_delete">🗑️ حذف السجل</string>
+    <string name="book_delete_last_blocked">لا يمكن حذف السجل الوحيد — أضف سجلًا آخر أولًا.</string>
+    <string name="book_delete_confirm">هل تريد حذف هذا السجل وكل حساب وعملية مسجلة فيه؟</string>
+
     <string name="account_add_entry_button">+ تسجيل عملية</string>
     <string name="account_add_entry_title">تسجيل عملية</string>
     <string name="account_edit_entry_title">تعديل العملية</string>

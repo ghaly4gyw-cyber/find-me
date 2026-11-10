@@ -187,6 +187,8 @@ data class LedgerEntry(
  *  no signal, and often no paper either. Never sent over the mesh. */
 data class LedgerAccount(
     val id: String,
+    /** Which book this account belongs to — see [LedgerBook]. */
+    val bookId: String,
     val name: String,
     val phone: String?,
     val entries: List<LedgerEntry>,
@@ -203,3 +205,16 @@ data class LedgerAccount(
         return net
     }
 }
+
+/** A separate ledger within the Accounts tool — one business, one branch,
+ *  one kind of deal, whatever grouping makes sense to the person using it
+ *  (e.g. "Gold trading", "Phone shop", "Personal loans"). Lets one phone
+ *  manage several unrelated sets of accounts without them all running
+ *  together in one list and one set of totals. Every device starts with a
+ *  single "General" book holding whatever was already recorded before this
+ *  existed. */
+data class LedgerBook(
+    val id: String,
+    val name: String,
+    val ts: Long
+)

@@ -930,10 +930,17 @@ object NotesRepository {
 object LedgerRepository {
     private const val PREFS = "find_me_ledger"
     private const val KEY_DATA = "accounts_json"
+    private const val KEY_BOOKS = "books_json"
+    private const val KEY_CURRENT_BOOK = "current_book_id"
+    private const val DEFAULT_BOOK_ID = "default"
 
     private var appContext: Context? = null
     private val _accounts = MutableStateFlow<List<LedgerAccount>>(emptyList())
     val accounts: StateFlow<List<LedgerAccount>> = _accounts
+    private val _books = MutableStateFlow<List<LedgerBook>>(emptyList())
+    val books: StateFlow<List<LedgerBook>> = _books
+    private val _currentBookId = MutableStateFlow("")
+    val currentBookId: StateFlow<String> = _currentBookId
 
     fun init(context: Context) {
         if (appContext != null) return
@@ -941,9 +948,10 @@ object LedgerRepository {
         loadFromDisk()
     }
 
-    fun addAccount(name: String, phone: String?): LedgerAccount {
+    fun addAccount(name: String, phone: String?, bookId: String = currentBookId.value): LedgerAccount {
         val account = LedgerAccount(
             id = UUID.randomUUID().toString(),
+            bookId = bookId,
             name = name,
             phone = phone?.takeIf { it.isNotBlank() },
             entries = emptyList(),
@@ -965,6 +973,45 @@ object LedgerRepository {
         }
         saveToDisk()
     }
+
+    fun accountsInBook(bookId: String): List<LedgerAccount> = _accounts.value.filter { it.bookId == bookId }
+
+    /** Adds a new book — a separate business/case to manage, alongside
+     *  whatever others already exist on this phone — and switches to it. */
+    fun addBook(name: String): LedgerBook {
+        val book = LedgerBook(id = UUID.randomUUID().toString(), name = name, ts = System.currentTimeMillis())
+        _books.update { it + book }
+        setCurrentBook(book.id)
+        saveToDisk()
+        return book
+    }
+
+    fun renameBook(id: String, name: String) {
+        _books.update { list -> list.map { if (it.id == id) it.copy(name = name) else it } }
+        saveToDisk()
+    }
+
+    /** Deletes a book AND everything recorded in it — the caller is
+     *  responsible for warning about that before calling this; there's no
+     *  "orphaned accounts" state left lying around afterwards. If the
+     *  deleted book was the active one, falls back to whichever book comes
+     *  first, same as if this were a fresh install with one book missing. */
+    fun removeBook(id: String) {
+        _accounts.update { list -> list.filter { it.bookId != id } }
+        _books.update { list -> list.filter { it.id != id } }
+        if (_currentBookId.value == id) {
+            _currentBookId.value = _books.value.firstOrNull()?.id ?: ""
+        }
+        saveToDisk()
+    }
+
+    fun setCurrentBook(id: String) {
+        _currentBookId.value = id
+        val ctx = appContext ?: return
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_CURRENT_BOOK, id).apply()
+    }
+
+    fun book(id: String): LedgerBook? = _books.value.find { it.id == id }
 
     fun addEntry(
         accountId: String,
@@ -1029,45 +1076,88 @@ object LedgerRepository {
 
     fun account(id: String): LedgerAccount? = _accounts.value.find { it.id == id }
 
-    /** Sum of every account's balance in [currency]. Positive means, on the
-     *  whole, more is owed to the device's owner than they owe out. */
-    fun totalBalance(currency: LedgerCurrency): Double =
-        _accounts.value.sumOf { it.balance(currency) }
+    /** Sum of [bookId]'s accounts' balances in [currency]. Positive means,
+     *  on the whole, more is owed to the device's owner than they owe out
+     *  — within that one book; books never mix totals with each other. */
+    fun totalBalance(currency: LedgerCurrency, bookId: String = currentBookId.value): Double =
+        accountsInBook(bookId).sumOf { it.balance(currency) }
 
     private fun loadFromDisk() {
         val ctx = appContext ?: return
         try {
-            val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .getString(KEY_DATA, null) ?: return
-            val arr = JSONArray(json)
-            val loaded = mutableListOf<LedgerAccount>()
-            for (i in 0 until arr.length()) {
-                val o = arr.getJSONObject(i)
-                val entriesArr = o.optJSONArray("entries") ?: JSONArray()
-                val entries = mutableListOf<LedgerEntry>()
-                for (j in 0 until entriesArr.length()) {
-                    val eo = entriesArr.getJSONObject(j)
-                    entries += LedgerEntry(
-                        id = eo.getString("id"),
-                        amount = eo.getDouble("amount"),
-                        currency = runCatching { LedgerCurrency.valueOf(eo.optString("currency", "LOCAL")) }
-                            .getOrDefault(LedgerCurrency.LOCAL),
-                        direction = runCatching { LedgerDirection.valueOf(eo.optString("direction", "THEY_OWE_ME")) }
-                            .getOrDefault(LedgerDirection.THEY_OWE_ME),
-                        details = eo.optString("details", ""),
-                        photoBase64 = eo.optString("photoBase64", "").takeIf { it.isNotEmpty() },
-                        ts = eo.optLong("ts", System.currentTimeMillis())
+            val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val booksJson = prefs.getString(KEY_BOOKS, null)
+            var loadedBooks = mutableListOf<LedgerBook>()
+            if (booksJson != null) {
+                val arr = JSONArray(booksJson)
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    loadedBooks += LedgerBook(
+                        id = o.getString("id"),
+                        name = o.getString("name"),
+                        ts = o.optLong("ts", System.currentTimeMillis())
                     )
                 }
-                loaded += LedgerAccount(
-                    id = o.getString("id"),
-                    name = o.getString("name"),
-                    phone = o.optString("phone", "").takeIf { it.isNotEmpty() },
-                    entries = entries,
-                    ts = o.optLong("ts", System.currentTimeMillis())
-                )
             }
-            _accounts.value = loaded
+
+            val accountsJson = prefs.getString(KEY_DATA, null)
+            val loadedAccounts = mutableListOf<LedgerAccount>()
+            // A book was never recorded before this feature existed, so an
+            // account from back then has no bookId in its saved JSON —
+            // that's the signal this phone's data needs the one-time
+            // migration into a default "General" book below, rather than
+            // every pre-existing account silently vanishing from view.
+            var needsMigration = false
+            if (accountsJson != null) {
+                val arr = JSONArray(accountsJson)
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    val entriesArr = o.optJSONArray("entries") ?: JSONArray()
+                    val entries = mutableListOf<LedgerEntry>()
+                    for (j in 0 until entriesArr.length()) {
+                        val eo = entriesArr.getJSONObject(j)
+                        entries += LedgerEntry(
+                            id = eo.getString("id"),
+                            amount = eo.getDouble("amount"),
+                            currency = runCatching { LedgerCurrency.valueOf(eo.optString("currency", "LOCAL")) }
+                                .getOrDefault(LedgerCurrency.LOCAL),
+                            direction = runCatching { LedgerDirection.valueOf(eo.optString("direction", "THEY_OWE_ME")) }
+                                .getOrDefault(LedgerDirection.THEY_OWE_ME),
+                            details = eo.optString("details", ""),
+                            photoBase64 = eo.optString("photoBase64", "").takeIf { it.isNotEmpty() },
+                            ts = eo.optLong("ts", System.currentTimeMillis())
+                        )
+                    }
+                    val bookId = o.optString("bookId", "")
+                    if (bookId.isEmpty()) needsMigration = true
+                    loadedAccounts += LedgerAccount(
+                        id = o.getString("id"),
+                        bookId = bookId, // fixed up below if this account predates books
+                        name = o.getString("name"),
+                        phone = o.optString("phone", "").takeIf { it.isNotEmpty() },
+                        entries = entries,
+                        ts = o.optLong("ts", System.currentTimeMillis())
+                    )
+                }
+            }
+
+            if (loadedBooks.isEmpty()) {
+                loadedBooks += LedgerBook(id = DEFAULT_BOOK_ID, name = "General", ts = System.currentTimeMillis())
+            }
+            val fallbackBookId = loadedBooks.first().id
+            val fixedAccounts = if (needsMigration) {
+                loadedAccounts.map { if (it.bookId.isEmpty()) it.copy(bookId = fallbackBookId) else it }
+            } else {
+                loadedAccounts
+            }
+
+            _books.value = loadedBooks
+            _accounts.value = fixedAccounts
+            _currentBookId.value = prefs.getString(KEY_CURRENT_BOOK, null)
+                ?.takeIf { id -> loadedBooks.any { it.id == id } }
+                ?: fallbackBookId
+
+            if (needsMigration) saveToDisk() // persist the upgraded format once, not on every load
         } catch (e: Exception) {
             // corrupted/old cache format — just start empty, nothing to recover
         }
@@ -1076,7 +1166,12 @@ object LedgerRepository {
     private fun saveToDisk() {
         val ctx = appContext ?: return
         try {
-            val arr = JSONArray()
+            val booksArr = JSONArray()
+            for (book in _books.value) {
+                booksArr.put(JSONObject().put("id", book.id).put("name", book.name).put("ts", book.ts))
+            }
+
+            val accountsArr = JSONArray()
             for (acc in _accounts.value) {
                 val entriesArr = JSONArray()
                 for (e in acc.entries) {
@@ -1091,17 +1186,20 @@ object LedgerRepository {
                             .put("ts", e.ts)
                     )
                 }
-                arr.put(
+                accountsArr.put(
                     JSONObject()
                         .put("id", acc.id)
+                        .put("bookId", acc.bookId)
                         .put("name", acc.name)
                         .put("phone", acc.phone ?: "")
                         .put("entries", entriesArr)
                         .put("ts", acc.ts)
                 )
             }
+
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                .putString(KEY_DATA, arr.toString())
+                .putString(KEY_DATA, accountsArr.toString())
+                .putString(KEY_BOOKS, booksArr.toString())
                 .apply()
         } catch (e: Exception) {
             // best-effort cache — losing it just means the ledger is gone

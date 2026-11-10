@@ -137,6 +137,15 @@
     <string name="account_export_excel">📊 Export as Excel (CSV)</string>
     <string name="account_export_failed">Couldn\'t create the export file.</string>
 
+    <string name="accounts_book_switcher_fmt">📒 %1$s ▾</string>
+    <string name="book_picker_title">Switch book</string>
+    <string name="book_add_new">+ New book</string>
+    <string name="book_name_hint">Book name (e.g. a shop or deal)</string>
+    <string name="book_rename">✏️ Rename book</string>
+    <string name="book_delete">🗑️ Delete book</string>
+    <string name="book_delete_last_blocked">Can\'t delete the only book — add another first.</string>
+    <string name="book_delete_confirm">Delete this book and every account and transaction recorded in it?</string>
+
     <string name="account_add_entry_button">+ Record a transaction</string>
     <string name="account_add_entry_title">Record a transaction</string>
     <string name="account_edit_entry_title">Edit transaction</string>

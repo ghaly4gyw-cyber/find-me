@@ -134,6 +134,15 @@
     <string name="account_export_excel">📊 Exporter en Excel (CSV)</string>
     <string name="account_export_failed">Impossible de créer le fichier d\'export.</string>
 
+    <string name="accounts_book_switcher_fmt">📒 %1$s ▾</string>
+    <string name="book_picker_title">Changer de registre</string>
+    <string name="book_add_new">+ Nouveau registre</string>
+    <string name="book_name_hint">Nom du registre (ex. : une boutique ou une affaire)</string>
+    <string name="book_rename">✏️ Renommer le registre</string>
+    <string name="book_delete">🗑️ Supprimer le registre</string>
+    <string name="book_delete_last_blocked">Impossible de supprimer le seul registre — ajoutez-en un autre d\'abord.</string>
+    <string name="book_delete_confirm">Supprimer ce registre et tous les comptes et opérations qu\'il contient ?</string>
+
     <string name="account_add_entry_button">+ Enregistrer une opération</string>
     <string name="account_add_entry_title">Enregistrer une opération</string>
     <string name="account_edit_entry_title">Modifier l\'opération</string>

@@ -21,9 +21,11 @@ import androidx.recyclerview.widget.RecyclerView
 import com.ghaly.findme.R
 import com.ghaly.findme.export.LedgerExport
 import com.ghaly.findme.model.LedgerAccount
+import com.ghaly.findme.model.LedgerBook
 import com.ghaly.findme.model.LedgerCurrency
 import com.ghaly.findme.repo.LedgerRepository
 import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 /** The accounts/debts ledger — who owes the device's owner, and who they
@@ -60,14 +62,19 @@ class AccountsFragment : Fragment(R.layout.fragment_accounts) {
         val totalTheyOwe = view.findViewById<TextView>(R.id.accountsTotalTheyOwe)
         val totalIOwe = view.findViewById<TextView>(R.id.accountsTotalIOwe)
         val searchInput = view.findViewById<EditText>(R.id.accountsSearchInput)
+        val bookSwitcher = view.findViewById<TextView>(R.id.accountsBookSwitcher)
 
         view.findViewById<TextView>(R.id.addAccountButton).setOnClickListener { showAddAccountDialog() }
         view.findViewById<TextView>(R.id.accountsExportButton).setOnClickListener { showExportMenu() }
+        bookSwitcher.setOnClickListener { showBookPickerDialog() }
+        bookSwitcher.setOnLongClickListener { showCurrentBookActionMenu(); true }
 
         var allAccounts: List<LedgerAccount> = emptyList()
+        var currentBookId = ""
         fun applyFilter() {
             val query = searchInput.text?.toString()?.trim().orEmpty()
-            val filtered = if (query.isEmpty()) allAccounts else allAccounts.filter {
+            val inBook = allAccounts.filter { it.bookId == currentBookId }
+            val filtered = if (query.isEmpty()) inBook else inBook.filter {
                 it.name.contains(query, ignoreCase = true) || it.phone?.contains(query, ignoreCase = true) == true
             }
             adapter.items = filtered
@@ -75,20 +82,35 @@ class AccountsFragment : Fragment(R.layout.fragment_accounts) {
         }
         searchInput.addTextChangedListener(simpleTextWatcher { applyFilter() })
 
+        // Books, accounts and the active book id can each change independently
+        // (adding a book, renaming it, recording a deal) — combine so every
+        // one of them re-renders the switcher label, the filtered list and
+        // the book-scoped totals together, rather than three separate
+        // collectors that could show a stale label next to a fresh total.
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                LedgerRepository.accounts.collect { accounts ->
-                    allAccounts = accounts
-                    applyFilter()
-                    bindTotal(totalTheyOwe, LedgerCurrency.LOCAL, positive = true)
-                    bindTotal(totalIOwe, LedgerCurrency.LOCAL, positive = false)
-                }
+                combine(
+                    LedgerRepository.accounts,
+                    LedgerRepository.books,
+                    LedgerRepository.currentBookId
+                ) { accounts, books, bookId -> Triple(accounts, books, bookId) }
+                    .collect { (accounts, books, bookId) ->
+                        allAccounts = accounts
+                        currentBookId = bookId
+                        applyFilter()
+                        bookSwitcher.text = getString(
+                            R.string.accounts_book_switcher_fmt,
+                            books.find { it.id == bookId }?.name.orEmpty()
+                        )
+                        bindTotal(totalTheyOwe, LedgerCurrency.LOCAL, positive = true, bookId = bookId)
+                        bindTotal(totalIOwe, LedgerCurrency.LOCAL, positive = false, bookId = bookId)
+                    }
             }
         }
     }
 
-    private fun bindTotal(view: TextView, currency: LedgerCurrency, positive: Boolean) {
-        val total = LedgerRepository.totalBalance(currency)
+    private fun bindTotal(view: TextView, currency: LedgerCurrency, positive: Boolean, bookId: String) {
+        val total = LedgerRepository.totalBalance(currency, bookId)
         val amount = if (positive) total.coerceAtLeast(0.0) else (-total).coerceAtLeast(0.0)
         val label = currencyLabel(requireContext(), currency)
         view.text = getString(
@@ -96,6 +118,86 @@ class AccountsFragment : Fragment(R.layout.fragment_accounts) {
             formatLedgerAmount(amount),
             label
         )
+    }
+
+    /** Switch to another existing book, or create a new one — the book
+     *  itself is renamed/deleted from [showCurrentBookActionMenu] instead,
+     *  reached by long-pressing the switcher rather than crowding this
+     *  list with per-row actions. */
+    private fun showBookPickerDialog() {
+        val books = LedgerRepository.books.value
+        val labels = books.map { it.name }.toTypedArray() + getString(R.string.book_add_new)
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.book_picker_title)
+            .setItems(labels) { _, which ->
+                if (which == books.size) {
+                    showAddBookDialog()
+                } else {
+                    LedgerRepository.setCurrentBook(books[which].id)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showAddBookDialog() {
+        val input = EditText(requireContext())
+        input.hint = getString(R.string.book_name_hint)
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.book_add_new)
+            .setView(input)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val name = input.text?.toString()?.trim().orEmpty()
+                if (name.isNotEmpty()) LedgerRepository.addBook(name)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Rename or delete the book currently in view. Deleting the last
+     *  remaining book would leave nowhere for accounts to live, so that
+     *  option is refused rather than offered. */
+    private fun showCurrentBookActionMenu() {
+        val book = LedgerRepository.book(LedgerRepository.currentBookId.value) ?: return
+        val options = arrayOf(getString(R.string.book_rename), getString(R.string.book_delete))
+        AlertDialog.Builder(requireContext())
+            .setTitle(book.name)
+            .setItems(options) { _, which ->
+                if (which == 0) {
+                    showRenameBookDialog(book)
+                } else {
+                    if (LedgerRepository.books.value.size <= 1) {
+                        Toast.makeText(requireContext(), R.string.book_delete_last_blocked, Toast.LENGTH_SHORT).show()
+                    } else {
+                        showDeleteBookConfirm(book)
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showRenameBookDialog(book: LedgerBook) {
+        val input = EditText(requireContext())
+        input.setText(book.name)
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.book_rename)
+            .setView(input)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val name = input.text?.toString()?.trim().orEmpty()
+                if (name.isNotEmpty()) LedgerRepository.renameBook(book.id, name)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showDeleteBookConfirm(book: LedgerBook) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(book.name)
+            .setMessage(R.string.book_delete_confirm)
+            .setPositiveButton(R.string.notes_delete_confirm) { _, _ -> LedgerRepository.removeBook(book.id) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun openAccount(account: LedgerAccount) {
@@ -109,11 +211,12 @@ class AccountsFragment : Fragment(R.layout.fragment_accounts) {
             .commit()
     }
 
-    /** Both options cover every account, not just what's currently filtered
-     *  by the search box — a statement meant to be shared should hold the
-     *  whole record, not whatever happened to be on screen. */
+    /** Both options cover every account in the current book, not just what's
+     *  currently filtered by the search box — a statement meant to be shared
+     *  should hold the whole book's record, not whatever happened to be on
+     *  screen, and not another book's unrelated deals. */
     private fun showExportMenu() {
-        val accounts = LedgerRepository.accounts.value
+        val accounts = LedgerRepository.accountsInBook(LedgerRepository.currentBookId.value)
         if (accounts.isEmpty()) {
             Toast.makeText(requireContext(), R.string.accounts_empty, Toast.LENGTH_SHORT).show()
             return
