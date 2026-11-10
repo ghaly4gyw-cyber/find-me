@@ -35,7 +35,7 @@ class AccountsFragment : Fragment(R.layout.fragment_accounts) {
 
     private val adapter = AccountAdapter(
         onClick = { account -> openAccount(account) },
-        onLongClick = { account -> showDeleteAccountConfirm(account) }
+        onLongClick = { account -> showAccountActionMenu(requireContext(), account) { showDeleteAccountConfirm(account) } }
     )
 
     // Held only while the "add account" dialog is open, same pattern as the

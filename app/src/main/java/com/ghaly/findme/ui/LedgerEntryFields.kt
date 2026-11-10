@@ -2,14 +2,19 @@ package com.ghaly.findme.ui
 
 import android.app.DatePickerDialog
 import android.content.Context
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.RadioGroup
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import com.ghaly.findme.R
+import com.ghaly.findme.model.LedgerAccount
 import com.ghaly.findme.model.LedgerCurrency
 import com.ghaly.findme.model.LedgerDirection
+import com.ghaly.findme.repo.LedgerRepository
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -83,4 +88,44 @@ internal fun wireLedgerEntryFields(
     val photoClick = View.OnClickListener { onPickPhotoClicked() }
     fields.photoPreview.setOnClickListener(photoClick)
     fields.choosePhotoText.setOnClickListener(photoClick)
+}
+
+/** Name + phone editor for an existing account — shared by the accounts
+ *  list (long-press) and the account detail screen (long-press the name),
+ *  so renaming a contact behaves the same from either place. */
+internal fun showEditAccountDialog(context: Context, account: LedgerAccount) {
+    val view = LayoutInflater.from(context).inflate(R.layout.dialog_edit_account, null)
+    val nameInput = view.findViewById<EditText>(R.id.accountNameInput)
+    val phoneInput = view.findViewById<EditText>(R.id.accountPhoneInput)
+    nameInput.setText(account.name)
+    phoneInput.setText(account.phone ?: "")
+
+    AlertDialog.Builder(context)
+        .setTitle(R.string.account_edit_title)
+        .setView(view)
+        .setPositiveButton(R.string.save) { _, _ ->
+            val name = nameInput.text?.toString()?.trim().orEmpty()
+            if (name.isEmpty()) {
+                Toast.makeText(context, R.string.account_name_required, Toast.LENGTH_SHORT).show()
+                return@setPositiveButton
+            }
+            LedgerRepository.updateAccount(account.id, name, phoneInput.text?.toString()?.trim())
+        }
+        .setNegativeButton(android.R.string.cancel, null)
+        .show()
+}
+
+/** "Edit" / "Delete" picker for an account — [onDelete] is left to the
+ *  caller since the accounts list and the detail screen each need to do
+ *  something slightly different afterwards (the detail screen also has to
+ *  leave the now-gone account's own screen). */
+internal fun showAccountActionMenu(context: Context, account: LedgerAccount, onDelete: () -> Unit) {
+    val options = arrayOf(context.getString(R.string.account_edit_action), context.getString(R.string.notes_delete_confirm))
+    AlertDialog.Builder(context)
+        .setTitle(account.name)
+        .setItems(options) { _, which ->
+            if (which == 0) showEditAccountDialog(context, account) else onDelete()
+        }
+        .setNegativeButton(android.R.string.cancel, null)
+        .show()
 }

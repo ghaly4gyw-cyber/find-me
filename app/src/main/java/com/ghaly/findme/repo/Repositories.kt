@@ -959,6 +959,13 @@ object LedgerRepository {
         saveToDisk()
     }
 
+    fun updateAccount(id: String, name: String, phone: String?) {
+        _accounts.update { list ->
+            list.map { if (it.id == id) it.copy(name = name, phone = phone?.takeIf { p -> p.isNotBlank() }) else it }
+        }
+        saveToDisk()
+    }
+
     fun addEntry(
         accountId: String,
         amount: Double,

@@ -19,6 +19,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ghaly.findme.R
+import com.ghaly.findme.export.LedgerExport
 import com.ghaly.findme.model.LedgerAccount
 import com.ghaly.findme.model.LedgerCurrency
 import com.ghaly.findme.model.LedgerEntry
@@ -56,7 +57,13 @@ class AccountDetailFragment : Fragment(R.layout.fragment_account_detail) {
         list.layoutManager = LinearLayoutManager(requireContext())
         list.adapter = adapter
 
-        nameView.setOnLongClickListener { showDeleteAccountConfirm(); true }
+        nameView.setOnLongClickListener {
+            LedgerRepository.account(accountId)?.let { account ->
+                showAccountActionMenu(requireContext(), account) { showDeleteAccountConfirm() }
+            }
+            true
+        }
+        view.findViewById<TextView>(R.id.accountDetailExportButton).setOnClickListener { showExportMenu() }
         view.findViewById<TextView>(R.id.addEntryButton).setOnClickListener { showAddEntryDialog() }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -119,6 +126,35 @@ class AccountDetailFragment : Fragment(R.layout.fragment_account_detail) {
                 view.setTextColor(requireContext().getColor(R.color.sand_300))
             }
         }
+    }
+
+    /** Same two formats as the Accounts list's export menu, but scoped to
+     *  just this one account — a statement to hand to this specific
+     *  customer/supplier rather than the whole ledger. */
+    private fun showExportMenu() {
+        val account = LedgerRepository.account(accountId) ?: return
+        if (account.entries.isEmpty()) {
+            Toast.makeText(requireContext(), R.string.account_detail_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val options = arrayOf(getString(R.string.account_export_pdf), getString(R.string.account_export_excel))
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.account_export_menu_title)
+            .setItems(options) { _, which ->
+                try {
+                    if (which == 0) {
+                        val file = LedgerExport.exportPdf(requireContext(), listOf(account), account.name)
+                        LedgerExport.shareFile(requireContext(), file, "application/pdf")
+                    } else {
+                        val file = LedgerExport.exportCsv(requireContext(), listOf(account))
+                        LedgerExport.shareFile(requireContext(), file, "text/csv")
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), R.string.account_export_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun showDeleteAccountConfirm() {
