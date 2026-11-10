@@ -17,8 +17,8 @@ android {
         // com.ghaly.findme.update.UpdateChecker) and offers to install it
         // in-app, instead of someone having to go back to GitHub and
         // download the APK by hand every time.
-        versionCode = 11
-        versionName = "0.11.0"
+        versionCode = 12
+        versionName = "0.12.0"
     }
 
     // Without this, every CI build gets signed with a throwaway key that

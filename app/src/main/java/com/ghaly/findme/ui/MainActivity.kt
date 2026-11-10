@@ -629,8 +629,46 @@ class MainActivity : AppCompatActivity() {
             if (addToBackStack) transaction.addToBackStack(null)
             transaction.commit()
             supportFragmentManager.executePendingTransactions()
+            checkForLayoutShrink(fragment)
         } catch (e: Throwable) {
             showInlineContentError(fragment::class.simpleName ?: "screen", e)
+        }
+    }
+
+    /** Three different checks (a crash log, a freeze watchdog, and now
+     *  catching exceptions the instant a screen opens) have all come back
+     *  clean while the reported "shrinking"/black-screen symptom kept
+     *  happening — which rules out a thrown exception and a frozen main
+     *  thread, and points at the screen's own dimensions instead. Rather
+     *  than guess a fourth time, this measures the new screen a moment
+     *  after it should have filled the space below the header, and if it
+     *  clearly hasn't, writes down the real numbers and puts them directly
+     *  on screen — so whatever comes back next is evidence, not another
+     *  description to interpret. */
+    private fun checkForLayoutShrink(fragment: androidx.fragment.app.Fragment) {
+        val container = findViewById<android.widget.FrameLayout>(R.id.contentContainer)
+        container.post {
+            val fragmentView = fragment.view ?: return@post
+            val containerHeight = container.height
+            val containerWidth = container.width
+            val viewHeight = fragmentView.height
+            val viewWidth = fragmentView.width
+            val heightShrunk = containerHeight > 0 && viewHeight in 1 until (containerHeight / 4)
+            val widthShrunk = containerWidth > 0 && viewWidth in 1 until (containerWidth / 4)
+            if (heightShrunk || widthShrunk) {
+                val label = fragment::class.simpleName ?: "screen"
+                val rootHeight = findViewById<android.view.View>(R.id.rootLayout).height
+                val details = buildString {
+                    append("Layout shrink detected on $label\n")
+                    append("contentContainer: ${containerWidth}x${containerHeight}px\n")
+                    append("fragment view: ${viewWidth}x${viewHeight}px\n")
+                    append("rootLayout height: ${rootHeight}px\n")
+                    append("screen: ${resources.displayMetrics.widthPixels}x${resources.displayMetrics.heightPixels}px, density ${resources.displayMetrics.density}")
+                }
+                val syntheticError = RuntimeException(details)
+                CrashLog.writeHandled(this, label, syntheticError)
+                showInlineContentError(label, syntheticError)
+            }
         }
     }
 
