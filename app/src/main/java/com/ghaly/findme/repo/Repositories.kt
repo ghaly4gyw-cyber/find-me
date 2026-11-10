@@ -4,6 +4,7 @@ import android.content.Context
 import com.ghaly.findme.model.ChatMessage
 import com.ghaly.findme.model.InactivityAlert
 import com.ghaly.findme.model.LedgerAccount
+import com.ghaly.findme.model.LedgerBook
 import com.ghaly.findme.model.LedgerCurrency
 import com.ghaly.findme.model.LedgerDirection
 import com.ghaly.findme.model.LedgerEntry
