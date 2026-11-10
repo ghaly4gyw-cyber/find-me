@@ -33,6 +33,7 @@ import com.ghaly.findme.mesh.Permissions
 import com.ghaly.findme.mesh.ProfileStore
 import com.ghaly.findme.update.UpdateChecker
 import com.ghaly.findme.update.UpdateInstaller
+import com.ghaly.findme.util.AnrWatchdog
 import com.ghaly.findme.util.CrashLog
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
@@ -179,7 +180,11 @@ class MainActivity : AppCompatActivity() {
         // If the app died last time, this is the one place that can show the
         // real error instead of another guess at it — read once, right after
         // the restart it caused.
-        CrashLog.consumeLastCrash(this)?.let { showCrashDialog(it) }
+        val crashText = CrashLog.consumeLastCrash(this)
+        val hangText = AnrWatchdog.consumeLastHang(this)
+        val diagnosticText = listOfNotNull(crashText, hangText).takeIf { it.isNotEmpty() }
+            ?.joinToString("\n\n——————\n\n")
+        diagnosticText?.let { showCrashDialog(it) }
 
         meshStatus = findViewById(R.id.meshStatus)
         daylightHeaderPill = findViewById(R.id.daylightHeaderPill)
