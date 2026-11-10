@@ -408,15 +408,7 @@ class MainActivity : AppCompatActivity() {
                     1 -> CalculatorFragment()
                     else -> AccountsFragment()
                 }
-                supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
-                supportFragmentManager.beginTransaction()
-                    .setCustomAnimations(
-                        R.anim.slide_in_right, R.anim.slide_out_left,
-                        R.anim.slide_in_right, R.anim.slide_out_left
-                    )
-                    .replace(R.id.contentContainer, fragment)
-                    .addToBackStack(null)
-                    .commit()
+                replaceContentSafely(fragment, addToBackStack = true)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
@@ -611,14 +603,57 @@ class MainActivity : AppCompatActivity() {
      *  stale screen that no longer matched whichever tab was highlighted. Each
      *  tab switch should start clean. */
     private fun showFragment(fragment: androidx.fragment.app.Fragment) {
-        supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
-        supportFragmentManager.beginTransaction()
-            .setCustomAnimations(
-                R.anim.slide_in_right, R.anim.slide_out_left,
-                R.anim.slide_in_right, R.anim.slide_out_left
-            )
-            .replace(R.id.contentContainer, fragment)
-            .commit()
+        replaceContentSafely(fragment, addToBackStack = false)
+    }
+
+    /** Every screen reached from a tab or from Tools goes through here. A
+     *  screen repeatedly described as "breaking" or "shrinking" the moment
+     *  it's opened, with no crash popup and no detected freeze, was the one
+     *  combination nothing in this app could explain from a description
+     *  alone — so instead of guessing again, this makes the opening itself
+     *  impossible to fail silently: executePendingTransactions() forces the
+     *  new fragment's view to actually build right here, on this call stack,
+     *  instead of some time later — so if building it throws anything at
+     *  all, it throws HERE, where it can be caught and put directly on
+     *  screen as readable text immediately, with no relaunch, no waiting,
+     *  and nothing for whoever's using the app to interpret or describe. */
+    private fun replaceContentSafely(fragment: androidx.fragment.app.Fragment, addToBackStack: Boolean) {
+        try {
+            supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+            val transaction = supportFragmentManager.beginTransaction()
+                .setCustomAnimations(
+                    R.anim.slide_in_right, R.anim.slide_out_left,
+                    R.anim.slide_in_right, R.anim.slide_out_left
+                )
+                .replace(R.id.contentContainer, fragment)
+            if (addToBackStack) transaction.addToBackStack(null)
+            transaction.commit()
+            supportFragmentManager.executePendingTransactions()
+        } catch (e: Throwable) {
+            showInlineContentError(fragment::class.simpleName ?: "screen", e)
+        }
+    }
+
+    /** Puts the exact error directly where the broken screen would have
+     *  been — selectable, visible immediately, no dialog or relaunch needed.
+     *  Deliberately doesn't go through any Fragment or dialog machinery
+     *  itself, since whatever just failed might be something both of those
+     *  share. */
+    private fun showInlineContentError(label: String, throwable: Throwable) {
+        CrashLog.writeHandled(this, label, throwable)
+        val container = findViewById<android.widget.FrameLayout>(R.id.contentContainer)
+        val scroll = android.widget.ScrollView(this)
+        val textView = TextView(this)
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        textView.setPadding(padding, padding, padding, padding)
+        textView.setTextIsSelectable(true)
+        textView.textSize = 12f
+        textView.typeface = android.graphics.Typeface.MONOSPACE
+        textView.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.sos_red))
+        textView.text = "$label failed to open:\n\n${android.util.Log.getStackTraceString(throwable)}"
+        scroll.addView(textView)
+        container.removeAllViews()
+        container.addView(scroll)
     }
 
     /** Highlights the active bottom tab (pill background + brighter text) and dims the rest. */

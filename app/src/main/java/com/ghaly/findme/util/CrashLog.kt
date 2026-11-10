@@ -60,6 +60,29 @@ object CrashLog {
         File(context.filesDir, FILE_NAME).writeText(text)
     }
 
+    /** For an exception caught and handled in place (see
+     *  MainActivity.replaceContentSafely) rather than one that killed the
+     *  app — written the same way, so it's available to read back later too,
+     *  even though the inline error view already shows it directly on
+     *  screen without needing a relaunch. */
+    fun writeHandled(context: Context, label: String, throwable: Throwable) {
+        try {
+            val sw = StringWriter()
+            throwable.printStackTrace(PrintWriter(sw))
+            val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+            val text = buildString {
+                append("Find Me hit an error (caught, didn't crash the app): $label\n")
+                append("Time: $timestamp\n")
+                append("Device: ${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE}, SDK ${Build.VERSION.SDK_INT})\n")
+                append("\n")
+                append(sw.toString())
+            }
+            File(context.filesDir, "last_handled_error.txt").writeText(text)
+        } catch (e: Exception) {
+            // best-effort — the on-screen error view is the primary copy
+        }
+    }
+
     /** Reads and clears the last crash, if there is one — called once from
      *  MainActivity.onCreate() so it surfaces exactly once, right after the
      *  restart it caused, rather than nagging on every later launch too. */
