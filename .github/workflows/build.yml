@@ -154,3 +154,16 @@ jobs:
             exit 1
           fi
           echo "Database round-trip confirmed working."
+
+      # db-config.php holds the real database password once rendered —
+      # confirms the .htaccess rule actually blocks it from being downloaded
+      # directly, not just that it's present.
+      - name: Verify db-config.php is NOT publicly downloadable
+        run: |
+          status=$(curl -sS -o /dev/null -w "%{http_code}" https://patrons.digital/findme-api/db-config.php)
+          echo "HTTP status for db-config.php: $status"
+          if [ "$status" == "200" ]; then
+            echo "::error::db-config.php is PUBLICLY DOWNLOADABLE — the .htaccess rule isn't being applied"
+            exit 1
+          fi
+          echo "db-config.php is not publicly accessible — good."
