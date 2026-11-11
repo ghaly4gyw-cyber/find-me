@@ -109,6 +109,29 @@ function ensureSchema(PDO $pdo): void
         "INSERT INTO app_control (id, min_supported_version) VALUES (1, 0)
          ON DUPLICATE KEY UPDATE id = id"
     );
+
+    // Places a miner explicitly marked "share with team" at save time —
+    // uploaded here (see public-place-upload.php / PublicPlaceUploader.kt) so
+    // they show up on the dashboard even for a site with no mesh connection
+    // to any other, and so one site's known hazards/water points/landmarks
+    // can be seen across the whole project, not just by whoever's in direct
+    // range. place_id is the app's own stable id for the place (fixed since
+    // the moment it was first shared), so a phone re-uploading the same
+    // place after a rename just updates this one row instead of duplicating
+    // it.
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS public_places (
+            place_id VARCHAR(64) PRIMARY KEY,
+            device_id VARCHAR(64) NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            lat DOUBLE NOT NULL,
+            lon DOUBLE NOT NULL,
+            shared_by_name VARCHAR(100) NULL,
+            place_ts BIGINT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
 }
 
 /** Shared by every endpoint that needs the database — one place to change

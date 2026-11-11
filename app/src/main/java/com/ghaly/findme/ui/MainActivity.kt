@@ -35,6 +35,7 @@ import com.ghaly.findme.export.LedgerExport
 import com.ghaly.findme.update.BlockChecker
 import com.ghaly.findme.update.FeedbackUploader
 import com.ghaly.findme.update.LocationUploader
+import com.ghaly.findme.update.PublicPlaceUploader
 import com.ghaly.findme.update.RegistrationUploader
 import com.ghaly.findme.update.RemoteControl
 import com.ghaly.findme.update.UpdateChecker
@@ -331,6 +332,7 @@ class MainActivity : AppCompatActivity() {
                 checkWindowHealth()
                 maybeUploadLocation()
                 maybeUploadUsage()
+                maybeUploadPublicPlaces()
                 maybeCheckBlocked()
                 delay(5_000L)
             }
@@ -824,6 +826,22 @@ class MainActivity : AppCompatActivity() {
         val deviceId = ProfileStore.get(this).deviceId
         lifecycleScope.launch(Dispatchers.IO) {
             UsageUploader.uploadIfDue(this@MainActivity, deviceId)
+        }
+    }
+
+    /** Opportunistically syncs this phone's PUBLIC saved places (marked
+     *  "share with team" at save time) to the backend — see
+     *  PublicPlaceUploader. This is what lets a place saved at one site show
+     *  up on the admin dashboard even for a completely separate site with no
+     *  mesh connection between them at all; it never touches a place that
+     *  wasn't explicitly marked shared. */
+    private fun maybeUploadPublicPlaces() {
+        if (!ProfileStore.isRegistered(this)) return
+        if (!hasActiveNetwork()) return
+        val deviceId = ProfileStore.get(this).deviceId
+        val publicPlaces = com.ghaly.findme.repo.SavedPlaceRepository.places.value.filter { it.sharedByName != null }
+        lifecycleScope.launch(Dispatchers.IO) {
+            PublicPlaceUploader.uploadIfDue(this@MainActivity, deviceId, publicPlaces)
         }
     }
 

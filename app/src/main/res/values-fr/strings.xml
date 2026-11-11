@@ -284,7 +284,7 @@
     <string name="now_navigating_fmt">Navigation vers %s</string>
     <string name="stopped_navigating_fmt">Navigation arrêtée vers %s</string>
     <string name="place_deleted_fmt">\"%s\" supprimé</string>
-    <string name="share_with_team">Partager avec l\'équipe</string>
+    <string name="share_with_team">🌍 Rendre public (visible par tout le monde, pas seulement vous)</string>
     <string name="shared_by_fmt">partagé par %s</string>
     <string name="place_shared_fmt">\"%s\" partagé avec l\'équipe</string>
     <string name="clear_trail_dialog_title">Effacer le trajet</string>

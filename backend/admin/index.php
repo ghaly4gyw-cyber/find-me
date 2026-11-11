@@ -61,6 +61,7 @@ function formatDuration(int $ms): string
 
 $users = [];
 $feedback = [];
+$publicPlaces = [];
 $appControl = null;
 $error = null;
 $dbConfigPath = __DIR__ . '/../db-config.php';
@@ -83,6 +84,10 @@ if (!file_exists($dbConfigPath)) {
         )->fetchAll(PDO::FETCH_ASSOC);
         $feedback = $pdo->query(
             'SELECT device_id, name, message, created_at FROM feedback ORDER BY created_at DESC LIMIT 200'
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $publicPlaces = $pdo->query(
+            'SELECT place_id, device_id, name, lat, lon, shared_by_name, updated_at
+             FROM public_places ORDER BY updated_at DESC LIMIT 500'
         )->fetchAll(PDO::FETCH_ASSOC);
         $appControl = $pdo->query(
             'SELECT message_title, message_body, min_supported_version, min_supported_message FROM app_control WHERE id = 1'
@@ -375,6 +380,30 @@ $topFeatures = array_slice($topFeatures, 0, 10);
     <?php endforeach; ?>
   </div>
   <?php endif; ?>
+
+  <div class="section-title">Public places</div>
+  <div class="panel-box">
+    <p class="muted" style="margin: 0 0 0.75rem; font-size: 0.85rem;">
+      Spots a user marked "share with team" when saving — water points, landmarks, hazards. Shows up here even for a
+      site with no mesh connection to any other.
+    </p>
+    <?php if (empty($publicPlaces)): ?>
+      <p class="empty" style="padding: 0.5rem 0;">No public places shared yet.</p>
+    <?php else: foreach ($publicPlaces as $pl): ?>
+      <div class="feedback-item">
+        <div>
+          📍 <?= htmlspecialchars($pl['name']) ?>
+          <a class="details-link" style="margin: 0 0 0 8px; padding: 2px 8px; font-size: 0.78rem;"
+             href="https://maps.google.com/?q=<?= urlencode((string) $pl['lat']) ?>,<?= urlencode((string) $pl['lon']) ?>"
+             target="_blank" rel="noopener">Map</a>
+        </div>
+        <div class="meta">
+          — shared by <?= htmlspecialchars($pl['shared_by_name'] ?: 'unknown') ?>
+          · <?= htmlspecialchars($pl['updated_at']) ?>
+        </div>
+      </div>
+    <?php endforeach; endif; ?>
+  </div>
 
   <div class="section-title">Suggestions from users</div>
   <div class="panel-box">

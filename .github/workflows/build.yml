@@ -255,6 +255,25 @@ jobs:
           fi
           echo "Usage update endpoint confirmed working."
 
+      # Same canary-row approach again, now for public-place-upload.php — an
+      # upsert keyed on place_id, so re-running this on every deploy never
+      # grows the table, it just refreshes the same one canary place.
+      - name: Verify the public-place-upload endpoint works
+        run: |
+          response=$(curl -sS -o /tmp/response.json -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"device_id":"ci-healthcheck-canary","places":[{"place_id":"ci-healthcheck-place","name":"CI Canary Water Point","lat":20.0,"lon":-10.0,"shared_by_name":"CI Healthcheck","ts":1700000000000}]}' \
+            https://patrons.digital/findme-api/public-place-upload.php)
+          echo "HTTP status: $response"
+          cat /tmp/response.json
+          echo
+          if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/response.json; then
+            echo "::error::Public place upload failed"
+            exit 1
+          fi
+          echo "Public-place-upload endpoint confirmed working."
+
       # feedback.php is append-only (every real submission is kept forever),
       # so this deliberately does NOT post a real message every deploy —
       # that would grow the table forever. Instead it sends a request
@@ -329,6 +348,14 @@ jobs:
           fi
           if ! grep -q "App control" /tmp/admin_page.html; then
             echo "::error::Dashboard page is missing the App control section"
+            exit 1
+          fi
+          if ! grep -q "Public places" /tmp/admin_page.html; then
+            echo "::error::Dashboard page is missing the Public places section"
+            exit 1
+          fi
+          if ! grep -q "CI Canary Water Point" /tmp/admin_page.html; then
+            echo "::error::Public place from public-place-upload.php isn't showing up on the admin dashboard"
             exit 1
           fi
           if ! grep -q "CI Runner" /tmp/admin_page.html; then
