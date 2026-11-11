@@ -266,16 +266,6 @@ function isAdminPhone(string $phone): bool
     return in_array($phone, ADMIN_PHONES, true);
 }
 
-/** The two offline Android-app activation codes (see ActivationCodes.kt) —
- *  duplicated here, by panel username, ONLY so each admin can see their OWN
- *  code on their OWN dashboard login instead of Ghaly having to relay it by
- *  hand. Rotating one of these still means a new app release; changing it
- *  here would just make the panel show the wrong code. */
-const ADMIN_OFFLINE_CODES = [
-    'ghaly' => 'YAKMP5MS',
-    'osama' => 'EARJB47Q',
-];
-
 /** Generates a short, human-typeable contact code (6 characters, no 0/O/1/I
  *  to avoid mix-ups when someone reads it aloud or copies it by hand) and
  *  retries on the astronomically unlikely chance of a collision. Called once

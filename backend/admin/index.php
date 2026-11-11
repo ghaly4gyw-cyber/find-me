@@ -329,9 +329,6 @@ $topFeatures = array_slice($topFeatures, 0, 10);
   .admin-table th, .admin-table td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
   .admin-table th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; }
 
-  .own-code-box { background: var(--panel-2); border: 1px dashed var(--accent-2); border-radius: 10px; padding: 0.8rem 1rem; display: inline-block; }
-  .own-code-box .code { font-family: monospace; font-size: 1.2rem; font-weight: 700; color: var(--accent-2); letter-spacing: 1px; }
-
   .audit-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid var(--border); gap: 0.5rem; }
   .audit-row:last-child { border-bottom: none; }
   .audit-row .who { color: var(--accent-2); }
@@ -378,12 +375,6 @@ $topFeatures = array_slice($topFeatures, 0, 10);
 
   <div class="section-title">Your account</div>
   <div class="panel-box">
-    <?php if (isset(ADMIN_OFFLINE_CODES[$admin['username']])): ?>
-      <p class="muted" style="margin: 0 0 0.6rem; font-size: 0.85rem;">Your offline activation code — share it only with someone you personally vouch for. Entering it unlocks their app instantly, no internet needed.</p>
-      <div class="own-code-box" style="margin-bottom: 1rem;">
-        <span class="code"><?= htmlspecialchars(ADMIN_OFFLINE_CODES[$admin['username']]) ?></span>
-      </div>
-    <?php endif; ?>
     <form method="post" action="admin-save.php" class="mini-form">
       <input type="hidden" name="action" value="reset_password">
       <input type="hidden" name="username" value="<?= htmlspecialchars($admin['username']) ?>">
