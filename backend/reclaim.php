@@ -65,7 +65,7 @@ try {
 ensureSchema($pdo);
 
 $stmt = $pdo->prepare(
-    'SELECT device_id, pin_hash, reclaim_attempts, reclaim_locked_until, name, description, photo_base64, backup_json
+    'SELECT device_id, pin_hash, reclaim_attempts, reclaim_locked_until, name, description, photo_base64, backup_json, activated
      FROM registrations WHERE phone = ?'
 );
 $stmt->execute([$phone]);
@@ -131,4 +131,9 @@ echo json_encode([
     'description' => $row['description'],
     'photo_base64' => $row['photo_base64'],
     'backup_json' => $row['backup_json'],
+    // Activation state travels with the account across a reclaim — an
+    // already-activated person moving to a new phone shouldn't have to ask
+    // Osama/Ghaly again. See ProfileStore.applyActivationStatus.
+    'activated' => (bool) $row['activated'],
+    'is_admin' => isAdminPhone($phone),
 ]);

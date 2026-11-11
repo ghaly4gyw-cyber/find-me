@@ -601,6 +601,95 @@ jobs:
 
           echo "Online contacts/heartbeat/messaging round-trip confirmed working."
 
+      # Exercises the account-activation gate — "the app cannot be activated
+      # without that password or accepting the demand". Deliberately does
+      # NOT attempt to impersonate Ghaly's or Osama's real admin phones (no
+      # fake CI-only admin number is added to ADMIN_PHONES either — that
+      # would permanently grant real admin power to whoever ever registers
+      # that number for real, in production, not just in CI). Instead this
+      # proves: a brand-new account starts locked, the request/confirm
+      # endpoints work for an ordinary (non-admin) account, and the two
+      # admin-only endpoints correctly reject a non-admin with 403 — the
+      # actual approve/reject path is covered by manual testing with Ghaly's
+      # and Osama's own phones instead.
+      - name: Verify the activation gate starts locked and enforces admin-only access
+        run: |
+          set -e
+          # A fresh phone/device every run (derived from the run id, not a
+          # fixed canary) — unlike the other canaries, this one's whole point
+          # is proving a BRAND NEW account starts locked, and re-running
+          # against the same phone on a later deploy would find it already
+          # activated by this same test's own activation-confirm.php call
+          # below (there's no "deactivate" endpoint to undo that with, since
+          # the real product never needs one). Accumulating one extra always-
+          # activated test row per deploy is a fine trade for that — same
+          # accepted trade-off as the online-messaging canary's `messages`
+          # table growth.
+          PHONE="4${GITHUB_RUN_ID: -7}"
+          DEV="ci-healthcheck-canary-activation-$GITHUB_RUN_ID"
+
+          echo "--- a brand-new registration starts locked ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"name\":\"CI Activation Canary\",\"phone\":\"$PHONE\",\"device_id\":\"$DEV\"}" \
+            https://patrons.digital/findme-api/register.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "200" ] || ! grep -q '"activated":false' /tmp/r.json || ! grep -q '"is_admin":false' /tmp/r.json; then
+            echo "::error::register.php didn't start this new account locked"; exit 1
+          fi
+
+          echo "--- status-check.php agrees it's not activated ---"
+          response=$(curl -sS "https://patrons.digital/findme-api/status-check.php?device_id=$DEV")
+          echo "$response"
+          if ! echo "$response" | grep -q '"activated":false'; then
+            echo "::error::status-check.php reported the new account as already activated"; exit 1
+          fi
+
+          echo "--- it can submit an activation request ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE\",\"device_id\":\"$DEV\"}" \
+            https://patrons.digital/findme-api/activate-request.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/r.json; then
+            echo "::error::activate-request.php failed for an ordinary account"; exit 1
+          fi
+
+          echo "--- but it cannot list or decide pending requests itself (not an admin) ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE\",\"device_id\":\"$DEV\"}" \
+            https://patrons.digital/findme-api/activation-requests-list.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "403" ] || ! grep -q '"not_an_admin"' /tmp/r.json; then
+            echo "::error::activation-requests-list.php let a non-admin account in"; exit 1
+          fi
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE\",\"device_id\":\"$DEV\",\"request_id\":1,\"decision\":\"approve\"}" \
+            https://patrons.digital/findme-api/activation-decide.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "403" ] || ! grep -q '"not_an_admin"' /tmp/r.json; then
+            echo "::error::activation-decide.php let a non-admin account decide a request"; exit 1
+          fi
+
+          echo "--- a local code activation's opportunistic server sync works ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE\",\"device_id\":\"$DEV\"}" \
+            https://patrons.digital/findme-api/activation-confirm.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/r.json; then
+            echo "::error::activation-confirm.php failed"; exit 1
+          fi
+          response=$(curl -sS "https://patrons.digital/findme-api/status-check.php?device_id=$DEV")
+          echo "$response"
+          if ! echo "$response" | grep -q '"activated":true'; then
+            echo "::error::status-check.php still shows the account as locked after activation-confirm.php"; exit 1
+          fi
+
+          echo "Activation gate round-trip confirmed working."
+
       # Ghaly's standing instruction: every release from here on forces
       # every older install to update — "force all the clients and people to
       # update... If they does not update, then they does not get anything."

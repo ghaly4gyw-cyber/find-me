@@ -39,6 +39,8 @@ import com.ghaly.findme.update.AccountReclaimer
 import com.ghaly.findme.update.BackupUploader
 import com.ghaly.findme.update.BlockChecker
 import com.ghaly.findme.update.FeedbackUploader
+import com.ghaly.findme.update.ActivationMessenger
+import com.ghaly.findme.update.ActivationUploader
 import com.ghaly.findme.update.HeartbeatUploader
 import com.ghaly.findme.update.PinUploader
 import com.ghaly.findme.update.LocationUploader
@@ -53,6 +55,7 @@ import com.ghaly.findme.util.AnrWatchdog
 import com.ghaly.findme.util.AppLog
 import com.ghaly.findme.util.CrashLog
 import com.ghaly.findme.util.PhoneValidator
+import com.ghaly.findme.util.ActivationCodes
 import com.ghaly.findme.util.ThemePrefs
 import com.ghaly.findme.util.withTapBounce
 import java.io.ByteArrayOutputStream
@@ -79,6 +82,12 @@ class MainActivity : AppCompatActivity() {
      *  it can be dismissed again automatically if a later check confirms
      *  the device was unblocked (see enforceBlockState). */
     private var blockedGateDialog: AlertDialog? = null
+
+    /** The non-dismissible "not activated yet" gate (see
+     *  enforceActivationGate) — tracked the same way as blockedGateDialog,
+     *  so it clears itself the moment an admin approves the request or a
+     *  valid code gets entered, with no need to restart the app. */
+    private var activationGateDialog: AlertDialog? = null
 
     /** Set once in onCreate — needed outside it by signOutDueToAccountMoved,
      *  which can fire from the periodic background tick, not just from a
@@ -348,13 +357,22 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.onlineContactsButton).setOnClickListener {
             replaceContentSafely(OnlineContactsFragment(), addToBackStack = true)
         }
+        // "He will be has a list there of the requests" — only Osama/Ghaly
+        // ever see this icon at all; re-checked once more by every admin
+        // endpoint itself, so this is never the only gate.
+        val pendingActivationsButton = findViewById<TextView>(R.id.pendingActivationsButton)
+        pendingActivationsButton.visibility = if (ProfileStore.isAdmin(this)) View.VISIBLE else View.GONE
+        pendingActivationsButton.setOnClickListener {
+            replaceContentSafely(PendingActivationsFragment(), addToBackStack = true)
+        }
         findViewById<TextView>(R.id.feedbackButton).setOnClickListener { showFeedbackDialog() }
 
         // A light press animation on every quick-access icon in the top bar
         // plus the bottom tab row — the "dynamic"/"some animation" ask.
         listOf(
             R.id.notesButton, R.id.calculatorButton, R.id.accountsButton, R.id.onlineContactsButton,
-            R.id.feedbackButton, R.id.buddyCheckinButton, R.id.languageButton, R.id.toolsButton, R.id.myNameButton
+            R.id.pendingActivationsButton, R.id.feedbackButton, R.id.buddyCheckinButton, R.id.languageButton,
+            R.id.toolsButton, R.id.myNameButton
         ).forEach { id -> findViewById<View>(id).withTapBounce() }
 
         tabButtons = listOf(
@@ -388,6 +406,11 @@ class MainActivity : AppCompatActivity() {
         // blocked stays blocked if it's opened offline, rather than getting
         // a free pass until it happens to reconnect.
         enforceBlockState()
+        // Same "show the last confirmed state immediately, even offline"
+        // reasoning as enforceBlockState above — someone who closed the app
+        // mid-request shouldn't get a free pass back in until a check (or a
+        // code) actually confirms activation.
+        enforceActivationGate()
         maybeCheckBlocked()
         if (savedInstanceState == null) {
             maybePromptForFeedback()
@@ -407,6 +430,7 @@ class MainActivity : AppCompatActivity() {
                 maybeUploadUsage()
                 maybeUploadPublicPlaces()
                 maybeCheckBlocked()
+                enforceActivationGate()
                 maybeSyncAccountSecurity()
                 delay(5_000L)
             }
@@ -990,6 +1014,9 @@ class MainActivity : AppCompatActivity() {
             // presence signal contacts-status.php reports back as someone's
             // online dot, kept fresh on the same tick as everything else here.
             HeartbeatUploader.sendIfDue(this@MainActivity, phone, profile.deviceId)
+            // Tells the server about a local code-activation, if one is
+            // still waiting to sync — see ActivationUploader's doc comment.
+            ActivationUploader.uploadIfPending(this@MainActivity, phone, profile.deviceId)
         }
     }
 
@@ -1014,6 +1041,91 @@ class MainActivity : AppCompatActivity() {
             blockedGateDialog?.dismiss()
             blockedGateDialog = null
         }
+    }
+
+    /** Shows or dismisses the non-dismissible "not activated yet" gate —
+     *  "the app cannot be activated without that password or accepting the
+     *  demand". Skipped entirely for admins (Ghaly/Osama are always
+     *  activated server-side) and for anyone not yet past the registration
+     *  gate at all (nothing to activate yet). Like enforceBlockState, this
+     *  only reflects the last confirmed/locally-set state — it's
+     *  enforceActivationGate() that gets called again (from onCreate, the
+     *  periodic tick, right after registering, and right after a reclaim)
+     *  to pick up a change. */
+    private fun enforceActivationGate() {
+        // Admin status can only ever turn on after a registration/status
+        // sync that happened after onCreate's own one-time visibility set —
+        // re-applied here on every call so the icon appears without needing
+        // a restart, for the rare case it wasn't already known immediately.
+        findViewById<View>(R.id.pendingActivationsButton).visibility =
+            if (ProfileStore.isAdmin(this)) View.VISIBLE else View.GONE
+
+        if (!ProfileStore.isRegistered(this)) {
+            activationGateDialog?.dismiss()
+            activationGateDialog = null
+            return
+        }
+        if (ProfileStore.isActivated(this) || ProfileStore.isAdmin(this)) {
+            activationGateDialog?.dismiss()
+            activationGateDialog = null
+            return
+        }
+        if (activationGateDialog?.isShowing == true) return
+
+        val view = layoutInflater.inflate(R.layout.dialog_activation_gate, null)
+        view.findViewById<TextView>(R.id.activationAdminContacts).text = getString(
+            R.string.activation_admin_contacts_fmt,
+            ActivationCodes.GHALY_CONTACT_PHONE,
+            ActivationCodes.OSAMA_CONTACT_PHONE
+        )
+        val statusView = view.findViewById<TextView>(R.id.activationRequestStatus)
+        val codeInput = view.findViewById<EditText>(R.id.activationCodeInput)
+
+        view.findViewById<Button>(R.id.activationCodeSubmitButton).setOnClickListener {
+            val code = codeInput.text?.toString().orEmpty()
+            if (ActivationCodes.isValid(code)) {
+                ProfileStore.markActivatedLocally(this)
+                val phone = ProfileStore.get(this).phone
+                if (phone != null) {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        ActivationUploader.uploadIfPending(this@MainActivity, phone, ProfileStore.get(this@MainActivity).deviceId)
+                    }
+                }
+                Toast.makeText(this, R.string.activation_code_accepted, Toast.LENGTH_SHORT).show()
+                enforceActivationGate()
+            } else {
+                Toast.makeText(this, R.string.activation_code_wrong, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        view.findViewById<Button>(R.id.activationRequestButton).setOnClickListener {
+            val phone = ProfileStore.get(this).phone
+            if (phone == null) return@setOnClickListener
+            if (!hasActiveNetwork()) {
+                statusView.text = getString(R.string.activation_request_no_internet)
+                statusView.visibility = View.VISIBLE
+                return@setOnClickListener
+            }
+            val deviceId = ProfileStore.get(this).deviceId
+            statusView.text = getString(R.string.activation_request_sending)
+            statusView.visibility = View.VISIBLE
+            lifecycleScope.launch {
+                val success = withContext(Dispatchers.IO) {
+                    ActivationMessenger.requestActivation(this@MainActivity, phone, deviceId)
+                }
+                statusView.text = getString(
+                    if (success) R.string.activation_request_sent else R.string.activation_request_failed
+                )
+            }
+        }
+
+        activationGateDialog = AlertDialog.Builder(this)
+            .setTitle(R.string.activation_gate_title)
+            .setView(view)
+            .setCancelable(false)
+            .create()
+        activationGateDialog?.setCanceledOnTouchOutside(false)
+        activationGateDialog?.show()
     }
 
     /** Occasionally — at most once every 14 days, and only once someone has
@@ -1266,6 +1378,11 @@ class MainActivity : AppCompatActivity() {
             refreshNameButton(nameButton)
             mesh?.sendProfile()
             dialog.dismiss()
+            if (isFirstRunGate) {
+                // Right behind the registration gate — "the app cannot be
+                // activated without that password or accepting the demand".
+                enforceActivationGate()
+            }
         }
     }
 
@@ -1320,6 +1437,10 @@ class MainActivity : AppCompatActivity() {
                         // Dismiss the first-run gate behind this one too —
                         // reclaim.php already supplied everything it asked for.
                         parentGateDialog?.dismiss()
+                        // Reclaim.php carried this account's real activation
+                        // state across — show (or skip) the activation gate
+                        // accordingly, rather than waiting for the next tick.
+                        enforceActivationGate()
                     }
                     AccountReclaimer.Result.NoSuchAccount ->
                         Toast.makeText(this@MainActivity, R.string.recover_no_such_account, Toast.LENGTH_SHORT).show()

@@ -383,4 +383,25 @@
     <string name="online_status_unknown">Not seen online yet</string>
     <string name="online_status_last_seen_min">Last seen %1$d min ago</string>
     <string name="online_status_last_seen_hr">Last seen %1$d h ago</string>
+
+    <string name="activation_gate_title">Account not activated yet</string>
+    <string name="activation_gate_explanation">For everyone\'s safety, a new account has to be turned on by Osama or Ghaly before you can use the app. Enter a code below if you have one, or send them a request.</string>
+    <string name="activation_code_hint">Enter activation code</string>
+    <string name="activation_code_submit">Activate</string>
+    <string name="activation_or">OR</string>
+    <string name="activation_request_button">Request activation from admin</string>
+    <string name="activation_admin_contacts_fmt">Ghaly: %1$s\nOsama: %2$s</string>
+    <string name="activation_code_accepted">Activated — welcome!</string>
+    <string name="activation_code_wrong">That code isn\'t right</string>
+    <string name="activation_request_no_internet">No internet right now — connect and try again, or call one of the numbers below</string>
+    <string name="activation_request_sending">Sending request…</string>
+    <string name="activation_request_sent">Request sent. Contact Osama or Ghaly to speed it up.</string>
+    <string name="activation_request_failed">Couldn\'t send the request — try again</string>
+    <string name="activation_pending_title">Pending activations</string>
+    <string name="activation_pending_empty">No pending activation requests right now</string>
+    <string name="activation_approve">Approve</string>
+    <string name="activation_reject">Reject</string>
+    <string name="activation_requested_at_fmt">Requested %1$s</string>
+    <string name="activation_approved_toast">%1$s activated</string>
+    <string name="activation_rejected_toast">%1$s rejected</string>
 </resources>

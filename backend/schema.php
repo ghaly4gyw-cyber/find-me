@@ -65,6 +65,15 @@ function ensureSchema(PDO $pdo): void
         // shouldn't require sharing location. contacts-status.php reports a
         // phone as online if this is recent enough.
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP NULL",
+        // Account activation gate — "the app cannot be activated without
+        // that password or accepting the demand", so it doesn't end up in
+        // the wrong hands. DEFAULT 1 here only grandfathers in every row
+        // that already exists at the moment this ALTER runs (everyone
+        // already using the app); register.php explicitly writes 0 for a
+        // genuinely brand-new, non-admin phone's very first INSERT, so new
+        // installs actually start locked. See activate-with-code.php /
+        // activate-request.php / activation-decide.php.
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS activated TINYINT(1) NOT NULL DEFAULT 1",
     ] as $sql) {
         try {
             $pdo->exec($sql);
@@ -178,6 +187,38 @@ function ensureSchema(PDO $pdo): void
             INDEX idx_to_phone_id (to_phone, id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     );
+
+    // One pending-or-decided activation request per phone — "the request
+    // with all details with that new user... he approve it, accept it, or
+    // the otherwise". Re-requesting after a rejection just flips this row
+    // back to pending (see activate-request.php's upsert) rather than
+    // piling up history nobody needs.
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS activation_requests (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            phone VARCHAR(32) NOT NULL UNIQUE,
+            device_id VARCHAR(64) NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            decided_at TIMESTAMP NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+}
+
+/** The two phone numbers allowed to see pending activation requests and
+ *  approve/reject them — Ghaly and Osama, per his explicit instruction
+ *  ("Osama is the admin for all of us... And also from me"). A phone not on
+ *  this list gets 403 from every admin-only endpoint, no matter what device
+ *  or code it has. Deliberately a plain constant, not a database row or a
+ *  secret: these two numbers aren't sensitive, and keeping the list in code
+ *  (reviewed/deployed by Ghaly alone) is simpler than another admin screen
+ *  just to manage who the admins are. */
+const ADMIN_PHONES = ['47339960', '47052797'];
+
+function isAdminPhone(string $phone): bool
+{
+    return in_array($phone, ADMIN_PHONES, true);
 }
 
 /** Generates a short, human-typeable contact code (6 characters, no 0/O/1/I

@@ -375,4 +375,25 @@
     <string name="online_status_unknown">Jamais vu en ligne</string>
     <string name="online_status_last_seen_min">Vu il y a %1$d min</string>
     <string name="online_status_last_seen_hr">Vu il y a %1$d h</string>
+
+    <string name="activation_gate_title">Compte pas encore activé</string>
+    <string name="activation_gate_explanation">Pour la sécurité de tous, Osama ou Ghaly doit activer tout nouveau compte avant que vous puissiez utiliser l\'application. Entrez un code si vous en avez un, ou envoyez-leur une demande.</string>
+    <string name="activation_code_hint">Entrez le code d\'activation</string>
+    <string name="activation_code_submit">Activer</string>
+    <string name="activation_or">OU</string>
+    <string name="activation_request_button">Demander l\'activation à l\'administrateur</string>
+    <string name="activation_admin_contacts_fmt">Ghaly : %1$s\nOsama : %2$s</string>
+    <string name="activation_code_accepted">Activé — bienvenue !</string>
+    <string name="activation_code_wrong">Ce code n\'est pas correct</string>
+    <string name="activation_request_no_internet">Pas d\'internet pour l\'instant — connectez-vous et réessayez, ou appelez un des numéros ci-dessous</string>
+    <string name="activation_request_sending">Envoi de la demande…</string>
+    <string name="activation_request_sent">Demande envoyée. Contactez Osama ou Ghaly pour accélérer les choses.</string>
+    <string name="activation_request_failed">Impossible d\'envoyer la demande — réessayez</string>
+    <string name="activation_pending_title">Activations en attente</string>
+    <string name="activation_pending_empty">Aucune demande d\'activation en attente pour l\'instant</string>
+    <string name="activation_approve">Approuver</string>
+    <string name="activation_reject">Rejeter</string>
+    <string name="activation_requested_at_fmt">Demandé le %1$s</string>
+    <string name="activation_approved_toast">%1$s activé</string>
+    <string name="activation_rejected_toast">%1$s rejeté</string>
 </resources>

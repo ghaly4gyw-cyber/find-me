@@ -1,6 +1,7 @@
 package com.ghaly.findme.update
 
 import android.content.Context
+import com.ghaly.findme.mesh.ProfileStore
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -69,6 +70,15 @@ object BlockChecker {
                 .putBoolean(KEY_STILL_REGISTERED, stillRegistered)
                 .putLong(KEY_LAST_CHECK_AT, System.currentTimeMillis())
                 .apply()
+            // Piggy-backed on this same already-polled endpoint — see
+            // status-check.php's doc comment. applyActivationStatus never
+            // downgrades an already-locally-activated (e.g. by code) account
+            // back to locked just because this particular sync is stale.
+            ProfileStore.applyActivationStatus(
+                context,
+                activated = json.optBoolean("activated", false),
+                isAdmin = json.optBoolean("is_admin", false)
+            )
         } catch (e: Exception) {
             // Offline or server down — cached state (if any) is left as-is.
         }

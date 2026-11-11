@@ -15,6 +15,13 @@
  * stops matching any row — this is how the old phone finds that out and
  * signs itself out (see MainActivity.enforceSessionState). A device that was
  * never registered reads as still_registered: true (nothing to sign out of).
+ *
+ * Also reports "activated" and "is_admin" — the account-activation gate (see
+ * ActivationGate.kt / activate-with-code.php / activate-request.php). Piggy-
+ * backed onto this same already-polled endpoint rather than a separate one,
+ * since the app already checks in here periodically. A device that isn't
+ * registered at all reads as activated: false, is_admin: false (nothing to
+ * unlock yet).
  */
 
 header('Content-Type: application/json');
@@ -51,9 +58,9 @@ try {
 
 ensureSchema($pdo);
 
-$stmt = $pdo->prepare('SELECT blocked FROM registrations WHERE device_id = ?');
+$stmt = $pdo->prepare('SELECT blocked, phone, activated FROM registrations WHERE device_id = ?');
 $stmt->execute([$deviceId]);
-$row = $stmt->fetchColumn();
+$row = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // A device that was reclaimed away never had "registered" turn false for an
 // id that was never registered in the first place — only once it HAD a row
@@ -63,6 +70,8 @@ $row = $stmt->fetchColumn();
 // ProfileStore.isRegistered + enforceSessionState) — still_registered here
 // just answers "does a row exist with my id", plainly.
 echo json_encode([
-    'blocked' => $row !== false && (bool) $row,
+    'blocked' => $row !== false && (bool) $row['blocked'],
     'still_registered' => $row !== false,
+    'activated' => $row !== false && (bool) $row['activated'],
+    'is_admin' => $row !== false && isAdminPhone($row['phone']),
 ]);

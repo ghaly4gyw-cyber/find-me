@@ -64,6 +64,13 @@ object AccountReclaimer {
                 }
                 ProfileStore.markRegistered(context)
                 ProfileStore.markPinSetFromReclaim(context)
+                // Activation state travels with the account — see
+                // reclaim.php's doc comment.
+                ProfileStore.applyActivationStatus(
+                    context,
+                    activated = json.optBoolean("activated", false),
+                    isAdmin = json.optBoolean("is_admin", false)
+                )
                 restoreBackup(json.optString("backup_json", "").ifEmpty { null })
                 return Result.Success(name, phone)
             }

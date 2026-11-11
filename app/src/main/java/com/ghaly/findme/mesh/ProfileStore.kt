@@ -21,6 +21,16 @@ object ProfileStore {
     private const val KEY_PIN_PENDING = "pin_pending_upload"
     private const val KEY_PIN_IS_SET = "pin_is_set"
 
+    // Account-activation gate — "the app cannot be activated without that
+    // password or accepting the demand". KEY_ACTIVATED is the one flag
+    // MainActivity's gate actually checks; KEY_PENDING_ACTIVATION_CONFIRM is
+    // set only by a LOCAL code activation (ActivationCodes.kt), so the next
+    // time the phone is online, ActivationUploader can tell the server too —
+    // see that class's doc comment for why the gate itself never waits on it.
+    private const val KEY_ACTIVATED = "activated"
+    private const val KEY_IS_ADMIN = "is_admin"
+    private const val KEY_PENDING_ACTIVATION_CONFIRM = "pending_activation_confirm"
+
     fun get(context: Context): Profile {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return Profile(
@@ -102,5 +112,62 @@ object ProfileStore {
      *  very first run of the app looked before anyone ever registered. */
     fun clearForSignOut(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+    }
+
+    /** False until an admin approves this account (or it was always one of
+     *  Ghaly/Osama's own numbers) — see MainActivity.enforceActivationGate.
+     *  Defaults to false: a never-yet-confirmed account is locked, not open,
+     *  which is the safe direction for a gate whose whole point is keeping
+     *  the app out of the wrong hands. */
+    fun isActivated(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ACTIVATED, false)
+    }
+
+    /** True only for Ghaly's/Osama's own registered phone numbers (server
+     *  decides this, via ADMIN_PHONES in schema.php) — shows the extra
+     *  "pending activations" screen in the app. */
+    fun isAdmin(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_IS_ADMIN, false)
+    }
+
+    /** Applied from a server response (register.php or status-check.php).
+     *  Deliberately monotonic on [activated]: an account this phone already
+     *  unlocked for itself by entering a code (see ActivationCodes.kt) must
+     *  never be re-locked just because a particular sync happened to run
+     *  before ActivationUploader's own confirm call reached the server —
+     *  only ever OR's in a true from the server, never clears a true that's
+     *  already set locally. [isAdmin] has no such concern (it only ever
+     *  reflects the server's own ADMIN_PHONES check) so it's just applied
+     *  directly. */
+    fun applyActivationStatus(context: Context, activated: Boolean, isAdmin: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(KEY_ACTIVATED, prefs.getBoolean(KEY_ACTIVATED, false) || activated)
+            .putBoolean(KEY_IS_ADMIN, isAdmin)
+            .apply()
+    }
+
+    /** Called the moment someone enters a valid offline activation code
+     *  (ActivationCodes.isValid) — unlocks the app on this device instantly,
+     *  with no network involved, and leaves a marker for ActivationUploader
+     *  to tell the server too, next time this phone happens to be online. */
+    fun markActivatedLocally(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_ACTIVATED, true)
+            .putBoolean(KEY_PENDING_ACTIVATION_CONFIRM, true)
+            .apply()
+    }
+
+    /** Null (nothing pending) once ActivationUploader has successfully told
+     *  the server about a local code activation, or if this account was
+     *  never activated by code in the first place (e.g. admin-approved). */
+    fun hasPendingActivationConfirm(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_PENDING_ACTIVATION_CONFIRM, false)
+    }
+
+    fun clearPendingActivationConfirm(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_PENDING_ACTIVATION_CONFIRM, false)
+            .apply()
     }
 }

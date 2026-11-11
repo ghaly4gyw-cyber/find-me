@@ -19,6 +19,7 @@ import com.ghaly.findme.model.Note
 import com.ghaly.findme.model.OnlineContact
 import com.ghaly.findme.model.OnlineMessage
 import com.ghaly.findme.model.PeerPosition
+import com.ghaly.findme.update.PendingActivation
 import com.ghaly.findme.model.Post
 import com.ghaly.findme.model.PostComment
 import com.ghaly.findme.model.SosAlert
@@ -520,6 +521,44 @@ class OnlineMessageAdapter : RecyclerView.Adapter<OnlineMessageAdapter.VH>() {
         // Same absolute-Gravity approach as ChatAdapter — see its comment for why.
         (holder.row as android.widget.LinearLayout).gravity =
             if (m.mine) android.view.Gravity.RIGHT else android.view.Gravity.LEFT
+    }
+}
+
+class PendingActivationAdapter(
+    private val onApprove: (PendingActivation) -> Unit = {},
+    private val onReject: (PendingActivation) -> Unit = {}
+) : RecyclerView.Adapter<PendingActivationAdapter.VH>() {
+    var items: List<PendingActivation> = emptyList()
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
+
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val name: android.widget.TextView = v.findViewById(R.id.pendingActivationName)
+        val phone: android.widget.TextView = v.findViewById(R.id.pendingActivationPhone)
+        val requestedAt: android.widget.TextView = v.findViewById(R.id.pendingActivationRequestedAt)
+        val approve: android.widget.Button = v.findViewById(R.id.pendingActivationApprove)
+        val reject: android.widget.Button = v.findViewById(R.id.pendingActivationReject)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_pending_activation, parent, false)
+        return VH(v)
+    }
+
+    override fun getItemCount() = items.size
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val r = items[position]
+        holder.name.text = r.name
+        holder.phone.text = r.phone
+        holder.requestedAt.text = holder.requestedAt.context.getString(
+            R.string.activation_requested_at_fmt, r.requestedAtRaw
+        )
+        holder.approve.setOnClickListener { onApprove(r) }
+        holder.reject.setOnClickListener { onReject(r) }
     }
 }
 

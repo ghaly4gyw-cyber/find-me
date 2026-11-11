@@ -88,21 +88,30 @@ if ($existing !== false && $existing !== $deviceId) {
     exit;
 }
 
+// Brand-new phones start locked ("the app cannot be activated without that
+// password or accepting the demand") unless the number itself is one of
+// Ghaly/Osama's — they're always activated, on any device, including a
+// reinstall. This value is only ever used by the INSERT branch below: the
+// ON DUPLICATE KEY UPDATE deliberately leaves `activated` out of its SET
+// list, so a device re-syncing an already-registered (or already-approved)
+// phone never gets silently re-locked or re-opened by this endpoint.
+$initialActivated = isAdminPhone($phone) ? 1 : 0;
+
 // Upsert by device_id: a device re-syncing (app reopened online later, or a
 // retry after a dropped connection) just refreshes its own row. description/
 // photo_base64 only overwrite when actually sent (COALESCE keeps the
 // existing value on an update that doesn't include them), so re-syncing name
 // and phone alone never wipes out a photo already on file.
 $stmt = $pdo->prepare(
-    'INSERT INTO registrations (device_id, phone, name, description, photo_base64)
-     VALUES (?, ?, ?, ?, ?)
+    'INSERT INTO registrations (device_id, phone, name, description, photo_base64, activated)
+     VALUES (?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
         phone = VALUES(phone),
         name = VALUES(name),
         description = COALESCE(VALUES(description), description),
         photo_base64 = COALESCE(VALUES(photo_base64), photo_base64)'
 );
-$stmt->execute([$deviceId, $phone, $name, $description, $photoBase64]);
+$stmt->execute([$deviceId, $phone, $name, $description, $photoBase64, $initialActivated]);
 
 // Every account gets a short contact code, generated once and kept for the
 // life of the account — "add their code" (a friend-code to reach someone by,
@@ -117,4 +126,13 @@ if ($contactCode === false || $contactCode === null || $contactCode === '') {
         ->execute([$contactCode, $phone]);
 }
 
-echo json_encode(['status' => 'ok', 'contact_code' => $contactCode]);
+$stmt = $pdo->prepare('SELECT activated FROM registrations WHERE phone = ?');
+$stmt->execute([$phone]);
+$activated = (bool) $stmt->fetchColumn();
+
+echo json_encode([
+    'status' => 'ok',
+    'contact_code' => $contactCode,
+    'activated' => $activated,
+    'is_admin' => isAdminPhone($phone),
+]);

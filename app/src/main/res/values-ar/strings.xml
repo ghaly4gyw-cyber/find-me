@@ -375,4 +375,25 @@
     <string name="online_status_unknown">لم يُشاهد متصلاً بعد</string>
     <string name="online_status_last_seen_min">آخر ظهور منذ %1$d دقيقة</string>
     <string name="online_status_last_seen_hr">آخر ظهور منذ %1$d ساعة</string>
+
+    <string name="activation_gate_title">الحساب غير مُفعَّل بعد</string>
+    <string name="activation_gate_explanation">حفاظًا على سلامة الجميع، يجب أن يقوم أسامة أو غالي بتفعيل أي حساب جديد قبل أن تتمكن من استخدام التطبيق. أدخل رمز التفعيل إن كان لديك واحد، أو أرسل لهما طلبًا.</string>
+    <string name="activation_code_hint">أدخل رمز التفعيل</string>
+    <string name="activation_code_submit">تفعيل</string>
+    <string name="activation_or">أو</string>
+    <string name="activation_request_button">إرسال طلب تفعيل إلى المسؤول</string>
+    <string name="activation_admin_contacts_fmt">غالي: %1$s\nأسامة: %2$s</string>
+    <string name="activation_code_accepted">تم التفعيل — أهلاً بك!</string>
+    <string name="activation_code_wrong">هذا الرمز غير صحيح</string>
+    <string name="activation_request_no_internet">لا يوجد اتصال بالإنترنت الآن — اتصل بالإنترنت وحاول مرة أخرى، أو اتصل بأحد الرقمين أدناه</string>
+    <string name="activation_request_sending">جارٍ إرسال الطلب…</string>
+    <string name="activation_request_sent">تم إرسال الطلب. تواصل مع أسامة أو غالي لتسريع الأمر.</string>
+    <string name="activation_request_failed">تعذّر إرسال الطلب — حاول مرة أخرى</string>
+    <string name="activation_pending_title">طلبات التفعيل المعلّقة</string>
+    <string name="activation_pending_empty">لا توجد طلبات تفعيل معلّقة حاليًا</string>
+    <string name="activation_approve">قبول</string>
+    <string name="activation_reject">رفض</string>
+    <string name="activation_requested_at_fmt">طُلب في %1$s</string>
+    <string name="activation_approved_toast">تم تفعيل %1$s</string>
+    <string name="activation_rejected_toast">تم رفض %1$s</string>
 </resources>

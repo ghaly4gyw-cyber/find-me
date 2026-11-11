@@ -160,6 +160,20 @@
                 android:maxLines="1" />
 
             <TextView
+                android:id="@+id/pendingActivationsButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="🛡️"
+                android:textSize="18sp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:background="@drawable/bg_tab_item"
+                android:contentDescription="@string/activation_pending_title"
+                android:visibility="gone"
+                android:maxLines="1" />
+
+            <TextView
                 android:id="@+id/feedbackButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

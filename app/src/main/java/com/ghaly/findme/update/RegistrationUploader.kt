@@ -1,6 +1,7 @@
 package com.ghaly.findme.update
 
 import android.content.Context
+import com.ghaly.findme.mesh.ProfileStore
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -81,6 +82,15 @@ object RegistrationUploader {
                         .putBoolean(KEY_UPLOADED, true)
                     if (code.isNotEmpty()) editor.putString(KEY_CONTACT_CODE, code)
                     editor.apply()
+                    // Fastest path to an accurate activation-gate state — the
+                    // very first server round trip this account ever makes
+                    // already says whether it's activated/admin, no need to
+                    // wait for BlockChecker's own separate periodic poll.
+                    ProfileStore.applyActivationStatus(
+                        context,
+                        activated = json.optBoolean("activated", false),
+                        isAdmin = json.optBoolean("is_admin", false)
+                    )
                 }
                 responseCode == 409 -> {
                     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
