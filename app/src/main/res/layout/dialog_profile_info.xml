@@ -44,4 +44,22 @@
         android:textColor="@color/sand_700"
         android:textSize="12sp" />
 
+    <TextView
+        android:id="@+id/profileInfoPinStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/sand_300"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/profileInfoPinButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:padding="6dp"
+        android:text="@string/profile_set_pin_button"
+        android:textColor="@color/teal_400" />
+
 </LinearLayout>

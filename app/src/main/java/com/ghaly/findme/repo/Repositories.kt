@@ -720,6 +720,20 @@ object SavedPlaceRepository {
         saveToDisk()
     }
 
+    /** See LedgerRepository.exportForBackup. Includes private places too
+     *  (not just ones shared with the team) — this is a personal backup
+     *  channel, separate from the public-places sharing feature. */
+    fun exportForBackup(): String {
+        return appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_DATA, null) ?: "[]"
+    }
+
+    /** See LedgerRepository.restoreFromBackup. */
+    fun restoreFromBackup(placesJson: String) {
+        val ctx = appContext ?: return
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_DATA, placesJson).apply()
+        loadFromDisk()
+    }
+
     private fun loadFromDisk() {
         val ctx = appContext ?: return
         try {
@@ -998,6 +1012,18 @@ object NotesRepository {
         saveToDisk()
     }
 
+    /** See LedgerRepository.exportForBackup. */
+    fun exportForBackup(): String {
+        return appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_DATA, null) ?: "[]"
+    }
+
+    /** See LedgerRepository.restoreFromBackup. */
+    fun restoreFromBackup(notesJson: String) {
+        val ctx = appContext ?: return
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_DATA, notesJson).apply()
+        loadFromDisk()
+    }
+
     private fun loadFromDisk() {
         val ctx = appContext ?: return
         try {
@@ -1079,6 +1105,31 @@ object LedgerRepository {
     fun removeAccount(id: String) {
         _accounts.update { list -> list.filter { it.id != id } }
         saveToDisk()
+    }
+
+    /** Raw on-disk JSON, exactly as saveToDisk() persists it — for the
+     *  account backup/reclaim feature (see BackupUploader/AccountReclaimer).
+     *  Books first, accounts second, matching restoreFromBackup's args. */
+    fun exportForBackup(): Pair<String, String> {
+        val ctx = appContext
+        val prefs = ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return Pair(
+            prefs?.getString(KEY_BOOKS, null) ?: "[]",
+            prefs?.getString(KEY_DATA, null) ?: "[]"
+        )
+    }
+
+    /** Overwrites local books/accounts with a downloaded backup (see
+     *  reclaim.php) and reloads from it — reuses loadFromDisk()'s own
+     *  parsing/migration so a restored backup is treated exactly like data
+     *  that was always on this phone. */
+    fun restoreFromBackup(booksJson: String, accountsJson: String) {
+        val ctx = appContext ?: return
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_BOOKS, booksJson)
+            .putString(KEY_DATA, accountsJson)
+            .apply()
+        loadFromDisk()
     }
 
     fun updateAccount(id: String, name: String, phone: String?) {

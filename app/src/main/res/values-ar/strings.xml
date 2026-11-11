@@ -196,8 +196,9 @@
     <string name="about_visit_website_button">زيارة الموقع</string>
     <string name="about_close_button">إغلاق</string>
     <string name="remote_control_update_required_title">تحديث مطلوب</string>
-    <string name="remote_control_update_required_default">هذا الإصدار قديم. يرجى التحديث لمواصلة استخدام إيجادني.</string>
+    <string name="remote_control_update_required_default">هذا الإصدار قديم. يرجى التحديث لمواصلة استخدام إيجادني. اسمك والأماكن المحفوظة والحسابات والملاحظات تبقى كما هي — التحديث لا يمحو أي شيء منها.</string>
     <string name="remote_control_check_now_button">التحقق الآن</string>
+    <string name="remote_control_open_download_page_button">⬇️ صفحة التحميل</string>
 
     <string name="registration_title">مرحبًا بك في إيجادني — من أنت؟</string>
     <string name="registration_body_hint">يتم مشاركة اسمك ورقم هاتفك مع المعدّنين الآخرين على الشبكة ليعرفوا مع من يتحدثون. يساعد موقعك مسؤول التطبيق على استرجاع هاتفك إذا ضاع أو سُرق. يُطلب هذا مرة واحدة فقط ولا يمكن تغييره لاحقًا، لذا خذ لحظة للتأكد من صحتهما.</string>
@@ -212,7 +213,30 @@
     <string name="profile_info_description_fmt">ملاحظة: %s</string>
     <string name="profile_info_none">—</string>
     <string name="registration_conflict_title">رقم الهاتف هذا مسجّل بالفعل</string>
-    <string name="registration_conflict_body">اسمك ورقم هاتفك مسجّلان بالفعل على جهاز آخر. يمكن لهذا الجهاز الاستمرار في العمل كما هو، لكن قد ترغب في التحقق من ذلك مع من قام بهذا الإعداد.</string>
+    <string name="registration_conflict_body">رقم هاتفك مسجّل بالفعل على هاتف آخر، لذا تم تسجيل الخروج من هذا الهاتف.</string>
+
+    <string name="phone_invalid_format">يجب أن يتكون رقم الهاتف من 8 أرقام بالضبط، ويبدأ بـ 2 أو 3 أو 4</string>
+    <string name="profile_pin_hint">الرمز السري (اختياري، 4–8 أرقام) — يستعيد حسابك على هاتف جديد</string>
+    <string name="profile_pin_hint_required">الرمز السري</string>
+    <string name="pin_invalid_length">يجب أن يتكون الرمز السري من 4 إلى 8 أرقام</string>
+    <string name="recover_account_link">هل لديك حساب بالفعل؟ استعده برقم هاتفك ورمزك السري</string>
+    <string name="recover_account_title">استعادة الحساب</string>
+    <string name="recover_account_button">استعادة</string>
+    <string name="recover_missing_fields">أدخل رقم هاتفك ورمزك السري</string>
+    <string name="recover_no_such_account">لا يوجد حساب بهذا رقم الهاتف</string>
+    <string name="recover_no_pin_set">هذا الحساب لم يضبط رمزاً سرياً للاستعادة أبداً</string>
+    <string name="recover_wrong_pin_fmt">رمز سري خاطئ — تبقّى %d محاولات</string>
+    <string name="recover_locked_fmt">محاولات كثيرة جداً — حاول مرة أخرى بعد حوالي %d دقيقة</string>
+    <string name="recover_device_already_bound">هذا الهاتف مسجّل بالفعل برقم آخر</string>
+    <string name="recover_network_error">تعذر الوصول إلى الخادم — تحقق من اتصالك وحاول مرة أخرى</string>
+    <string name="recover_success_toast">تم استعادة الحساب — مرحباً بعودتك</string>
+    <string name="profile_set_pin_button">🔒 الرمز السري للاستعادة</string>
+    <string name="profile_pin_status_set">🔒 تم ضبط الرمز السري للاستعادة</string>
+    <string name="profile_pin_status_unset">🔓 لم يُضبط رمز سري للاستعادة بعد</string>
+    <string name="set_pin_dialog_title">الرمز السري للاستعادة</string>
+    <string name="set_pin_dialog_message">يُستخدم لنقل حسابك إلى هاتف جديد إذا فُقد هذا الهاتف أو تعطّل. 4–8 أرقام. اتركه فارغاً لإزالته.</string>
+    <string name="signed_out_title">تم تسجيل الخروج</string>
+    <string name="signed_out_body">تم تسجيل هذا الحساب للتو على هاتف آخر، لذا تم تسجيل خروج هذا الهاتف منه. كل ما تم حفظه هنا (الحسابات والملاحظات والأماكن) يبقى على هذا الهاتف — لكن عليك التسجيل من جديد لمواصلة استخدام إيجادني.</string>
 
     <string name="tools_suggest_feature">💡 اقترح ميزة</string>
     <string name="feedback_dialog_title">هل هناك شيء تريد إضافته؟</string>

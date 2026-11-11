@@ -13,7 +13,8 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
-        android:paddingVertical="12dp">
+        android:paddingTop="12dp"
+        android:paddingBottom="4dp">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -59,7 +60,6 @@
             android:id="@+id/daylightHeaderPill"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
             android:background="@drawable/bg_button_pill"
             android:paddingHorizontal="10dp"
             android:paddingVertical="6dp"
@@ -70,56 +70,133 @@
             android:maxLines="1"
             android:ellipsize="end"
             tools:text="☼ 5h 15m" />
-
-        <TextView
-            android:id="@+id/toolsButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="🛠️"
-            android:textSize="18sp"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="8dp"
-            android:background="@drawable/bg_tab_item_selected"
-            android:maxLines="1" />
-
-        <TextView
-            android:id="@+id/buddyCheckinButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="🤝"
-            android:textSize="18sp"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="8dp"
-            android:background="@drawable/bg_tab_item_selected"
-            android:maxLines="1" />
-
-        <TextView
-            android:id="@+id/languageButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="🌐"
-            android:textSize="18sp"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="8dp"
-            android:background="@drawable/bg_tab_item_selected"
-            android:maxLines="1" />
-
-        <TextView
-            android:id="@+id/myNameButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/teal_400"
-            android:textSize="13sp"
-            android:paddingHorizontal="14dp"
-            android:paddingVertical="8dp"
-            android:background="@drawable/bg_tab_item_selected"
-            android:maxLines="1"
-            android:ellipsize="end"
-            tools:text="Miner-3F2A ✎" />
     </LinearLayout>
+
+    <!-- Every quick-access tool lives here now, as one scrollable row instead
+         of being buried behind the wrench icon — "all the buttons in the top
+         nav bar... show them there all", per Ghaly's request. Dynamic in two
+         senses: it scrolls rather than clipping on narrow screens or long
+         Arabic/French labels, and a new tool just appends to the row rather
+         than needing a layout redesign. layoutAnimation makes the whole row
+         stagger in (fade + rise) the moment this screen first lays out. -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:overScrollMode="ifContentScrolls"
+        android:paddingBottom="8dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layoutAnimation="@anim/layout_fade_up">
+
+            <TextView
+                android:id="@+id/notesButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="📝"
+                android:textSize="18sp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:background="@drawable/bg_tab_item_selected"
+                android:contentDescription="@string/tools_notes"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/calculatorButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="🧮"
+                android:textSize="18sp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:background="@drawable/bg_tab_item_selected"
+                android:contentDescription="@string/tools_calculator"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/accountsButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="💰"
+                android:textSize="18sp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:background="@drawable/bg_tab_item_selected"
+                android:contentDescription="@string/tools_accounts"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/feedbackButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="💡"
+                android:textSize="18sp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:background="@drawable/bg_tab_item_selected"
+                android:contentDescription="@string/tools_suggest_feature"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/buddyCheckinButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="🤝"
+                android:textSize="18sp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:background="@drawable/bg_tab_item_selected"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/languageButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="🌐"
+                android:textSize="18sp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:background="@drawable/bg_tab_item_selected"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/toolsButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="⚙️"
+                android:textSize="18sp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:background="@drawable/bg_tab_item_selected"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/myNameButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/teal_400"
+                android:textSize="13sp"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="8dp"
+                android:background="@drawable/bg_tab_item_selected"
+                android:maxLines="1"
+                android:ellipsize="end"
+                tools:text="Miner-3F2A ✎" />
+        </LinearLayout>
+    </HorizontalScrollView>
 
     <LinearLayout
         android:id="@+id/permissionBar"

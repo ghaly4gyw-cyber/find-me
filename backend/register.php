@@ -44,16 +44,17 @@ if ($photoBase64 === '') $photoBase64 = null;
 // is already a small resized/compressed thumbnail by the time the app sends
 // it (see MainActivity.handlePickedPhoto), so 200,000 base64 characters
 // (~150KB raw) is a generous ceiling, not a real-world ask.
+require __DIR__ . '/schema.php';
+
 if ($name === '' || $phone === '' || $deviceId === ''
-    || mb_strlen($name) > 100 || mb_strlen($phone) > 32 || mb_strlen($deviceId) > 64
+    || mb_strlen($name) > 100 || mb_strlen($deviceId) > 64
+    || !isValidMauritanianPhone($phone)
     || ($description !== null && mb_strlen($description) > 500)
     || ($photoBase64 !== null && strlen($photoBase64) > 200_000)) {
     http_response_code(400);
     echo json_encode(['status' => 'error', 'reason' => 'missing_or_invalid_fields']);
     exit;
 }
-
-require __DIR__ . '/schema.php';
 
 $configPath = __DIR__ . '/db-config.php';
 if (!file_exists($configPath)) {

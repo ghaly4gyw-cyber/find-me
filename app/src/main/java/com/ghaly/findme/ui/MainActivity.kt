@@ -32,8 +32,11 @@ import com.ghaly.findme.mesh.MeshManager
 import com.ghaly.findme.mesh.Permissions
 import com.ghaly.findme.mesh.ProfileStore
 import com.ghaly.findme.export.LedgerExport
+import com.ghaly.findme.update.AccountReclaimer
+import com.ghaly.findme.update.BackupUploader
 import com.ghaly.findme.update.BlockChecker
 import com.ghaly.findme.update.FeedbackUploader
+import com.ghaly.findme.update.PinUploader
 import com.ghaly.findme.update.LocationUploader
 import com.ghaly.findme.update.PublicPlaceUploader
 import com.ghaly.findme.update.RegistrationUploader
@@ -45,6 +48,8 @@ import com.ghaly.findme.update.UsageUploader
 import com.ghaly.findme.util.AnrWatchdog
 import com.ghaly.findme.util.AppLog
 import com.ghaly.findme.util.CrashLog
+import com.ghaly.findme.util.PhoneValidator
+import com.ghaly.findme.util.withTapBounce
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -52,6 +57,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
+
+    /** Public, no-login fallback download page for the forced-update gate's
+     *  neutral button — same APK the in-app installer fetches, just reachable
+     *  from any browser. See download/index.php. */
+    private val DOWNLOAD_PAGE_URL = "https://patrons.digital/findme-api/download/"
 
     var mesh: MeshManager? = null
         private set
@@ -64,6 +74,11 @@ class MainActivity : AppCompatActivity() {
      *  it can be dismissed again automatically if a later check confirms
      *  the device was unblocked (see enforceBlockState). */
     private var blockedGateDialog: AlertDialog? = null
+
+    /** Set once in onCreate — needed outside it by signOutDueToAccountMoved,
+     *  which can fire from the periodic background tick, not just from a
+     *  tap on the button itself. */
+    private var nameButtonView: TextView? = null
 
     private var bound = false
     // Guards against calling bindService() more than once per onCreate..onStop
@@ -263,6 +278,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val nameButton = findViewById<TextView>(R.id.myNameButton)
+        nameButtonView = nameButton
         refreshNameButton(nameButton)
         nameButton.setOnClickListener {
             if (ProfileStore.isRegistered(this)) {
@@ -285,6 +301,28 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.toolsButton).setOnClickListener { showToolsDialog() }
         findViewById<TextView>(R.id.buddyCheckinButton).setOnClickListener { showBuddyCheckInDialog() }
 
+        // Promoted straight to the top bar instead of hiding behind the
+        // wrench icon — "the other tools like accounts, calculator, notice,
+        // all of them to be there also showing". Same destinations the old
+        // Tools dialog used to send these three to.
+        findViewById<TextView>(R.id.notesButton).setOnClickListener {
+            replaceContentSafely(NotesFragment(), addToBackStack = true)
+        }
+        findViewById<TextView>(R.id.calculatorButton).setOnClickListener {
+            replaceContentSafely(CalculatorFragment(), addToBackStack = true)
+        }
+        findViewById<TextView>(R.id.accountsButton).setOnClickListener {
+            replaceContentSafely(AccountsFragment(), addToBackStack = true)
+        }
+        findViewById<TextView>(R.id.feedbackButton).setOnClickListener { showFeedbackDialog() }
+
+        // A light press animation on every quick-access icon in the top bar
+        // plus the bottom tab row — the "dynamic"/"some animation" ask.
+        listOf(
+            R.id.notesButton, R.id.calculatorButton, R.id.accountsButton, R.id.feedbackButton,
+            R.id.buddyCheckinButton, R.id.languageButton, R.id.toolsButton, R.id.myNameButton
+        ).forEach { id -> findViewById<View>(id).withTapBounce() }
+
         tabButtons = listOf(
             findViewById(R.id.tabPeers),
             findViewById(R.id.tabMap),
@@ -300,6 +338,7 @@ class MainActivity : AppCompatActivity() {
         tabButtons[3].setOnClickListener { selectTab(3); showFragment(SosFragment()) }
         tabButtons[4].setOnClickListener { selectTab(4); showFragment(PostsFragment()) }
         tabButtons[5].setOnClickListener { selectTab(5); showFragment(GroupsFragment()) }
+        tabButtons.forEach { it.withTapBounce() }
 
         if (savedInstanceState == null) {
             selectTab(0)
@@ -334,6 +373,7 @@ class MainActivity : AppCompatActivity() {
                 maybeUploadUsage()
                 maybeUploadPublicPlaces()
                 maybeCheckBlocked()
+                maybeSyncAccountSecurity()
                 delay(5_000L)
             }
         }
@@ -604,45 +644,24 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    /** Offline, personal utilities — nothing here touches the mesh or anyone
-     *  else's phone. One entry point that opens into its own full screen
-     *  (so the list stays short no matter how many little tools get added
-     *  here later), rather than a button per tool crowding the top bar. */
+    /** Notes, Calculator, Accounts and Suggest-a-feature now have their own
+     *  icons in the top bar (see activity_main.xml), so this dialog is left
+     *  with only the handful of things that genuinely are occasional/admin
+     *  rather than everyday field tools. */
     private fun showToolsDialog() {
         val options = arrayOf(
-            getString(R.string.tools_notes),
-            getString(R.string.tools_calculator),
-            getString(R.string.tools_accounts),
             getString(R.string.tools_check_for_updates),
             getString(R.string.tools_share_debug_log),
-            getString(R.string.tools_about),
-            getString(R.string.tools_suggest_feature)
+            getString(R.string.tools_about)
         )
         AlertDialog.Builder(this)
             .setTitle(R.string.tools_dialog_title)
             .setItems(options) { _, which ->
-                if (which == 3) {
-                    checkForUpdates(manual = true)
-                    return@setItems
+                when (which) {
+                    0 -> checkForUpdates(manual = true)
+                    1 -> shareDebugLog()
+                    2 -> showAboutDialog()
                 }
-                if (which == 4) {
-                    shareDebugLog()
-                    return@setItems
-                }
-                if (which == 5) {
-                    showAboutDialog()
-                    return@setItems
-                }
-                if (which == 6) {
-                    showFeedbackDialog()
-                    return@setItems
-                }
-                val fragment = when (which) {
-                    0 -> NotesFragment()
-                    1 -> CalculatorFragment()
-                    else -> AccountsFragment()
-                }
-                replaceContentSafely(fragment, addToBackStack = true)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
@@ -736,21 +755,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** The hard update gate itself: not cancelable, no negative button, no
-     *  way to reach the UI behind it. Tapping the one button fetches the
-     *  real release info and goes straight into the same download/install
-     *  flow as a manual update check — the gate dialog only dismisses once
-     *  that's actually underway, not on tap. If the download can't start
-     *  (lost signal again in the meantime), the button re-enables so they
-     *  can retry rather than getting stuck on a dead button. */
+    /** The hard update gate itself: not cancelable, no way to reach the UI
+     *  behind it. The positive button fetches the real release info and goes
+     *  straight into the same download/install flow as a manual update check
+     *  — the gate dialog only dismisses once that's actually underway, not on
+     *  tap; if the download can't start (lost signal again in the meantime)
+     *  the button re-enables so they can retry rather than getting stuck on a
+     *  dead button. The neutral button is the fallback Ghaly asked for: "if
+     *  they block their update, provide the link to GitHub… or on the site
+     *  they go and download it from there" — opens the public download page
+     *  (patrons.digital/findme-api/download/, itself backed by the GitHub
+     *  release) in the browser, in case the in-app installer path is ever
+     *  stuck (no install-from-unknown-sources permission yet, a corrupt
+     *  partial download, etc.). The message text itself is linkified too, so
+     *  any link Ghaly types into the dashboard's "min_supported_message"
+     *  field is directly tappable. */
     private fun showForcedUpdateGate(message: String?) {
         val dialog = AlertDialog.Builder(this)
             .setTitle(R.string.remote_control_update_required_title)
             .setMessage(message ?: getString(R.string.remote_control_update_required_default))
             .setCancelable(false)
             .setPositiveButton(R.string.remote_control_check_now_button, null)
+            .setNeutralButton(R.string.remote_control_open_download_page_button, null)
             .show()
         dialog.setCanceledOnTouchOutside(false)
+        dialog.findViewById<TextView>(android.R.id.message)?.let { messageView ->
+            android.text.util.Linkify.addLinks(messageView, android.text.util.Linkify.WEB_URLS)
+            messageView.movementMethod = android.text.method.LinkMovementMethod.getInstance()
+        }
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { button ->
             button.isEnabled = false
             lifecycleScope.launch {
@@ -763,6 +795,15 @@ class MainActivity : AppCompatActivity() {
                 dialog.dismiss()
                 startUpdateDownload(update)
             }
+        }
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(DOWNLOAD_PAGE_URL)))
+            } catch (e: Exception) {
+                Toast.makeText(this, R.string.update_no_internet, Toast.LENGTH_SHORT).show()
+            }
+            // Deliberately does not dismiss the gate — the app is still on
+            // the outdated build until the install actually completes.
         }
     }
 
@@ -789,12 +830,45 @@ class MainActivity : AppCompatActivity() {
                 )
             }
             if (RegistrationUploader.consumePendingConflict(this@MainActivity)) {
-                AlertDialog.Builder(this@MainActivity)
-                    .setTitle(R.string.registration_conflict_title)
-                    .setMessage(R.string.registration_conflict_body)
-                    .setPositiveButton(android.R.string.ok, null)
-                    .show()
+                signOutDueToAccountMoved()
             }
+        }
+    }
+
+    /** Fires when either signal says this phone's account now belongs to a
+     *  different device — a race on first registration (see
+     *  checkRegistrationUpload) or, far more commonly, a deliberate reclaim
+     *  from a new phone (see enforceSessionState/AccountReclaimer) — "if he
+     *  registered to a new phone, he will be auto required to be logged out
+     *  from the other one". Deliberately does NOT touch the ledger/notes/
+     *  saved-places repositories (see ProfileStore.clearForSignOut) — only
+     *  the account binding is cleared; local data stays on this phone. Clears
+     *  the registered flag first, synchronously, so no later tick in the
+     *  same session can re-enter this before the gate is back up. */
+    private fun signOutDueToAccountMoved() {
+        if (!ProfileStore.isRegistered(this)) return // already handled
+        ProfileStore.clearForSignOut(this)
+        val nameButton = nameButtonView ?: return
+        AlertDialog.Builder(this)
+            .setTitle(R.string.signed_out_title)
+            .setMessage(R.string.signed_out_body)
+            .setCancelable(false)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                refreshNameButton(nameButton)
+                showEditProfileDialog(nameButton, isFirstRunGate = true)
+            }
+            .show()
+    }
+
+    /** Companion to enforceBlockState: signs this phone out the moment a
+     *  status-check confirms its device_id no longer matches any
+     *  registration row (see BlockChecker.isStillRegistered/status-check
+     *  .php's still_registered field) — the normal, expected result of
+     *  someone deliberately reclaiming their number onto a new phone. */
+    private fun enforceSessionState() {
+        if (!ProfileStore.isRegistered(this)) return
+        if (!BlockChecker.isStillRegistered(this)) {
+            signOutDueToAccountMoved()
         }
     }
 
@@ -859,7 +933,25 @@ class MainActivity : AppCompatActivity() {
                     BlockChecker.checkIfDue(this@MainActivity, deviceId)
                 }
                 enforceBlockState()
+                enforceSessionState()
             }
+        }
+    }
+
+    /** Opportunistically syncs a newly set/changed recovery PIN (see
+     *  ProfileStore.setPendingPin/PinUploader) and this phone's accounts-
+     *  ledger/notes/saved-places bundle (see BackupUploader) — the other two
+     *  halves of "their data should be on the host and auto go with them",
+     *  alongside the profile sync checkRegistrationUpload already does. */
+    private fun maybeSyncAccountSecurity() {
+        if (!ProfileStore.isRegistered(this)) return
+        val profile = ProfileStore.get(this)
+        val phone = profile.phone
+        if (phone.isNullOrBlank()) return
+        if (!hasActiveNetwork()) return
+        lifecycleScope.launch(Dispatchers.IO) {
+            PinUploader.uploadIfPending(this@MainActivity, phone, profile.deviceId)
+            BackupUploader.uploadIfDue(this@MainActivity, phone, profile.deviceId)
         }
     }
 
@@ -1046,6 +1138,8 @@ class MainActivity : AppCompatActivity() {
         val nameInput = view.findViewById<EditText>(R.id.profileNameInput)
         val phoneInput = view.findViewById<EditText>(R.id.profilePhoneInput)
         val descInput = view.findViewById<EditText>(R.id.profileDescriptionInput)
+        val pinInput = view.findViewById<EditText>(R.id.profilePinInput)
+        val recoverLink = view.findViewById<TextView>(R.id.recoverAccountLink)
 
         val current = ProfileStore.get(this)
         // For the first-run gate, the name field starts blank rather than the
@@ -1062,6 +1156,14 @@ class MainActivity : AppCompatActivity() {
             nameInput.hint = getString(R.string.registration_name_hint)
             phoneInput.hint = getString(R.string.registration_phone_hint)
         }
+        PhoneValidator.attachLiveValidation(phoneInput) { getString(R.string.phone_invalid_format) }
+
+        // Only meaningful on the first-run gate (a brand-new phone, deciding
+        // between registering fresh or recovering an existing account) —
+        // showEditProfileDialog is never reached any other way once
+        // registered (see showProfileInfoDialog), so this is effectively
+        // always true, but guarded anyway for clarity/future-proofing.
+        recoverLink.visibility = if (isFirstRunGate) View.VISIBLE else View.GONE
 
         val photoClick = View.OnClickListener { pickPhotoLauncher.launch("image/*") }
         photoView.setOnClickListener(photoClick)
@@ -1081,14 +1183,24 @@ class MainActivity : AppCompatActivity() {
         if (isFirstRunGate) {
             dialog.setCanceledOnTouchOutside(false)
         }
+        recoverLink.setOnClickListener { showRecoverAccountDialog(nameButton, dialog) }
         // Overriding the positive button's click after show(), instead of the
         // usual setPositiveButton lambda, is what lets the gate reject an
         // empty name/phone without the dialog auto-dismissing on tap.
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
             val newName = nameInput.text?.toString()?.trim().orEmpty()
             val newPhone = phoneInput.text?.toString()?.trim().orEmpty()
+            val newPin = pinInput.text?.toString()?.trim().orEmpty()
             if (isFirstRunGate && (newName.isEmpty() || newPhone.isEmpty())) {
                 Toast.makeText(this, R.string.registration_missing_fields, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (newPhone.isNotEmpty() && !PhoneValidator.isValid(newPhone)) {
+                Toast.makeText(this, R.string.phone_invalid_format, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (newPin.isNotEmpty() && !Regex("^[0-9]{4,8}$").matches(newPin)) {
+                Toast.makeText(this, R.string.pin_invalid_length, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             if (newName.isNotEmpty()) {
@@ -1100,13 +1212,94 @@ class MainActivity : AppCompatActivity() {
                 description = descInput.text?.toString()?.trim(),
                 photoBase64 = pendingPhotoBase64
             )
+            if (newPin.isNotEmpty()) {
+                ProfileStore.setPendingPin(this, newPin)
+            }
             if (isFirstRunGate) {
                 ProfileStore.markRegistered(this)
                 checkRegistrationUpload()
+                maybeSyncAccountSecurity()
             }
             refreshNameButton(nameButton)
             mesh?.sendProfile()
             dialog.dismiss()
+        }
+    }
+
+    /** "Already registered? Recover with phone + PIN" — the escape hatch from
+     *  the mandatory first-run gate for someone on a NEW phone who already
+     *  has an account elsewhere, rather than being forced to create a second
+     *  one. Needs a live connection (see AccountReclaimer); shows a plain
+     *  progress toast rather than a spinner, since this can take a few
+     *  seconds out in the field. On success, replaces the first-run gate
+     *  outright — no need to also fill in name/phone, reclaim.php already
+     *  returned them. */
+    private fun showRecoverAccountDialog(nameButton: TextView, parentGateDialog: AlertDialog?) {
+        val view = layoutInflater.inflate(R.layout.dialog_recover_account, null)
+        val phoneInput = view.findViewById<EditText>(R.id.recoverPhoneInput)
+        val pinInput = view.findViewById<EditText>(R.id.recoverPinInput)
+        PhoneValidator.attachLiveValidation(phoneInput) { getString(R.string.phone_invalid_format) }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.recover_account_title)
+            .setView(view)
+            .setPositiveButton(R.string.recover_account_button, null)
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { button ->
+            val phone = phoneInput.text?.toString()?.trim().orEmpty()
+            val pin = pinInput.text?.toString()?.trim().orEmpty()
+            if (phone.isEmpty() || pin.isEmpty()) {
+                Toast.makeText(this, R.string.recover_missing_fields, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (!PhoneValidator.isValid(phone)) {
+                Toast.makeText(this, R.string.phone_invalid_format, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (!hasActiveNetwork()) {
+                Toast.makeText(this, R.string.update_no_internet, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            button.isEnabled = false
+            val deviceId = ProfileStore.get(this).deviceId
+            lifecycleScope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    AccountReclaimer.reclaim(this@MainActivity, phone, pin, deviceId)
+                }
+                button.isEnabled = true
+                when (result) {
+                    is AccountReclaimer.Result.Success -> {
+                        Toast.makeText(this@MainActivity, R.string.recover_success_toast, Toast.LENGTH_LONG).show()
+                        refreshNameButton(nameButton)
+                        mesh?.sendProfile()
+                        dialog.dismiss()
+                        // Dismiss the first-run gate behind this one too —
+                        // reclaim.php already supplied everything it asked for.
+                        parentGateDialog?.dismiss()
+                    }
+                    AccountReclaimer.Result.NoSuchAccount ->
+                        Toast.makeText(this@MainActivity, R.string.recover_no_such_account, Toast.LENGTH_SHORT).show()
+                    AccountReclaimer.Result.NoPinSet ->
+                        Toast.makeText(this@MainActivity, R.string.recover_no_pin_set, Toast.LENGTH_SHORT).show()
+                    is AccountReclaimer.Result.WrongPin ->
+                        Toast.makeText(
+                            this@MainActivity,
+                            getString(R.string.recover_wrong_pin_fmt, result.attemptsRemaining),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    is AccountReclaimer.Result.Locked ->
+                        Toast.makeText(
+                            this@MainActivity,
+                            getString(R.string.recover_locked_fmt, (result.retryAfterSeconds / 60).coerceAtLeast(1)),
+                            Toast.LENGTH_LONG
+                        ).show()
+                    AccountReclaimer.Result.DeviceAlreadyBoundElsewhere ->
+                        Toast.makeText(this@MainActivity, R.string.recover_device_already_bound, Toast.LENGTH_LONG).show()
+                    AccountReclaimer.Result.NetworkError ->
+                        Toast.makeText(this@MainActivity, R.string.recover_network_error, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -1126,10 +1319,50 @@ class MainActivity : AppCompatActivity() {
             descView.text = getString(R.string.profile_info_description_fmt, current.description)
             descView.visibility = View.VISIBLE
         }
+        view.findViewById<TextView>(R.id.profileInfoPinStatus).text = getString(
+            if (ProfileStore.isPinSet(this)) R.string.profile_pin_status_set else R.string.profile_pin_status_unset
+        )
+        view.findViewById<TextView>(R.id.profileInfoPinButton).setOnClickListener {
+            showSetPinDialog(current.phone)
+        }
         AlertDialog.Builder(this)
             .setTitle(R.string.profile_info_title)
             .setView(view)
             .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    /** Set/change/clear the recovery PIN after registration — the one thing
+     *  that's still editable once the rest of the profile is locked (see
+     *  showProfileInfoDialog's doc comment). Saves locally immediately
+     *  (works fully offline, same as everything else); PinUploader syncs it
+     *  to the server on the next connectivity check. */
+    private fun showSetPinDialog(phone: String?) {
+        if (phone.isNullOrBlank()) return // can't set a PIN with no phone number on file
+        val input = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            filters = arrayOf(android.text.InputFilter.LengthFilter(8))
+            hint = getString(R.string.profile_pin_hint)
+        }
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        val container = android.widget.FrameLayout(this).apply {
+            setPadding(padding, padding / 2, padding, 0)
+            addView(input)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.set_pin_dialog_title)
+            .setMessage(R.string.set_pin_dialog_message)
+            .setView(container)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val pin = input.text?.toString()?.trim().orEmpty()
+                if (pin.isNotEmpty() && !Regex("^[0-9]{4,8}$").matches(pin)) {
+                    Toast.makeText(this, R.string.pin_invalid_length, Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                ProfileStore.setPendingPin(this, pin)
+                maybeSyncAccountSecurity()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 

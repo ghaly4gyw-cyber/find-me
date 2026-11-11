@@ -182,7 +182,7 @@ jobs:
           response=$(curl -sS -o /tmp/response.json -w "%{http_code}" \
             -X POST \
             -H "Content-Type: application/json" \
-            -d '{"name":"CI Healthcheck","phone":"+0000000000","device_id":"ci-healthcheck-canary"}' \
+            -d '{"name":"CI Healthcheck","phone":"20000000","device_id":"ci-healthcheck-canary"}' \
             https://patrons.digital/findme-api/register.php)
           echo "HTTP status: $response"
           cat /tmp/response.json
@@ -397,6 +397,143 @@ jobs:
       # renders AND that the real APK file landed on the host and isn't
       # empty/truncated (a broken upload would otherwise look "successful"
       # while leaving a 0-byte or missing file for real users to hit).
+      # Exercises the PIN/reclaim account-security feature end to end, using
+      # a second fixed canary pair (kept entirely separate from
+      # ci-healthcheck-canary above, since reclaiming reassigns device_id and
+      # would otherwise disrupt every other check that relies on that one
+      # staying put). Ends by reclaiming back to the original device, so
+      # re-running this on the next deploy starts from the same state again
+      # — same idempotent-canary pattern as the block/unblock check.
+      - name: Verify PIN set, wrong-PIN rejection, reclaim, and backup upload
+        run: |
+          set -e
+          PHONE="30000000"
+          DEV_A="ci-healthcheck-canary-pin"
+          DEV_B="ci-healthcheck-canary-pin-b"
+
+          echo "--- register device A ---"
+          curl -sS -o /dev/null -w "status: %{http_code}\n" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"name\":\"CI PIN Canary\",\"phone\":\"$PHONE\",\"device_id\":\"$DEV_A\"}" \
+            https://patrons.digital/findme-api/register.php
+
+          echo "--- device A sets its PIN ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE\",\"device_id\":\"$DEV_A\",\"pin\":\"123456\"}" \
+            https://patrons.digital/findme-api/set-pin.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/r.json; then
+            echo "::error::set-pin.php failed"; exit 1
+          fi
+
+          echo "--- wrong PIN is rejected ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE\",\"pin\":\"000000\",\"device_id\":\"$DEV_B\"}" \
+            https://patrons.digital/findme-api/reclaim.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "401" ] || ! grep -q '"wrong_pin"' /tmp/r.json; then
+            echo "::error::reclaim.php accepted a wrong PIN"; exit 1
+          fi
+
+          echo "--- correct PIN reclaims the number onto device B ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE\",\"pin\":\"123456\",\"device_id\":\"$DEV_B\"}" \
+            https://patrons.digital/findme-api/reclaim.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "200" ] || ! grep -q '"CI PIN Canary"' /tmp/r.json; then
+            echo "::error::reclaim.php didn't succeed with the correct PIN"; exit 1
+          fi
+
+          echo "--- device A now reads as signed out, device B as registered ---"
+          response=$(curl -sS "https://patrons.digital/findme-api/status-check.php?device_id=$DEV_A")
+          echo "$response"
+          if ! echo "$response" | grep -q '"still_registered":false'; then
+            echo "::error::old device still reads as registered after reclaim"; exit 1
+          fi
+          response=$(curl -sS "https://patrons.digital/findme-api/status-check.php?device_id=$DEV_B")
+          echo "$response"
+          if ! echo "$response" | grep -q '"still_registered":true'; then
+            echo "::error::new device doesn't read as registered after reclaim"; exit 1
+          fi
+
+          echo "--- a device that doesn't own the number can't upload its backup ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE\",\"device_id\":\"$DEV_A\",\"backup_json\":\"{}\"}" \
+            https://patrons.digital/findme-api/backup-upload.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "403" ]; then
+            echo "::error::backup-upload.php let a non-owner device upload"; exit 1
+          fi
+
+          echo "--- the current owner (device B) can upload its backup ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE\",\"device_id\":\"$DEV_B\",\"backup_json\":\"{\\\"notes\\\":[]}\"}" \
+            https://patrons.digital/findme-api/backup-upload.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/r.json; then
+            echo "::error::backup-upload.php failed for the current owner"; exit 1
+          fi
+
+          echo "--- reclaim back to device A, so the next run starts from the same state ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE\",\"pin\":\"123456\",\"device_id\":\"$DEV_A\"}" \
+            https://patrons.digital/findme-api/reclaim.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "200" ]; then
+            echo "::error::couldn't reclaim back to device A for idempotency"; exit 1
+          fi
+          echo "PIN/reclaim/backup round-trip confirmed working."
+
+      # Ghaly's standing instruction: every release from here on forces
+      # every older install to update — "force all the clients and people to
+      # update... If they does not update, then they does not get anything."
+      # Reuses the already-authenticated session from the admin-login step
+      # above to raise min_supported_version to match the build this very
+      # run just shipped, through the exact same form the dashboard's "App
+      # control" panel submits to (control-save.php) — so this is a bona
+      # fide admin action, not a bypass of it, and Ghaly can always override
+      # it by hand from the dashboard afterward if he ever wants to pause it.
+      # Everything else in that row (the one-time message fields, and
+      # min_supported_message — left blank so the app falls back to its own
+      # localized, data-safety-reassuring default text) is read back first
+      # and POSTed unchanged, so this never clobbers a message Ghaly set
+      # from the dashboard himself.
+      - name: Force every older install to update to this release
+        run: |
+          VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' app/build.gradle.kts)
+          echo "Raising min_supported_version to $VERSION_CODE"
+          current=$(curl -sS https://patrons.digital/findme-api/control.php)
+          echo "Current control state: $current"
+          python3 - "$current" <<'PYEOF' > /tmp/current_message.env
+          import json, sys
+          data = json.loads(sys.argv[1])
+          msg = data.get("message") or {}
+          print(f"MSG_TITLE={msg.get('title', '')}")
+          print(f"MSG_BODY={msg.get('body', '')}")
+          print(f"MIN_MSG={data.get('min_supported_message') or ''}")
+          PYEOF
+          source /tmp/current_message.env
+          curl -sS -b /tmp/cookies.txt -o /tmp/control_save.html -w "\nHTTP status: %{http_code}\n" \
+            -X POST \
+            --data-urlencode "message_title=${MSG_TITLE}" \
+            --data-urlencode "message_body=${MSG_BODY}" \
+            --data-urlencode "min_supported_version=${VERSION_CODE}" \
+            --data-urlencode "min_supported_message=${MIN_MSG}" \
+            https://patrons.digital/findme-api/admin/control-save.php
+          updated=$(curl -sS https://patrons.digital/findme-api/control.php)
+          echo "Control state after save: $updated"
+          if ! echo "$updated" | grep -q "\"min_supported_version\":${VERSION_CODE}"; then
+            echo "::error::min_supported_version didn't actually update to $VERSION_CODE"
+            exit 1
+          fi
+          echo "Every install below versionCode $VERSION_CODE will now be gated until it updates."
+
       - name: Verify the public download page and APK are live
         run: |
           status=$(curl -sS -o /tmp/download_page.html -w "%{http_code}" https://patrons.digital/findme-api/download/)

@@ -22,6 +22,7 @@ object BlockChecker {
     private const val ENDPOINT_URL = "https://patrons.digital/findme-api/status-check.php"
     private const val PREFS = "block_checker"
     private const val KEY_LAST_BLOCKED = "last_blocked"
+    private const val KEY_STILL_REGISTERED = "still_registered"
     private const val KEY_LAST_CHECK_AT = "last_check_at"
     private const val MIN_INTERVAL_MS = 15 * 60 * 1000L
 
@@ -30,6 +31,16 @@ object BlockChecker {
      *  than resetting while offline. */
     fun isBlocked(context: Context): Boolean {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_LAST_BLOCKED, false)
+    }
+
+    /** False only once a check has actually confirmed this device's id no
+     *  longer matches any registration row — i.e. this phone's number was
+     *  reclaimed onto a different phone (see reclaim.php). Defaults to true
+     *  (never signs anyone out just because they've never been able to check
+     *  — same conservative default as isBlocked). See
+     *  MainActivity.enforceSessionState. */
+    fun isStillRegistered(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_STILL_REGISTERED, true)
     }
 
     private fun dueForCheck(context: Context): Boolean {
@@ -52,8 +63,10 @@ object BlockChecker {
             if (connection.responseCode !in 200..299) return
             val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
             val blocked = json.optBoolean("blocked", false)
+            val stillRegistered = json.optBoolean("still_registered", true)
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                 .putBoolean(KEY_LAST_BLOCKED, blocked)
+                .putBoolean(KEY_STILL_REGISTERED, stillRegistered)
                 .putLong(KEY_LAST_CHECK_AT, System.currentTimeMillis())
                 .apply()
         } catch (e: Exception) {

@@ -49,6 +49,13 @@ function ensureSchema(PDO $pdo): void
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS pin_hash VARCHAR(255) NULL",
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS reclaim_attempts INT NOT NULL DEFAULT 0",
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS reclaim_locked_until TIMESTAMP NULL",
+        // Bundled backup of this account's local-only data (accounts ledger,
+        // notes, saved places) — see backup-upload.php/BackupUploader.kt and
+        // reclaim.php. Lets "their data should be on the host and auto go
+        // with them" survive a lost/broken/reinstalled phone, not just the
+        // name+phone profile row itself.
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS backup_json LONGTEXT NULL",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS backup_updated_at TIMESTAMP NULL",
     ] as $sql) {
         try {
             $pdo->exec($sql);
@@ -132,6 +139,15 @@ function ensureSchema(PDO $pdo): void
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     );
+}
+
+/** Mauritanian mobile numbers only — mirrors PhoneValidator.kt on the app
+ *  side. Exactly 8 digits, starting with 2 (Mattel), 3 (Mauritel) or 4
+ *  (Chinguitel). Checked server-side too since register.php and friends are
+ *  public endpoints the app isn't the only possible caller of. */
+function isValidMauritanianPhone(string $phone): bool
+{
+    return (bool) preg_match('/^[234][0-9]{7}$/', $phone);
 }
 
 /** Shared by every endpoint that needs the database — one place to change

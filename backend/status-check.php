@@ -8,6 +8,13 @@
  * dashboard (see admin/block-user.php); this is what the app polls to
  * find out. A device that isn't registered at all is reported as not
  * blocked — there's nothing to block yet.
+ *
+ * Also reports "still_registered": whether a registrations row still has
+ * THIS device_id at all. A reclaim (see reclaim.php) re-points a phone
+ * number's row at a new device's id, which means the old device's id simply
+ * stops matching any row — this is how the old phone finds that out and
+ * signs itself out (see MainActivity.enforceSessionState). A device that was
+ * never registered reads as still_registered: true (nothing to sign out of).
  */
 
 header('Content-Type: application/json');
@@ -46,6 +53,16 @@ ensureSchema($pdo);
 
 $stmt = $pdo->prepare('SELECT blocked FROM registrations WHERE device_id = ?');
 $stmt->execute([$deviceId]);
-$blocked = $stmt->fetchColumn();
+$row = $stmt->fetchColumn();
 
-echo json_encode(['blocked' => $blocked !== false && (bool) $blocked]);
+// A device that was reclaimed away never had "registered" turn false for an
+// id that was never registered in the first place — only once it HAD a row
+// and that row's device_id moved on to someone else. We can't tell those two
+// cases apart from this one query alone, so the app only ever treats this as
+// a sign-out when it already believed itself registered (see
+// ProfileStore.isRegistered + enforceSessionState) — still_registered here
+// just answers "does a row exist with my id", plainly.
+echo json_encode([
+    'blocked' => $row !== false && (bool) $row,
+    'still_registered' => $row !== false,
+]);

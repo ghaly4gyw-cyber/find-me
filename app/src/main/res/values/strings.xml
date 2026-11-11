@@ -199,8 +199,9 @@
     <string name="about_visit_website_button">Visit website</string>
     <string name="about_close_button">Close</string>
     <string name="remote_control_update_required_title">Update needed</string>
-    <string name="remote_control_update_required_default">This version is outdated. Please update to keep using Find Me.</string>
+    <string name="remote_control_update_required_default">This version is outdated. Please update to keep using Find Me. Your name, saved places, accounts and notes stay exactly as they are — updating never erases them.</string>
     <string name="remote_control_check_now_button">Check now</string>
+    <string name="remote_control_open_download_page_button">⬇️ Download page</string>
 
     <string name="registration_title">Welcome to Find Me — who are you?</string>
     <string name="registration_body_hint">Your name and phone number are shared with other miners on the mesh so they know who they\'re talking to. Your location helps the app\'s admin recover your phone if it\'s ever lost or stolen. This is asked once and can\'t be changed afterward, so take a moment to get it right.</string>
@@ -215,7 +216,30 @@
     <string name="profile_info_description_fmt">Note: %s</string>
     <string name="profile_info_none">—</string>
     <string name="registration_conflict_title">This phone number is already registered</string>
-    <string name="registration_conflict_body">Your name and phone number are already registered to a different phone. This device can keep working as-is, but you may want to check with whoever set this up.</string>
+    <string name="registration_conflict_body">Your phone number is already registered to a different phone, so this one has been signed out of it.</string>
+
+    <string name="phone_invalid_format">Phone must be exactly 8 digits, starting with 2, 3, or 4</string>
+    <string name="profile_pin_hint">PIN (optional, 4–8 digits) — recovers your account on a new phone</string>
+    <string name="profile_pin_hint_required">PIN</string>
+    <string name="pin_invalid_length">PIN must be 4 to 8 digits</string>
+    <string name="recover_account_link">Already have an account? Recover it with your phone + PIN</string>
+    <string name="recover_account_title">Recover account</string>
+    <string name="recover_account_button">Recover</string>
+    <string name="recover_missing_fields">Enter your phone number and PIN</string>
+    <string name="recover_no_such_account">No account found for that phone number</string>
+    <string name="recover_no_pin_set">That account never set a recovery PIN</string>
+    <string name="recover_wrong_pin_fmt">Wrong PIN — %d attempts left</string>
+    <string name="recover_locked_fmt">Too many attempts — try again in about %d minutes</string>
+    <string name="recover_device_already_bound">This phone is already registered to a different number</string>
+    <string name="recover_network_error">Couldn\'t reach the server — check your connection and try again</string>
+    <string name="recover_success_toast">Account recovered — welcome back</string>
+    <string name="profile_set_pin_button">🔒 Recovery PIN</string>
+    <string name="profile_pin_status_set">🔒 Recovery PIN is set</string>
+    <string name="profile_pin_status_unset">🔓 No recovery PIN set yet</string>
+    <string name="set_pin_dialog_title">Recovery PIN</string>
+    <string name="set_pin_dialog_message">Used to move your account to a new phone if this one is ever lost or broken. 4–8 digits. Leave blank to remove it.</string>
+    <string name="signed_out_title">Signed out</string>
+    <string name="signed_out_body">This account was just registered on a different phone, so this phone has been signed out of it. Everything saved here (accounts, notes, places) stays on this phone — but you\'ll need to register again to keep using Find Me.</string>
 
     <string name="tools_suggest_feature">💡 Suggest a feature</string>
     <string name="feedback_dialog_title">Anything you\'d like to see added?</string>
