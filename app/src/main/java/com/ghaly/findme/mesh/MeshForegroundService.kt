@@ -9,10 +9,12 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.location.Location
 import android.os.BatteryManager
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.ghaly.findme.R
@@ -75,6 +77,24 @@ class MeshForegroundService : Service() {
     private var lowBatteryBeaconSent = false
     // Set while the map screen is actually visible — see onLiveLocationBoost above.
     private var liveLocationBoostActive = false
+
+    // ---- stillness-aware beacon backoff ----
+    // The GPS chip is what actually drains the battery here, and it's driven
+    // entirely by how often we ask for a fix — not by anything else in this
+    // service. Someone who's stopped moving (resting, working a spot, asleep)
+    // doesn't need a fresh fix every 30-120s: their position hasn't changed,
+    // so there's nothing new to tell anyone. This stretches the interval
+    // further the longer consecutive fixes land within a small radius of each
+    // other, and snaps straight back to the normal battery-based cadence the
+    // moment a fix shows real movement — so responsiveness while actually
+    // moving is unaffected, and nobody's "last known position" goes stale
+    // while they're genuinely not moving (it's still accurate; it just isn't
+    // re-confirmed as often).
+    private var lastStillFixLat: Double? = null
+    private var lastStillFixLon: Double? = null
+    private var consecutiveStillFixes = 0
+    private val STILL_RADIUS_M = 15f
+    private val MAX_STILL_MULTIPLIER = 4L
 
     /** Catches the OS's own low-battery threshold (~15% on most Android
      *  builds) to push one extra, out-of-cycle position beacon right away —
@@ -152,6 +172,7 @@ class MeshForegroundService : Service() {
             mesh.sendPosition(lat, lon, currentBatteryPct())
             mesh.updateMyAccuracy(accuracyM)
             com.ghaly.findme.repo.TrailRepository.record(lat, lon)
+            noteFixForStillness(lat, lon)
         }
         pressureWatcher = PressureWatcher(applicationContext) { dropHpa, minutes ->
             notifyPressureDrop(dropHpa, minutes)
@@ -227,7 +248,7 @@ class MeshForegroundService : Service() {
         // The map screen has its own, faster cadence in effect right now —
         // don't let this periodic battery-based check fight it every minute.
         if (liveLocationBoostActive) return
-        val desiredIntervalMs = batteryBasedIntervalMs()
+        val desiredIntervalMs = batteryBasedIntervalMs() * stillnessMultiplier()
         if (desiredIntervalMs != currentIntervalMs) {
             currentIntervalMs = desiredIntervalMs
             locationTracker.stop()
@@ -236,12 +257,47 @@ class MeshForegroundService : Service() {
     }
 
     private fun batteryBasedIntervalMs(): Long {
+        // Battery Saver is the user explicitly telling the OS (and every app)
+        // to conserve power right now — treat that the same as a low battery,
+        // regardless of the actual percentage left.
+        val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (powerManager?.isPowerSaveMode == true) return 120_000L
         val pct = currentBatteryPct()
         return when {
             pct >= 50 -> 30_000L
             pct >= 20 -> 60_000L
             else -> 120_000L
         }
+    }
+
+    /** 1 when the last fix showed movement, rising to [MAX_STILL_MULTIPLIER]
+     *  the longer consecutive fixes land within [STILL_RADIUS_M] of each
+     *  other — multiplies the battery-based interval above. */
+    private fun stillnessMultiplier(): Long = (1L + consecutiveStillFixes).coerceAtMost(MAX_STILL_MULTIPLIER)
+
+    private fun noteFixForStillness(lat: Double, lon: Double) {
+        val prevLat = lastStillFixLat
+        val prevLon = lastStillFixLon
+        if (prevLat != null && prevLon != null) {
+            val results = FloatArray(1)
+            Location.distanceBetween(prevLat, prevLon, lat, lon, results)
+            consecutiveStillFixes = if (results[0] <= STILL_RADIUS_M) {
+                (consecutiveStillFixes + 1).coerceAtMost((MAX_STILL_MULTIPLIER - 1).toInt())
+            } else {
+                0
+            }
+        }
+        lastStillFixLat = lat
+        lastStillFixLon = lon
+    }
+
+    /** Resets the stillness counter so a just-ended live-location boost (or a
+     *  jump from a cold GPS fix) doesn't get misread as "hasn't moved" — the
+     *  next few fixes re-establish a real baseline before backing off again. */
+    private fun resetStillness() {
+        consecutiveStillFixes = 0
+        lastStillFixLat = null
+        lastStillFixLon = null
     }
 
     /** Called (via [MeshManager.onLiveLocationBoost]) whenever the map screen
@@ -253,6 +309,7 @@ class MeshForegroundService : Service() {
     private fun setLiveLocationBoost(active: Boolean) {
         if (liveLocationBoostActive == active) return
         liveLocationBoostActive = active
+        resetStillness()
         currentIntervalMs = if (active) 5_000L else batteryBasedIntervalMs()
         locationTracker.stop()
         locationTracker.start(currentIntervalMs)

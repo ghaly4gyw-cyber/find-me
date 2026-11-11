@@ -11,9 +11,10 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 
 /**
- * Periodically gets a GPS fix and hands it to [onLocation]. Interval is deliberately
- * not too aggressive (30s) to save battery — the MVP plan calls for battery-aware
- * beacon frequency later, this is the simple fixed-interval version.
+ * Periodically gets a GPS fix and hands it to [onLocation] at whatever interval
+ * the caller passes to [start]. The interval itself is decided by the caller
+ * (see MeshForegroundService's battery- and stillness-aware scheduling) — this
+ * class just runs it.
  */
 class LocationTracker(
     private val context: Context,
