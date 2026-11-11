@@ -717,13 +717,18 @@ jobs:
           echo "Raising min_supported_version to $VERSION_CODE"
           current=$(curl -sS https://patrons.digital/findme-api/control.php)
           echo "Current control state: $current"
+          # shlex.quote() is essential here — this file gets `source`d as a
+          # shell script next, and a real one-time message can contain
+          # spaces, quotes, or (as happened once in production, with an
+          # Arabic message) just plain words that bash would otherwise try
+          # to execute as commands rather than treat as plain text.
           python3 - "$current" <<'PYEOF' > /tmp/current_message.env
-          import json, sys
+          import json, sys, shlex
           data = json.loads(sys.argv[1])
           msg = data.get("message") or {}
-          print(f"MSG_TITLE={msg.get('title', '')}")
-          print(f"MSG_BODY={msg.get('body', '')}")
-          print(f"MIN_MSG={data.get('min_supported_message') or ''}")
+          print(f"MSG_TITLE={shlex.quote(msg.get('title', ''))}")
+          print(f"MSG_BODY={shlex.quote(msg.get('body', ''))}")
+          print(f"MIN_MSG={shlex.quote(data.get('min_supported_message') or '')}")
           PYEOF
           source /tmp/current_message.env
           curl -sS -b /tmp/cookies.txt -o /tmp/control_save.html -w "\nHTTP status: %{http_code}\n" \
