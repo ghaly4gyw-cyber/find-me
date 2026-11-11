@@ -132,4 +132,25 @@ jobs:
             echo "::error::Response body didn't match the expected error JSON"
             exit 1
           fi
-          echo "Endpoint is live and responding correctly."
+          echo "Endpoint is reachable and the PHP itself runs."
+
+      # Goes one step further than the GET check above: a real POST proves
+      # the database credentials are correct and the table gets created —
+      # not just that the file exists. Uses a fixed, obviously-fake
+      # device_id/phone so every deploy just upserts the same one harmless
+      # canary row forever instead of adding a new one each time.
+      - name: Verify the database round-trip works
+        run: |
+          response=$(curl -sS -o /tmp/response.json -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"name":"CI Healthcheck","phone":"+0000000000","device_id":"ci-healthcheck-canary"}' \
+            https://patrons.digital/findme-api/register.php)
+          echo "HTTP status: $response"
+          cat /tmp/response.json
+          echo
+          if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/response.json; then
+            echo "::error::Database round-trip failed — check DB_HOST/DB_NAME/DB_USER/DB_PASSWORD secrets"
+            exit 1
+          fi
+          echo "Database round-trip confirmed working."
