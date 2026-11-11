@@ -111,3 +111,25 @@ jobs:
           server-dir: ./findme-api/
           exclude: |
             **/db-config.template.php
+
+      # Proves the endpoint is actually live and talking to the database —
+      # my own sandbox can't reach this host directly, but this runner can.
+      # A GET isn't a valid call (the endpoint only accepts POST), so a plain
+      # 405 with this exact JSON is the expected, healthy result; anything
+      # else (404, 500, a PHP error dump, no response) fails the job so a
+      # broken deploy is never silently left live.
+      - name: Verify the registration endpoint responds
+        run: |
+          response=$(curl -sS -o /tmp/response.json -w "%{http_code}" https://patrons.digital/findme-api/register.php)
+          echo "HTTP status: $response"
+          cat /tmp/response.json
+          echo
+          if [ "$response" != "405" ]; then
+            echo "::error::Expected HTTP 405 (method not allowed) for a GET, got $response"
+            exit 1
+          fi
+          if ! grep -q '"method_not_allowed"' /tmp/response.json; then
+            echo "::error::Response body didn't match the expected error JSON"
+            exit 1
+          fi
+          echo "Endpoint is live and responding correctly."
