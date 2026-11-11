@@ -208,6 +208,8 @@
     <string name="feedback_offline">لا يوجد اتصال الآن — حاول مرة أخرى عندما تكون متصلًا.</string>
     <string name="feedback_sent">شكرًا — تم الإرسال.</string>
     <string name="feedback_failed">تعذّر الإرسال — حاول مرة أخرى لاحقًا.</string>
+    <string name="blocked_gate_title">تم حظر هذا الجهاز</string>
+    <string name="blocked_gate_body">قام المسؤول عن تطبيق Find Me بحظر هذا الجهاز، ولا يمكن استخدامه الآن. إذا كنت تعتقد أن هذا خطأ، تواصل معه مباشرة.</string>
 
     <string name="crash_dialog_title">توقف التطبيق في المرة الماضية — إليك السبب</string>
     <string name="crash_dialog_copy_button">نسخ</string>

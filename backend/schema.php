@@ -17,6 +17,7 @@ function ensureSchema(PDO $pdo): void
             last_location_at TIMESTAMP NULL,
             description VARCHAR(500) NULL,
             photo_base64 LONGTEXT NULL,
+            blocked TINYINT(1) NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
@@ -31,6 +32,7 @@ function ensureSchema(PDO $pdo): void
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS last_location_at TIMESTAMP NULL",
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS description VARCHAR(500) NULL",
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS photo_base64 LONGTEXT NULL",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS blocked TINYINT(1) NOT NULL DEFAULT 0",
     ] as $sql) {
         try {
             $pdo->exec($sql);

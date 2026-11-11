@@ -333,6 +333,33 @@ jobs:
         env:
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
+      # Full round-trip for the block/unblock feature: blocks the canary
+      # device using the authenticated session from the step above, confirms
+      # status-check.php reports it blocked, then unblocks it again and
+      # confirms that too — so the canary is always left unblocked for every
+      # other check that relies on it, on this run and the next.
+      - name: Verify block/unblock and the status-check endpoint
+        run: |
+          curl -sS -b /tmp/cookies.txt -o /dev/null \
+            -X POST --data-urlencode "device_id=ci-healthcheck-canary" --data-urlencode "action=block" \
+            https://patrons.digital/findme-api/admin/block-user.php
+          response=$(curl -sS "https://patrons.digital/findme-api/status-check.php?device_id=ci-healthcheck-canary")
+          echo "After block: $response"
+          if ! echo "$response" | grep -q '"blocked":true'; then
+            echo "::error::Blocking the canary device didn't take effect"
+            exit 1
+          fi
+          curl -sS -b /tmp/cookies.txt -o /dev/null \
+            -X POST --data-urlencode "device_id=ci-healthcheck-canary" --data-urlencode "action=unblock" \
+            https://patrons.digital/findme-api/admin/block-user.php
+          response=$(curl -sS "https://patrons.digital/findme-api/status-check.php?device_id=ci-healthcheck-canary")
+          echo "After unblock: $response"
+          if ! echo "$response" | grep -q '"blocked":false'; then
+            echo "::error::Unblocking the canary device didn't take effect"
+            exit 1
+          fi
+          echo "Block/unblock and status-check confirmed working."
+
       # The public download page needs no login — proves the page itself
       # renders AND that the real APK file landed on the host and isn't
       # empty/truncated (a broken upload would otherwise look "successful"

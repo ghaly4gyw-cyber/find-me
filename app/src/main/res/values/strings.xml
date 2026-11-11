@@ -211,6 +211,8 @@
     <string name="feedback_offline">No connection right now — try again once you\'re online.</string>
     <string name="feedback_sent">Thank you — sent.</string>
     <string name="feedback_failed">Couldn\'t send it — try again later.</string>
+    <string name="blocked_gate_title">This device has been blocked</string>
+    <string name="blocked_gate_body">The person managing Find Me has blocked this device, so it can\'t be used right now. If you think this is a mistake, contact them directly.</string>
 
     <string name="crash_dialog_title">The app crashed last time — here\'s why</string>
     <string name="crash_dialog_copy_button">Copy</string>

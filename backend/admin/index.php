@@ -55,7 +55,7 @@ if (!file_exists($dbConfigPath)) {
         ensureSchema($pdo);
         $users = $pdo->query(
             'SELECT r.name, r.phone, r.device_id, r.last_lat, r.last_lng, r.last_location_at,
-                    r.description, r.photo_base64, r.created_at,
+                    r.description, r.photo_base64, r.blocked, r.created_at,
                     u.app_opens, u.total_ms, u.feature_usage
              FROM registrations r
              LEFT JOIN usage_stats u ON u.device_id = r.device_id
@@ -137,6 +137,7 @@ foreach ($users as $u) {
         'app_opens' => $appOpens,
         'time_spent' => formatDuration($totalMs),
         'features' => $features,
+        'blocked' => (bool) $u['blocked'],
     ];
 }
 
@@ -202,6 +203,7 @@ $topFeatures = array_slice($topFeatures, 0, 10);
   .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
   .dot.online { background: var(--accent-2); box-shadow: 0 0 8px var(--accent-2); }
   .dot.offline { background: #3a5450; }
+  .blocked-badge { background: rgba(255,122,107,0.15); color: var(--danger); font-size: 0.72rem; padding: 2px 7px; border-radius: 6px; margin-left: 6px; }
   .user-card .phone { color: var(--muted); font-size: 0.88rem; margin-top: 2px; }
   .user-card .row { display: flex; justify-content: space-between; align-items: center; margin-top: 0.7rem; font-size: 0.85rem; }
   .user-card .row .muted { color: var(--muted); }
@@ -319,6 +321,7 @@ $topFeatures = array_slice($topFeatures, 0, 10);
       <div class="name">
         <span class="dot <?= $isOnline ? 'online' : 'offline' ?>"></span>
         <?= htmlspecialchars($u['name']) ?>
+        <?php if ($u['blocked']): ?><span class="blocked-badge">🚫 Blocked</span><?php endif; ?>
       </div>
       <div class="phone"><?= htmlspecialchars($u['phone']) ?></div>
       <div class="row">
@@ -337,6 +340,13 @@ $topFeatures = array_slice($topFeatures, 0, 10);
         <a class="map-link" href="https://maps.google.com/?q=<?= urlencode((string) $u['last_lat']) ?>,<?= urlencode((string) $u['last_lng']) ?>" target="_blank" rel="noopener">📍 Map</a>
       <?php endif; ?>
       <button class="details-link" @click="selected = USER_DETAILS[<?= json_encode($u['device_id'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>]">👤 Details</button>
+      <form method="post" action="block-user.php" style="display:inline;" onsubmit="return confirm(<?= $u['blocked'] ? "'Unblock this person?'" : "'Block this person? They won\\'t be able to use the app anymore until you unblock them.'" ?>);">
+        <input type="hidden" name="device_id" value="<?= htmlspecialchars($u['device_id']) ?>">
+        <input type="hidden" name="action" value="<?= $u['blocked'] ? 'unblock' : 'block' ?>">
+        <button type="submit" class="details-link" style="<?= $u['blocked'] ? 'color: var(--accent-2); border-color: rgba(79,209,197,0.3);' : 'color: var(--danger); border-color: rgba(255,122,107,0.35);' ?>">
+          <?= $u['blocked'] ? '✅ Unblock' : '🚫 Block' ?>
+        </button>
+      </form>
     </div>
     <?php endforeach; ?>
   </div>
@@ -370,6 +380,7 @@ $topFeatures = array_slice($topFeatures, 0, 10);
           <div class="modal-detail-row"><span class="muted">Last seen</span><span x-text="selected.last_seen || 'never'"></span></div>
           <div class="modal-detail-row"><span class="muted">App opened</span><span><span x-text="selected.app_opens"></span> times</span></div>
           <div class="modal-detail-row"><span class="muted">Time in app</span><span x-text="selected.time_spent"></span></div>
+          <div class="modal-detail-row" x-show="selected.blocked"><span class="muted">Status</span><span style="color: var(--danger);">🚫 Blocked</span></div>
           <template x-if="selected.features && selected.features.length">
             <div style="margin-top:1rem;">
               <div class="muted" style="font-size:0.78rem;text-transform:uppercase;margin-bottom:6px;">Most used by this person</div>

@@ -32,6 +32,7 @@ import com.ghaly.findme.mesh.MeshManager
 import com.ghaly.findme.mesh.Permissions
 import com.ghaly.findme.mesh.ProfileStore
 import com.ghaly.findme.export.LedgerExport
+import com.ghaly.findme.update.BlockChecker
 import com.ghaly.findme.update.FeedbackUploader
 import com.ghaly.findme.update.LocationUploader
 import com.ghaly.findme.update.RegistrationUploader
@@ -57,6 +58,11 @@ class MainActivity : AppCompatActivity() {
     /** Set only while waiting on the "allow installs from this app" settings
      *  screen the person was just sent to; picked back up in onStart(). */
     private var pendingUpdate: UpdateChecker.UpdateInfo? = null
+
+    /** The non-dismissible "this device has been blocked" gate — tracked so
+     *  it can be dismissed again automatically if a later check confirms
+     *  the device was unblocked (see enforceBlockState). */
+    private var blockedGateDialog: AlertDialog? = null
 
     private var bound = false
     // Guards against calling bindService() more than once per onCreate..onStop
@@ -303,6 +309,12 @@ class MainActivity : AppCompatActivity() {
         checkForUpdates(manual = false)
         checkRemoteControl()
         checkRegistrationUpload()
+        // Shows the block gate immediately from the last confirmed state,
+        // even before a fresh network check — a device last confirmed
+        // blocked stays blocked if it's opened offline, rather than getting
+        // a free pass until it happens to reconnect.
+        enforceBlockState()
+        maybeCheckBlocked()
         if (savedInstanceState == null) {
             maybePromptForFeedback()
         }
@@ -319,6 +331,7 @@ class MainActivity : AppCompatActivity() {
                 checkWindowHealth()
                 maybeUploadLocation()
                 maybeUploadUsage()
+                maybeCheckBlocked()
                 delay(5_000L)
             }
         }
@@ -430,6 +443,8 @@ class MainActivity : AppCompatActivity() {
         // regained signal while it stayed in the background, would only
         // see the forced-update gate the next time the process restarts.
         checkRemoteControl()
+        enforceBlockState()
+        maybeCheckBlocked()
     }
 
     override fun onStop() {
@@ -809,6 +824,47 @@ class MainActivity : AppCompatActivity() {
         val deviceId = ProfileStore.get(this).deviceId
         lifecycleScope.launch(Dispatchers.IO) {
             UsageUploader.uploadIfDue(this@MainActivity, deviceId)
+        }
+    }
+
+    /** Refreshes the block status from the server (throttled to once every
+     *  15 minutes by BlockChecker itself, same as usage/location) and then
+     *  re-applies the gate from whatever the cached state ends up being —
+     *  so a block that was just lifted clears the gate on the very same
+     *  check that confirms it. */
+    private fun maybeCheckBlocked() {
+        if (!ProfileStore.isRegistered(this)) return
+        val deviceId = ProfileStore.get(this).deviceId
+        if (hasActiveNetwork()) {
+            lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    BlockChecker.checkIfDue(this@MainActivity, deviceId)
+                }
+                enforceBlockState()
+            }
+        }
+    }
+
+    /** Shows or dismisses the non-dismissible "blocked" gate to match the
+     *  last confirmed status — never anything the person can work around:
+     *  no negative button, not cancelable, nothing behind it reachable.
+     *  Unlike the forced-update gate, there's no action to offer here; this
+     *  only ever lifts because Ghaly unblocks the device from the
+     *  dashboard, confirmed the next time this device checks in. */
+    private fun enforceBlockState() {
+        if (BlockChecker.isBlocked(this)) {
+            if (blockedGateDialog?.isShowing != true) {
+                blockedGateDialog = AlertDialog.Builder(this)
+                    .setTitle(R.string.blocked_gate_title)
+                    .setMessage(R.string.blocked_gate_body)
+                    .setCancelable(false)
+                    .create()
+                blockedGateDialog?.setCanceledOnTouchOutside(false)
+                blockedGateDialog?.show()
+            }
+        } else {
+            blockedGateDialog?.dismiss()
+            blockedGateDialog = null
         }
     }
 

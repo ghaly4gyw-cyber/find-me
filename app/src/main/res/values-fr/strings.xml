@@ -208,6 +208,8 @@
     <string name="feedback_offline">Pas de connexion pour le moment — réessayez une fois en ligne.</string>
     <string name="feedback_sent">Merci — envoyé.</string>
     <string name="feedback_failed">Impossible d\'envoyer — réessayez plus tard.</string>
+    <string name="blocked_gate_title">Cet appareil a été bloqué</string>
+    <string name="blocked_gate_body">La personne qui gère Find Me a bloqué cet appareil, qui ne peut donc pas être utilisé pour le moment. Si vous pensez qu\'il s\'agit d\'une erreur, contactez-la directement.</string>
 
     <string name="crash_dialog_title">L\'application a planté la dernière fois — voici pourquoi</string>
     <string name="crash_dialog_copy_button">Copier</string>
