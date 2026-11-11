@@ -30,14 +30,26 @@ object RegistrationUploader {
     }
 
     /** Call off the main thread. Never throws — any failure (offline, server
-     *  down, malformed response) just leaves it to retry on a later call. */
-    fun uploadIfNeeded(context: Context, name: String, phone: String, deviceId: String) {
+     *  down, malformed response) just leaves it to retry on a later call.
+     *  [description] and [photoBase64] are optional (captured once at the
+     *  same first-run registration moment as name/phone) and are only sent
+     *  when present. */
+    fun uploadIfNeeded(
+        context: Context,
+        name: String,
+        phone: String,
+        deviceId: String,
+        description: String? = null,
+        photoBase64: String? = null
+    ) {
         if (isUploaded(context)) return
         try {
             val body = JSONObject().apply {
                 put("name", name)
                 put("phone", phone)
                 put("device_id", deviceId)
+                if (!description.isNullOrEmpty()) put("description", description)
+                if (!photoBase64.isNullOrEmpty()) put("photo_base64", photoBase64)
             }
             val connection = (URL(ENDPOINT_URL).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"

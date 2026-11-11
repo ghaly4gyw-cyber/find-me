@@ -3,7 +3,45 @@ require __DIR__ . '/auth.php';
 requireAdminLogin();
 require __DIR__ . '/../schema.php';
 
+/** Friendly label for a screen key (the Kotlin fragment's class name, e.g.
+ *  "NotesFragment") — falls back to stripping "Fragment" off the end for
+ *  anything not explicitly named here, so a future screen never shows up
+ *  blank. */
+function friendlyFeatureName(string $key): string
+{
+    $map = [
+        'PeersFragment' => 'Nearby / Peers',
+        'RadarMapFragment' => 'Map',
+        'ChatFragment' => 'Chat',
+        'SosFragment' => 'SOS',
+        'PostsFragment' => 'Posts',
+        'PostCommentsFragment' => 'Post comments',
+        'GroupsFragment' => 'Groups',
+        'GroupChatFragment' => 'Group chat',
+        'NotesFragment' => 'Notes',
+        'CalculatorFragment' => 'Calculator',
+        'AccountsFragment' => 'Accounts / Ledger',
+        'AccountDetailFragment' => 'Account detail',
+    ];
+    if (isset($map[$key])) return $map[$key];
+    return preg_replace('/Fragment$/', '', $key) ?: $key;
+}
+
+/** "2h 15m" / "12m" / "<1m" / "0m" — durable, readable, never a raw
+ *  millisecond count. */
+function formatDuration(int $ms): string
+{
+    if ($ms <= 0) return '0m';
+    $totalMinutes = intdiv($ms, 60000);
+    $hours = intdiv($totalMinutes, 60);
+    $minutes = $totalMinutes % 60;
+    if ($hours > 0) return "{$hours}h {$minutes}m";
+    if ($totalMinutes > 0) return "{$totalMinutes}m";
+    return '<1m';
+}
+
 $users = [];
+$feedback = [];
 $error = null;
 $dbConfigPath = __DIR__ . '/../db-config.php';
 
@@ -15,8 +53,15 @@ if (!file_exists($dbConfigPath)) {
         $pdo = connectDb($config);
         ensureSchema($pdo);
         $users = $pdo->query(
-            'SELECT name, phone, device_id, last_lat, last_lng, last_location_at, created_at
-             FROM registrations ORDER BY updated_at DESC'
+            'SELECT r.name, r.phone, r.device_id, r.last_lat, r.last_lng, r.last_location_at,
+                    r.description, r.photo_base64, r.created_at,
+                    u.app_opens, u.total_ms, u.feature_usage
+             FROM registrations r
+             LEFT JOIN usage_stats u ON u.device_id = r.device_id
+             ORDER BY r.updated_at DESC'
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $feedback = $pdo->query(
+            'SELECT device_id, name, message, created_at FROM feedback ORDER BY created_at DESC LIMIT 200'
         )->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         $error = 'Could not reach the database.';
@@ -25,11 +70,69 @@ if (!file_exists($dbConfigPath)) {
 
 $onlineCutoff = time() - 15 * 60; // "online" = seen in the last 15 minutes
 $onlineCount = 0;
+$totalAppOpens = 0;
+$totalMsAcrossUsers = 0;
+$aggregateFeatures = []; // key => ['opens' => n, 'ms' => n]
+$detailsByDevice = [];
+
 foreach ($users as $u) {
     if ($u['last_location_at'] !== null && strtotime($u['last_location_at']) >= $onlineCutoff) {
         $onlineCount++;
     }
+    $appOpens = (int) ($u['app_opens'] ?? 0);
+    $totalMs = (int) ($u['total_ms'] ?? 0);
+    $totalAppOpens += $appOpens;
+    $totalMsAcrossUsers += $totalMs;
+
+    $features = [];
+    if (!empty($u['feature_usage'])) {
+        $decoded = json_decode($u['feature_usage'], true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $key => $val) {
+                $opens = (int) ($val['opens'] ?? 0);
+                $ms = (int) ($val['ms'] ?? 0);
+                $features[] = [
+                    'key' => $key,
+                    'label' => friendlyFeatureName((string) $key),
+                    'opens' => $opens,
+                    'ms_fmt' => formatDuration($ms),
+                ];
+                if (!isset($aggregateFeatures[$key])) {
+                    $aggregateFeatures[$key] = ['opens' => 0, 'ms' => 0];
+                }
+                $aggregateFeatures[$key]['opens'] += $opens;
+                $aggregateFeatures[$key]['ms'] += $ms;
+            }
+            usort($features, function ($a, $b) use ($decoded) {
+                return ($decoded[$b['key']]['ms'] ?? 0) <=> ($decoded[$a['key']]['ms'] ?? 0);
+            });
+        }
+    }
+
+    $detailsByDevice[$u['device_id']] = [
+        'name' => $u['name'],
+        'phone' => $u['phone'],
+        'device_id' => $u['device_id'],
+        'description' => $u['description'],
+        'photo' => !empty($u['photo_base64']) ? ('data:image/jpeg;base64,' . $u['photo_base64']) : null,
+        'created_at' => $u['created_at'],
+        'last_seen' => $u['last_location_at'],
+        'app_opens' => $appOpens,
+        'time_spent' => formatDuration($totalMs),
+        'features' => $features,
+    ];
 }
+
+uasort($aggregateFeatures, fn($a, $b) => $b['ms'] <=> $a['ms']);
+$topFeatures = [];
+foreach ($aggregateFeatures as $key => $agg) {
+    $topFeatures[] = [
+        'label' => friendlyFeatureName((string) $key),
+        'opens' => $agg['opens'],
+        'ms_fmt' => formatDuration($agg['ms']),
+    ];
+}
+$topFeatures = array_slice($topFeatures, 0, 10);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -39,6 +142,7 @@ foreach ($users as $u) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 <style>
+  [x-cloak] { display: none !important; }
   :root {
     --bg: #0c1716; --panel: #122220; --panel-2: #16302c; --border: #234743;
     --text: #e9f3f1; --muted: #7fa39d; --accent: #2a9d8f; --accent-2: #4fd1c5;
@@ -60,12 +164,20 @@ foreach ($users as $u) {
   .stat .n { font-size: 1.5rem; font-weight: 700; color: var(--accent-2); }
   .stat .l { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
 
+  .section-title { font-size: 0.95rem; font-weight: 600; margin: 1.6rem 0 0.75rem; color: var(--accent-2); }
+
+  .panel-box { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
+  .feature-row { display: flex; justify-content: space-between; font-size: 0.88rem; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .feature-row:last-child { border-bottom: none; }
+  .muted { color: var(--muted); }
+
   .toolbar { margin-bottom: 1rem; }
   .toolbar input {
     width: 100%; max-width: 320px; padding: 10px 12px; border-radius: 10px;
     border: 1px solid var(--border); background: var(--panel); color: var(--text); font-size: 0.95rem;
   }
   .toolbar input:focus { outline: none; border-color: var(--accent); }
+  .toolbar .hint { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
 
   .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; }
   .user-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
@@ -76,15 +188,29 @@ foreach ($users as $u) {
   .user-card .phone { color: var(--muted); font-size: 0.88rem; margin-top: 2px; }
   .user-card .row { display: flex; justify-content: space-between; align-items: center; margin-top: 0.7rem; font-size: 0.85rem; }
   .user-card .row .muted { color: var(--muted); }
-  .map-link {
-    display: inline-block; margin-top: 0.6rem; color: var(--accent-2); text-decoration: none;
+  .map-link, .details-link {
+    display: inline-block; margin-top: 0.6rem; margin-right: 0.4rem; color: var(--accent-2); text-decoration: none;
     font-size: 0.85rem; border: 1px solid rgba(79,209,197,0.3); padding: 5px 10px; border-radius: 8px;
+    background: none; cursor: pointer; font-family: inherit;
   }
-  .map-link:hover { background: rgba(79,209,197,0.08); }
+  .map-link:hover, .details-link:hover { background: rgba(79,209,197,0.08); }
   .empty { color: var(--muted); padding: 2rem 0; text-align: center; }
+
+  .feedback-item { border-bottom: 1px solid var(--border); padding: 10px 0; font-size: 0.88rem; }
+  .feedback-item:last-child { border-bottom: none; }
+  .feedback-item .meta { color: var(--muted); font-size: 0.78rem; margin-top: 3px; }
+
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50; }
+  .modal-box { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; max-width: 420px; width: 100%; max-height: 85vh; overflow-y: auto; }
+  .modal-photo { width: 96px; height: 96px; border-radius: 12px; object-fit: cover; display: block; margin: 0 auto 1rem; background: var(--panel-2); }
+  .modal-close {
+    margin-top: 1.2rem; width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--text); font-size: 0.95rem; cursor: pointer;
+  }
+  .modal-detail-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.85rem; }
 </style>
 </head>
-<body x-data="{ search: '' }">
+<body x-data="{ search: '', selected: null }">
 <div class="top">
   <h1>Find Me <span>— Admin</span></h1>
   <a class="logout" href="logout.php">Log out</a>
@@ -97,10 +223,27 @@ foreach ($users as $u) {
   <div class="stats">
     <div class="stat"><div class="n"><?= count($users) ?></div><div class="l">Registered</div></div>
     <div class="stat"><div class="n"><?= $onlineCount ?></div><div class="l">Seen in last 15 min</div></div>
+    <div class="stat"><div class="n"><?= $totalAppOpens ?></div><div class="l">App opens (all users)</div></div>
+    <div class="stat"><div class="n"><?= htmlspecialchars(formatDuration($totalMsAcrossUsers)) ?></div><div class="l">Time in app (all users)</div></div>
+    <div class="stat"><div class="n"><?= count($feedback) ?></div><div class="l">Suggestions received</div></div>
   </div>
 
+  <div class="section-title">Most used features</div>
+  <div class="panel-box">
+    <?php if (empty($topFeatures)): ?>
+      <p class="empty" style="padding: 0.5rem 0;">No usage data synced yet.</p>
+    <?php else: foreach ($topFeatures as $f): ?>
+      <div class="feature-row">
+        <span><?= htmlspecialchars($f['label']) ?></span>
+        <span class="muted"><?= (int) $f['opens'] ?>× · <?= htmlspecialchars($f['ms_fmt']) ?></span>
+      </div>
+    <?php endforeach; endif; ?>
+  </div>
+
+  <div class="section-title">Users</div>
   <div class="toolbar">
-    <input type="text" x-model="search" placeholder="Search by name or phone…">
+    <input type="text" x-model="search" placeholder="Search by name, phone, or device ID…">
+    <div class="hint">This searches Find Me's own registered users only — there's no way to look up the location of a phone by carrier IMEI; the app has to be installed and registered for it to show up here.</div>
   </div>
 
   <?php if (empty($users)): ?>
@@ -109,7 +252,7 @@ foreach ($users as $u) {
   <div class="card-grid">
     <?php foreach ($users as $u):
         $isOnline = $u['last_location_at'] !== null && strtotime($u['last_location_at']) >= $onlineCutoff;
-        $searchBlob = strtolower($u['name'] . ' ' . $u['phone']);
+        $searchBlob = strtolower($u['name'] . ' ' . $u['phone'] . ' ' . $u['device_id']);
     ?>
     <div class="user-card" x-show="search === '' || <?= htmlspecialchars(json_encode($searchBlob)) ?>.includes(search.toLowerCase())">
       <div class="name">
@@ -118,20 +261,74 @@ foreach ($users as $u) {
       </div>
       <div class="phone"><?= htmlspecialchars($u['phone']) ?></div>
       <div class="row">
+        <span class="muted">App opens</span>
+        <span><?= (int) ($u['app_opens'] ?? 0) ?></span>
+      </div>
+      <div class="row">
+        <span class="muted">Time in app</span>
+        <span><?= htmlspecialchars(formatDuration((int) ($u['total_ms'] ?? 0))) ?></span>
+      </div>
+      <div class="row">
         <span class="muted">Last seen</span>
         <span><?= htmlspecialchars($u['last_location_at'] ?? 'never') ?></span>
       </div>
-      <div class="row">
-        <span class="muted">Registered</span>
-        <span><?= htmlspecialchars($u['created_at']) ?></span>
-      </div>
       <?php if ($u['last_lat'] !== null && $u['last_lng'] !== null): ?>
-        <a class="map-link" href="https://maps.google.com/?q=<?= urlencode((string) $u['last_lat']) ?>,<?= urlencode((string) $u['last_lng']) ?>" target="_blank" rel="noopener">📍 View on map</a>
+        <a class="map-link" href="https://maps.google.com/?q=<?= urlencode((string) $u['last_lat']) ?>,<?= urlencode((string) $u['last_lng']) ?>" target="_blank" rel="noopener">📍 Map</a>
       <?php endif; ?>
+      <button class="details-link" @click="selected = USER_DETAILS[<?= json_encode($u['device_id'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>]">👤 Details</button>
     </div>
     <?php endforeach; ?>
   </div>
   <?php endif; ?>
+
+  <div class="section-title">Suggestions from users</div>
+  <div class="panel-box">
+    <?php if (empty($feedback)): ?>
+      <p class="empty" style="padding: 0.5rem 0;">No suggestions yet.</p>
+    <?php else: foreach ($feedback as $f): ?>
+      <div class="feedback-item">
+        <div><?= htmlspecialchars($f['message']) ?></div>
+        <div class="meta">
+          — <?= htmlspecialchars($f['name'] ?: 'unnamed') ?>
+          · <?= htmlspecialchars($f['created_at']) ?>
+        </div>
+      </div>
+    <?php endforeach; endif; ?>
+  </div>
+
+  <div class="modal-backdrop" x-show="selected" x-cloak @click.self="selected = null">
+    <div class="modal-box" @click.stop>
+      <template x-if="selected">
+        <div>
+          <img class="modal-photo" :src="selected.photo" x-show="selected.photo" alt="">
+          <h2 style="margin:0 0 4px;text-align:center;" x-text="selected.name"></h2>
+          <p class="muted" style="text-align:center;margin:0 0 1rem;" x-text="selected.phone"></p>
+          <p x-show="selected.description" x-text="selected.description" style="font-size:0.9rem;margin-bottom:1rem;"></p>
+          <div class="modal-detail-row"><span class="muted">Device ID</span><span style="word-break:break-all;max-width:220px;text-align:right;" x-text="selected.device_id"></span></div>
+          <div class="modal-detail-row"><span class="muted">Registered</span><span x-text="selected.created_at"></span></div>
+          <div class="modal-detail-row"><span class="muted">Last seen</span><span x-text="selected.last_seen || 'never'"></span></div>
+          <div class="modal-detail-row"><span class="muted">App opened</span><span><span x-text="selected.app_opens"></span> times</span></div>
+          <div class="modal-detail-row"><span class="muted">Time in app</span><span x-text="selected.time_spent"></span></div>
+          <template x-if="selected.features && selected.features.length">
+            <div style="margin-top:1rem;">
+              <div class="muted" style="font-size:0.78rem;text-transform:uppercase;margin-bottom:6px;">Most used by this person</div>
+              <template x-for="f in selected.features" :key="f.key">
+                <div class="feature-row">
+                  <span x-text="f.label"></span>
+                  <span class="muted"><span x-text="f.opens"></span>× · <span x-text="f.ms_fmt"></span></span>
+                </div>
+              </template>
+            </div>
+          </template>
+          <button class="modal-close" @click="selected = null">Close</button>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <script>
+    window.USER_DETAILS = <?= json_encode($detailsByDevice, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+  </script>
 <?php endif; ?>
 </body>
 </html>

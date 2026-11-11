@@ -198,6 +198,17 @@
     <string name="registration_conflict_title">Ce numéro de téléphone est déjà enregistré</string>
     <string name="registration_conflict_body">Votre nom et votre numéro de téléphone sont déjà enregistrés sur un autre appareil. Cet appareil peut continuer à fonctionner tel quel, mais vous devriez peut-être vérifier auprès de la personne qui a configuré ceci.</string>
 
+    <string name="tools_suggest_feature">💡 Suggérer une fonctionnalité</string>
+    <string name="feedback_dialog_title">Souhaitez-vous qu\'on ajoute quelque chose ?</string>
+    <string name="feedback_dialog_auto_prompt">Dites-nous ce qui manque, ce qui n\'est pas clair, ou ce que vous aimeriez voir dans l\'application ensuite — votre message va directement à l\'équipe qui la construit.</string>
+    <string name="feedback_input_hint">Écrivez votre idée ou suggestion ici…</string>
+    <string name="feedback_send">Envoyer</string>
+    <string name="feedback_not_now">Pas maintenant</string>
+    <string name="feedback_empty">Écrivez quelque chose d\'abord.</string>
+    <string name="feedback_offline">Pas de connexion pour le moment — réessayez une fois en ligne.</string>
+    <string name="feedback_sent">Merci — envoyé.</string>
+    <string name="feedback_failed">Impossible d\'envoyer — réessayez plus tard.</string>
+
     <string name="crash_dialog_title">L\'application a planté la dernière fois — voici pourquoi</string>
     <string name="crash_dialog_copy_button">Copier</string>
     <string name="crash_copied_toast">Copié — collez-le là où vous devez l\'envoyer.</string>

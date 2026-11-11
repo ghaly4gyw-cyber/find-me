@@ -201,6 +201,17 @@
     <string name="registration_conflict_title">This phone number is already registered</string>
     <string name="registration_conflict_body">Your name and phone number are already registered to a different phone. This device can keep working as-is, but you may want to check with whoever set this up.</string>
 
+    <string name="tools_suggest_feature">💡 Suggest a feature</string>
+    <string name="feedback_dialog_title">Anything you\'d like to see added?</string>
+    <string name="feedback_dialog_auto_prompt">Tell us what\'s missing, what\'s confusing, or what you\'d like the app to do next — it goes straight to the people building it.</string>
+    <string name="feedback_input_hint">Write your idea or suggestion here…</string>
+    <string name="feedback_send">Send</string>
+    <string name="feedback_not_now">Not now</string>
+    <string name="feedback_empty">Write something first.</string>
+    <string name="feedback_offline">No connection right now — try again once you\'re online.</string>
+    <string name="feedback_sent">Thank you — sent.</string>
+    <string name="feedback_failed">Couldn\'t send it — try again later.</string>
+
     <string name="crash_dialog_title">The app crashed last time — here\'s why</string>
     <string name="crash_dialog_copy_button">Copy</string>
     <string name="crash_copied_toast">Copied — paste it wherever you need to send it.</string>

@@ -213,11 +213,52 @@ jobs:
           fi
           echo "Location update endpoint confirmed working."
 
+      # Same canary-row approach again, now for usage-update.php — an
+      # upsert against the same fixed canary device, so re-running this on
+      # every deploy never grows the table.
+      - name: Verify the usage-update endpoint works
+        run: |
+          response=$(curl -sS -o /tmp/response.json -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"device_id":"ci-healthcheck-canary","app_opens":1,"total_ms":60000,"features":{"CalculatorFragment":{"opens":1,"ms":60000}}}' \
+            https://patrons.digital/findme-api/usage-update.php)
+          echo "HTTP status: $response"
+          cat /tmp/response.json
+          echo
+          if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/response.json; then
+            echo "::error::Usage update failed"
+            exit 1
+          fi
+          echo "Usage update endpoint confirmed working."
+
+      # feedback.php is append-only (every real submission is kept forever),
+      # so this deliberately does NOT post a real message every deploy —
+      # that would grow the table forever. Instead it sends a request
+      # missing the required message field and expects the endpoint's own
+      # validation to reject it with 400, which proves it's live and wired
+      # to the database without ever inserting a row.
+      - name: Verify the feedback endpoint responds
+        run: |
+          response=$(curl -sS -o /tmp/response.json -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"device_id":"ci-healthcheck-canary"}' \
+            https://patrons.digital/findme-api/feedback.php)
+          echo "HTTP status: $response"
+          cat /tmp/response.json
+          echo
+          if [ "$response" != "400" ] || ! grep -q '"missing_or_invalid_fields"' /tmp/response.json; then
+            echo "::error::Feedback endpoint didn't validate as expected"
+            exit 1
+          fi
+          echo "Feedback endpoint confirmed working."
+
       # Full login round-trip: posts the real admin password, follows the
       # redirect, and confirms the resulting page is actually the logged-in
-      # dashboard (not another login form) and lists the canary user —
-      # proves the session/auth/DB-query chain end to end, not just that the
-      # page loads.
+      # dashboard (not another login form), lists the canary user, and
+      # renders the usage-analytics sections added alongside it — proves the
+      # session/auth/DB-query chain end to end, not just that the page loads.
       - name: Verify the admin dashboard login works
         run: |
           rm -f /tmp/cookies.txt
@@ -236,7 +277,15 @@ jobs:
             exit 1
           fi
           if ! grep -q "CI Healthcheck" /tmp/admin_page.html; then
-            echo "::error::Dashboard page didn't contain the expected content"
+            echo "::error::Dashboard page didn't contain the expected user content"
+            exit 1
+          fi
+          if ! grep -q "Most used features" /tmp/admin_page.html; then
+            echo "::error::Dashboard page is missing the usage-analytics section"
+            exit 1
+          fi
+          if ! grep -q "Suggestions from users" /tmp/admin_page.html; then
+            echo "::error::Dashboard page is missing the feedback section"
             exit 1
           fi
           echo "Admin login + dashboard confirmed working."

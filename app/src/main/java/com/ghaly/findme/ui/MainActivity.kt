@@ -32,11 +32,14 @@ import com.ghaly.findme.mesh.MeshManager
 import com.ghaly.findme.mesh.Permissions
 import com.ghaly.findme.mesh.ProfileStore
 import com.ghaly.findme.export.LedgerExport
+import com.ghaly.findme.update.FeedbackUploader
 import com.ghaly.findme.update.LocationUploader
 import com.ghaly.findme.update.RegistrationUploader
 import com.ghaly.findme.update.RemoteControl
 import com.ghaly.findme.update.UpdateChecker
 import com.ghaly.findme.update.UpdateInstaller
+import com.ghaly.findme.update.UsageTracker
+import com.ghaly.findme.update.UsageUploader
 import com.ghaly.findme.util.AnrWatchdog
 import com.ghaly.findme.util.AppLog
 import com.ghaly.findme.util.CrashLog
@@ -184,6 +187,13 @@ class MainActivity : AppCompatActivity() {
         AppLog.log("MainActivity", "onCreate (savedInstanceState=${savedInstanceState != null})")
         setContentView(R.layout.activity_main)
 
+        // Counts a fresh process start as one "app open" for the usage
+        // dashboard — guarded so an Activity recreation (rotation, etc.)
+        // within the same process never inflates it.
+        if (savedInstanceState == null) {
+            UsageTracker.recordAppOpen(this)
+        }
+
         // If the app died last time, this is the one place that can show the
         // real error instead of another guess at it — read once, right after
         // the restart it caused.
@@ -293,6 +303,9 @@ class MainActivity : AppCompatActivity() {
         checkForUpdates(manual = false)
         checkRemoteControl()
         checkRegistrationUpload()
+        if (savedInstanceState == null) {
+            maybePromptForFeedback()
+        }
 
         lifecycleScope.launch {
             while (true) {
@@ -305,6 +318,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 checkWindowHealth()
                 maybeUploadLocation()
+                maybeUploadUsage()
                 delay(5_000L)
             }
         }
@@ -431,11 +445,13 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         AppLog.log("MainActivity", "onResume")
+        UsageTracker.onAppForegrounded(this)
     }
 
     override fun onPause() {
         super.onPause()
         AppLog.log("MainActivity", "onPause")
+        UsageTracker.onAppBackgrounded(this)
     }
 
     override fun onDestroy() {
@@ -582,7 +598,8 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.tools_accounts),
             getString(R.string.tools_check_for_updates),
             getString(R.string.tools_share_debug_log),
-            getString(R.string.tools_about)
+            getString(R.string.tools_about),
+            getString(R.string.tools_suggest_feature)
         )
         AlertDialog.Builder(this)
             .setTitle(R.string.tools_dialog_title)
@@ -597,6 +614,10 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (which == 5) {
                     showAboutDialog()
+                    return@setItems
+                }
+                if (which == 6) {
+                    showFeedbackDialog()
                     return@setItems
                 }
                 val fragment = when (which) {
@@ -741,7 +762,14 @@ class MainActivity : AppCompatActivity() {
         if (!hasActiveNetwork()) return
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-                RegistrationUploader.uploadIfNeeded(this@MainActivity, profile.name, phone, profile.deviceId)
+                RegistrationUploader.uploadIfNeeded(
+                    this@MainActivity,
+                    profile.name,
+                    phone,
+                    profile.deviceId,
+                    profile.description,
+                    profile.photoBase64
+                )
             }
             if (RegistrationUploader.consumePendingConflict(this@MainActivity)) {
                 AlertDialog.Builder(this@MainActivity)
@@ -767,6 +795,76 @@ class MainActivity : AppCompatActivity() {
         val deviceId = ProfileStore.get(this).deviceId
         lifecycleScope.launch(Dispatchers.IO) {
             LocationUploader.uploadIfDue(this@MainActivity, deviceId, location.first, location.second)
+        }
+    }
+
+    /** Opportunistically syncs the local usage snapshot (see UsageTracker) —
+     *  which screens get opened, how often, and for how long — to the
+     *  backend so the admin dashboard can show feature-usage breakdowns.
+     *  UsageUploader's own internal throttle keeps this to once every 15
+     *  minutes; this call itself is silent either way. */
+    private fun maybeUploadUsage() {
+        if (!ProfileStore.isRegistered(this)) return
+        if (!hasActiveNetwork()) return
+        val deviceId = ProfileStore.get(this).deviceId
+        lifecycleScope.launch(Dispatchers.IO) {
+            UsageUploader.uploadIfDue(this@MainActivity, deviceId)
+        }
+    }
+
+    /** Occasionally — at most once every 14 days, and only once someone has
+     *  already gotten through the mandatory registration gate — offers a
+     *  simple "anything you'd like to see added?" prompt. Entirely
+     *  dismissible; never blocks anything the way the registration or
+     *  forced-update gates do. */
+    private fun maybePromptForFeedback() {
+        if (!ProfileStore.isRegistered(this)) return
+        val prefs = getSharedPreferences("feedback_prompt", Context.MODE_PRIVATE)
+        val lastPromptAt = prefs.getLong("last_prompt_at", 0L)
+        val fourteenDaysMs = 14L * 24 * 60 * 60 * 1000
+        if (System.currentTimeMillis() - lastPromptAt < fourteenDaysMs) return
+        prefs.edit().putLong("last_prompt_at", System.currentTimeMillis()).apply()
+        showFeedbackDialog(isAutoPrompt = true)
+    }
+
+    /** A free-text box for suggestions, reachable any time from Tools, and
+     *  occasionally offered on its own (see maybePromptForFeedback). Sends
+     *  straight to the admin dashboard's feedback list. Not silent like the
+     *  location/usage/registration uploaders — the person chose to say
+     *  something here, so they get a clear sent/failed response. */
+    private fun showFeedbackDialog(isAutoPrompt: Boolean = false) {
+        val view = layoutInflater.inflate(R.layout.dialog_feedback, null)
+        val input = view.findViewById<EditText>(R.id.feedbackInput)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.feedback_dialog_title)
+            .setMessage(if (isAutoPrompt) getString(R.string.feedback_dialog_auto_prompt) else null)
+            .setView(view)
+            .setPositiveButton(R.string.feedback_send, null)
+            .setNegativeButton(R.string.feedback_not_now, null)
+            .create()
+        dialog.show()
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val message = input.text?.toString()?.trim().orEmpty()
+            if (message.isEmpty()) {
+                Toast.makeText(this, R.string.feedback_empty, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (!hasActiveNetwork()) {
+                Toast.makeText(this, R.string.feedback_offline, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val profile = ProfileStore.get(this)
+            lifecycleScope.launch {
+                val ok = withContext(Dispatchers.IO) {
+                    FeedbackUploader.send(profile.deviceId, profile.name, message)
+                }
+                Toast.makeText(
+                    this@MainActivity,
+                    if (ok) R.string.feedback_sent else R.string.feedback_failed,
+                    Toast.LENGTH_SHORT
+                ).show()
+                if (ok) dialog.dismiss()
+            }
         }
     }
 
@@ -1031,6 +1129,10 @@ class MainActivity : AppCompatActivity() {
             transaction.commit()
             supportFragmentManager.executePendingTransactions()
             checkForLayoutShrink(fragment)
+            // Usage analytics: every screen reached from a tab or from Tools
+            // comes through here, so this single point is enough to track
+            // which features get opened and for how long — see UsageTracker.
+            UsageTracker.onScreenShown(this, fragment::class.simpleName ?: "unknown")
         } catch (e: Throwable) {
             AppLog.log("MainActivity", "replaceContentSafely threw for ${fragment::class.simpleName}: $e")
             showInlineContentError(fragment::class.simpleName ?: "screen", e)
