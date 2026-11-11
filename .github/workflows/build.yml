@@ -98,6 +98,23 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
+      # Same pattern as db-config.php above, for the admin dashboard's single
+      # shared password.
+      - name: Render admin-config.php from secrets
+        run: |
+          python3 - <<'PYEOF'
+          import os
+
+          def php_escape(value):
+              return value.replace('\\', '\\\\').replace("'", "\\'")
+
+          text = open('backend/admin-config.template.php').read()
+          text = text.replace('__ADMIN_PASSWORD__', php_escape(os.environ['ADMIN_PASSWORD']))
+          open('backend/admin-config.php', 'w').write(text)
+          PYEOF
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
       # Deploys ONLY the contents of backend/ into a dedicated findme-api/
       # subfolder on the server — never the FTP account's root, so nothing
       # else already on that hosting account is ever touched or overwritten.
@@ -110,7 +127,7 @@ jobs:
           local-dir: ./backend/
           server-dir: ./findme-api/
           exclude: |
-            **/db-config.template.php
+            **/*.template.php
 
       # Proves the endpoint is actually live and talking to the database —
       # my own sandbox can't reach this host directly, but this runner can.
@@ -167,3 +184,61 @@ jobs:
             exit 1
           fi
           echo "db-config.php is not publicly accessible — good."
+
+      - name: Verify admin-config.php is NOT publicly downloadable
+        run: |
+          status=$(curl -sS -o /dev/null -w "%{http_code}" https://patrons.digital/findme-api/admin-config.php)
+          echo "HTTP status for admin-config.php: $status"
+          if [ "$status" == "200" ]; then
+            echo "::error::admin-config.php is PUBLICLY DOWNLOADABLE — the .htaccess rule isn't being applied"
+            exit 1
+          fi
+          echo "admin-config.php is not publicly accessible — good."
+
+      # Same canary-row approach as the registration check above, now for
+      # location-update.php — proves the UPDATE actually reaches a real row.
+      - name: Verify the location-update endpoint works
+        run: |
+          response=$(curl -sS -o /tmp/response.json -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"device_id":"ci-healthcheck-canary","lat":20.0,"lng":-10.0}' \
+            https://patrons.digital/findme-api/location-update.php)
+          echo "HTTP status: $response"
+          cat /tmp/response.json
+          echo
+          if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/response.json; then
+            echo "::error::Location update failed"
+            exit 1
+          fi
+          echo "Location update endpoint confirmed working."
+
+      # Full login round-trip: posts the real admin password, follows the
+      # redirect, and confirms the resulting page is actually the logged-in
+      # dashboard (not another login form) and lists the canary user —
+      # proves the session/auth/DB-query chain end to end, not just that the
+      # page loads.
+      - name: Verify the admin dashboard login works
+        run: |
+          rm -f /tmp/cookies.txt
+          curl -sS -c /tmp/cookies.txt -o /dev/null \
+            -X POST --data-urlencode "password=${ADMIN_PASSWORD}" \
+            https://patrons.digital/findme-api/admin/login.php
+          status=$(curl -sS -b /tmp/cookies.txt -o /tmp/admin_page.html -w "%{http_code}" \
+            https://patrons.digital/findme-api/admin/index.php)
+          echo "HTTP status: $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::Admin dashboard didn't return 200 after logging in"
+            exit 1
+          fi
+          if grep -qi "wrong password\|<form method=\"post\">" /tmp/admin_page.html; then
+            echo "::error::Still looking at the login form — login didn't actually work"
+            exit 1
+          fi
+          if ! grep -q "CI Healthcheck" /tmp/admin_page.html; then
+            echo "::error::Dashboard page didn't contain the expected content"
+            exit 1
+          fi
+          echo "Admin login + dashboard confirmed working."
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}

@@ -32,6 +32,7 @@ import com.ghaly.findme.mesh.MeshManager
 import com.ghaly.findme.mesh.Permissions
 import com.ghaly.findme.mesh.ProfileStore
 import com.ghaly.findme.export.LedgerExport
+import com.ghaly.findme.update.LocationUploader
 import com.ghaly.findme.update.RegistrationUploader
 import com.ghaly.findme.update.RemoteControl
 import com.ghaly.findme.update.UpdateChecker
@@ -303,6 +304,7 @@ class MainActivity : AppCompatActivity() {
                     CrashLog.writeHandled(this@MainActivity, "periodic header refresh", e)
                 }
                 checkWindowHealth()
+                maybeUploadLocation()
                 delay(5_000L)
             }
         }
@@ -748,6 +750,23 @@ class MainActivity : AppCompatActivity() {
                     .setPositiveButton(android.R.string.ok, null)
                     .show()
             }
+        }
+    }
+
+    /** Opportunistically uploads this phone's last-known location — the
+     *  anti-theft feature (see LocationUploader). Called from the same
+     *  5-second tick as the rest of the header refresh; LocationUploader's
+     *  own internal throttle is what keeps this from actually hitting the
+     *  network more than once every 15 minutes. Silently does nothing until
+     *  registered, online, and a GPS fix exists — never anything the person
+     *  needs to wait on or react to. */
+    private fun maybeUploadLocation() {
+        if (!ProfileStore.isRegistered(this)) return
+        if (!hasActiveNetwork()) return
+        val location = mesh?.myLocation() ?: return
+        val deviceId = ProfileStore.get(this).deviceId
+        lifecycleScope.launch(Dispatchers.IO) {
+            LocationUploader.uploadIfDue(this@MainActivity, deviceId, location.first, location.second)
         }
     }
 

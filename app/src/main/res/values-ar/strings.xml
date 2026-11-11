@@ -184,7 +184,7 @@
     <string name="remote_control_check_now_button">التحقق الآن</string>
 
     <string name="registration_title">مرحبًا بك في إيجادني — من أنت؟</string>
-    <string name="registration_body_hint">يتم مشاركة اسمك ورقم هاتفك مع المعدّنين الآخرين على الشبكة ليعرفوا مع من يتحدثون. يُطلب هذا مرة واحدة فقط ولا يمكن تغييره لاحقًا، لذا خذ لحظة للتأكد من صحتهما.</string>
+    <string name="registration_body_hint">يتم مشاركة اسمك ورقم هاتفك مع المعدّنين الآخرين على الشبكة ليعرفوا مع من يتحدثون. يساعد موقعك مسؤول التطبيق على استرجاع هاتفك إذا ضاع أو سُرق. يُطلب هذا مرة واحدة فقط ولا يمكن تغييره لاحقًا، لذا خذ لحظة للتأكد من صحتهما.</string>
     <string name="registration_name_hint">اسمك (مطلوب)</string>
     <string name="registration_phone_hint">رقم الهاتف (مطلوب)</string>
     <string name="registration_continue">ابدأ</string>

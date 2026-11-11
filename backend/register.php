@@ -42,6 +42,8 @@ if ($name === '' || $phone === '' || $deviceId === ''
     exit;
 }
 
+require __DIR__ . '/schema.php';
+
 $configPath = __DIR__ . '/db-config.php';
 if (!file_exists($configPath)) {
     http_response_code(500);
@@ -51,29 +53,14 @@ if (!file_exists($configPath)) {
 $config = require $configPath;
 
 try {
-    $pdo = new PDO(
-        "mysql:host={$config['host']};dbname={$config['name']};charset=utf8mb4",
-        $config['user'],
-        $config['password'],
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
+    $pdo = connectDb($config);
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode(['status' => 'error', 'reason' => 'db_connection_failed']);
     exit;
 }
 
-// Self-initializing schema — no separate migration step to remember to run.
-$pdo->exec(
-    "CREATE TABLE IF NOT EXISTS registrations (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        device_id VARCHAR(64) NOT NULL UNIQUE,
-        phone VARCHAR(32) NOT NULL UNIQUE,
-        name VARCHAR(100) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-);
+ensureSchema($pdo);
 
 // Is this phone number already registered to a DIFFERENT device? That's the
 // one case this whole endpoint exists to catch — "same account on two

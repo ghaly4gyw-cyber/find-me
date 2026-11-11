@@ -1,6 +1,8 @@
-# Blocks direct web access to db-config.php (which holds the real database
-# credentials once rendered at deploy time) while leaving register.php itself
-# reachable. Apache-specific — Hostinger shared hosting runs Apache.
-<Files "db-config.php">
+# Blocks direct web access to any file holding real credentials once
+# rendered at deploy time (db-config.php, admin-config.php) and to the
+# committed placeholder templates too, while leaving the actual endpoints
+# (register.php, location-update.php, admin/*) reachable. Apache-specific —
+# Hostinger shared hosting runs Apache.
+<FilesMatch "(^db-config\.php$|^admin-config\.php$|\.template\.php$)">
     Require all denied
-</Files>
+</FilesMatch>

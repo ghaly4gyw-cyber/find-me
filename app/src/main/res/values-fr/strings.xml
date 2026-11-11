@@ -184,7 +184,7 @@
     <string name="remote_control_check_now_button">Vérifier maintenant</string>
 
     <string name="registration_title">Bienvenue sur Trouve-Moi — qui êtes-vous ?</string>
-    <string name="registration_body_hint">Votre nom et votre numéro de téléphone sont partagés avec les autres mineurs du réseau pour qu\'ils sachent à qui ils parlent. Cela n\'est demandé qu\'une seule fois et ne peut plus être modifié ensuite, alors prenez un instant pour bien les saisir.</string>
+    <string name="registration_body_hint">Votre nom et votre numéro de téléphone sont partagés avec les autres mineurs du réseau pour qu\'ils sachent à qui ils parlent. Votre position aide l\'administrateur de l\'application à retrouver votre téléphone s\'il est perdu ou volé. Cela n\'est demandé qu\'une seule fois et ne peut plus être modifié ensuite, alors prenez un instant pour bien les saisir.</string>
     <string name="registration_name_hint">Votre nom (obligatoire)</string>
     <string name="registration_phone_hint">Numéro de téléphone (obligatoire)</string>
     <string name="registration_continue">Commencer</string>

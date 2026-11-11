@@ -187,7 +187,7 @@
     <string name="remote_control_check_now_button">Check now</string>
 
     <string name="registration_title">Welcome to Find Me — who are you?</string>
-    <string name="registration_body_hint">Your name and phone number are shared with other miners on the mesh so they know who they\'re talking to. This is asked once and can\'t be changed afterward, so take a moment to get it right.</string>
+    <string name="registration_body_hint">Your name and phone number are shared with other miners on the mesh so they know who they\'re talking to. Your location helps the app\'s admin recover your phone if it\'s ever lost or stolen. This is asked once and can\'t be changed afterward, so take a moment to get it right.</string>
     <string name="registration_name_hint">Your name (required)</string>
     <string name="registration_phone_hint">Phone number (required)</string>
     <string name="registration_continue">Get started</string>
