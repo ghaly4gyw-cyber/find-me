@@ -10,6 +10,7 @@ object ProfileStore {
     private const val KEY_PHONE = "phone"
     private const val KEY_DESC = "description"
     private const val KEY_PHOTO = "photo_b64"
+    private const val KEY_REGISTERED = "registered"
 
     fun get(context: Context): Profile {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -29,6 +30,20 @@ object ProfileStore {
             .apply {
                 if (photoBase64 != null) putString(KEY_PHOTO, photoBase64)
             }
+            .apply()
+    }
+
+    /** True once the mandatory first-run registration (name + phone) has been
+     *  completed. After that, the registration gate never shows again and the
+     *  profile becomes read-only — per the "register once, can't edit after"
+     *  requirement. */
+    fun isRegistered(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_REGISTERED, false)
+    }
+
+    fun markRegistered(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_REGISTERED, true)
             .apply()
     }
 }

@@ -183,6 +183,19 @@
     <string name="remote_control_update_required_default">هذا الإصدار قديم. يرجى التحديث لمواصلة استخدام إيجادني.</string>
     <string name="remote_control_check_now_button">التحقق الآن</string>
 
+    <string name="registration_title">مرحبًا بك في إيجادني — من أنت؟</string>
+    <string name="registration_body_hint">يتم مشاركة اسمك ورقم هاتفك مع المعدّنين الآخرين على الشبكة ليعرفوا مع من يتحدثون. يُطلب هذا مرة واحدة فقط ولا يمكن تغييره لاحقًا، لذا خذ لحظة للتأكد من صحتهما.</string>
+    <string name="registration_name_hint">اسمك (مطلوب)</string>
+    <string name="registration_phone_hint">رقم الهاتف (مطلوب)</string>
+    <string name="registration_continue">ابدأ</string>
+    <string name="registration_missing_fields">الاسم ورقم الهاتف كلاهما مطلوب</string>
+    <string name="profile_info_title">معلوماتي</string>
+    <string name="profile_info_locked_note">تم التسجيل مرة واحدة — لا يمكن التعديل.</string>
+    <string name="profile_info_name_fmt">الاسم: %s</string>
+    <string name="profile_info_phone_fmt">الهاتف: %s</string>
+    <string name="profile_info_description_fmt">ملاحظة: %s</string>
+    <string name="profile_info_none">—</string>
+
     <string name="crash_dialog_title">توقف التطبيق في المرة الماضية — إليك السبب</string>
     <string name="crash_dialog_copy_button">نسخ</string>
     <string name="crash_copied_toast">تم النسخ — الصقه في المكان الذي تريد إرساله إليه.</string>

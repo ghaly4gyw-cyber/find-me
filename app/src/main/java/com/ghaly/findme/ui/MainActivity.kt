@@ -245,7 +245,22 @@ class MainActivity : AppCompatActivity() {
 
         val nameButton = findViewById<TextView>(R.id.myNameButton)
         refreshNameButton(nameButton)
-        nameButton.setOnClickListener { showEditProfileDialog(nameButton) }
+        nameButton.setOnClickListener {
+            if (ProfileStore.isRegistered(this)) {
+                showProfileInfoDialog()
+            } else {
+                showEditProfileDialog(nameButton, isFirstRunGate = true)
+            }
+        }
+        // Mandatory first-run registration: name + phone are required before the
+        // person can use the app at all, per "everyone when he open the
+        // application, ask for his name, his number". Works fully offline —
+        // nothing here depends on the network. The dialog below the normal UI
+        // is already inflated at this point, but setCancelable(false) means it
+        // can't be dismissed or worked around until both fields are filled in.
+        if (!ProfileStore.isRegistered(this)) {
+            showEditProfileDialog(nameButton, isFirstRunGate = true)
+        }
 
         findViewById<TextView>(R.id.languageButton).setOnClickListener { showLanguageDialog() }
         findViewById<TextView>(R.id.toolsButton).setOnClickListener { showToolsDialog() }
@@ -760,8 +775,15 @@ class MainActivity : AppCompatActivity() {
         button.text = "${DeviceIdentity.name(this)} ✎"
     }
 
-    /** Opens the full "edit my profile" dialog: name, phone, description, photo. */
-    private fun showEditProfileDialog(nameButton: TextView) {
+    /** Opens the "edit my profile" dialog: name, phone, description, photo.
+     *  With [isFirstRunGate] this becomes the mandatory one-time registration
+     *  screen instead: name + phone become required, there's no cancel button
+     *  and no way to dismiss it (back button included — see setCancelable
+     *  below), and saving marks the profile as registered via
+     *  [ProfileStore.markRegistered] so this never shows again and the profile
+     *  becomes read-only (see [showProfileInfoDialog]). Everything here works
+     *  fully offline — nothing in this dialog talks to the network. */
+    private fun showEditProfileDialog(nameButton: TextView, isFirstRunGate: Boolean = false) {
         val view = layoutInflater.inflate(R.layout.dialog_edit_profile, null)
         val photoView = view.findViewById<ImageView>(R.id.profilePhoto)
         val nameInput = view.findViewById<EditText>(R.id.profileNameInput)
@@ -769,35 +791,87 @@ class MainActivity : AppCompatActivity() {
         val descInput = view.findViewById<EditText>(R.id.profileDescriptionInput)
 
         val current = ProfileStore.get(this)
-        nameInput.setText(current.name)
+        // For the first-run gate, the name field starts blank rather than the
+        // generated "Miner-XXXX" placeholder, so the person has to actually
+        // type their real name rather than tapping past a filled-in field.
+        nameInput.setText(if (isFirstRunGate) "" else current.name)
         phoneInput.setText(current.phone)
         descInput.setText(current.description)
         pendingPhotoBase64 = current.photoBase64
         pendingPhotoView = photoView
         applyPhotoPreview(photoView, current.photoBase64)
 
+        if (isFirstRunGate) {
+            nameInput.hint = getString(R.string.registration_name_hint)
+            phoneInput.hint = getString(R.string.registration_phone_hint)
+        }
+
         val photoClick = View.OnClickListener { pickPhotoLauncher.launch("image/*") }
         photoView.setOnClickListener(photoClick)
         view.findViewById<TextView>(R.id.choosePhotoText).setOnClickListener(photoClick)
 
-        AlertDialog.Builder(this)
-            .setTitle(R.string.edit_profile)
+        val builder = AlertDialog.Builder(this)
+            .setTitle(if (isFirstRunGate) R.string.registration_title else R.string.edit_profile)
+            .setMessage(if (isFirstRunGate) getString(R.string.registration_body_hint) else null)
             .setView(view)
-            .setPositiveButton(R.string.save) { _, _ ->
-                val newName = nameInput.text?.toString()?.trim().orEmpty()
-                if (newName.isNotEmpty()) {
-                    DeviceIdentity.setName(this, newName)
-                }
-                ProfileStore.save(
-                    this,
-                    phone = phoneInput.text?.toString()?.trim(),
-                    description = descInput.text?.toString()?.trim(),
-                    photoBase64 = pendingPhotoBase64
-                )
-                refreshNameButton(nameButton)
-                mesh?.sendProfile()
+            .setPositiveButton(if (isFirstRunGate) R.string.registration_continue else R.string.save, null)
+            .setCancelable(!isFirstRunGate)
+        if (!isFirstRunGate) {
+            builder.setNegativeButton(android.R.string.cancel, null)
+        }
+
+        val dialog = builder.show()
+        if (isFirstRunGate) {
+            dialog.setCanceledOnTouchOutside(false)
+        }
+        // Overriding the positive button's click after show(), instead of the
+        // usual setPositiveButton lambda, is what lets the gate reject an
+        // empty name/phone without the dialog auto-dismissing on tap.
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val newName = nameInput.text?.toString()?.trim().orEmpty()
+            val newPhone = phoneInput.text?.toString()?.trim().orEmpty()
+            if (isFirstRunGate && (newName.isEmpty() || newPhone.isEmpty())) {
+                Toast.makeText(this, R.string.registration_missing_fields, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
-            .setNegativeButton(android.R.string.cancel, null)
+            if (newName.isNotEmpty()) {
+                DeviceIdentity.setName(this, newName)
+            }
+            ProfileStore.save(
+                this,
+                phone = newPhone.ifEmpty { null },
+                description = descInput.text?.toString()?.trim(),
+                photoBase64 = pendingPhotoBase64
+            )
+            if (isFirstRunGate) {
+                ProfileStore.markRegistered(this)
+            }
+            refreshNameButton(nameButton)
+            mesh?.sendProfile()
+            dialog.dismiss()
+        }
+    }
+
+    /** Read-only view of my own profile, shown once registration is complete —
+     *  there is deliberately no edit affordance anywhere in here, per "he
+     *  can't also edit his information" once registered. */
+    private fun showProfileInfoDialog() {
+        val current = ProfileStore.get(this)
+        val view = layoutInflater.inflate(R.layout.dialog_profile_info, null)
+        applyPhotoPreview(view.findViewById(R.id.profileInfoPhoto), current.photoBase64)
+        view.findViewById<TextView>(R.id.profileInfoName).text =
+            getString(R.string.profile_info_name_fmt, current.name)
+        view.findViewById<TextView>(R.id.profileInfoPhone).text =
+            getString(R.string.profile_info_phone_fmt, current.phone ?: getString(R.string.profile_info_none))
+        val descView = view.findViewById<TextView>(R.id.profileInfoDescription)
+        if (!current.description.isNullOrBlank()) {
+            descView.text = getString(R.string.profile_info_description_fmt, current.description)
+            descView.visibility = View.VISIBLE
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.profile_info_title)
+            .setView(view)
+            .setPositiveButton(android.R.string.ok, null)
             .show()
     }
 
