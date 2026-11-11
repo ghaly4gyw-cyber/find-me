@@ -27,6 +27,25 @@ function friendlyFeatureName(string $key): string
     return preg_replace('/Fragment$/', '', $key) ?: $key;
 }
 
+/** "Wi-Fi — Home Router" / "Cellular — Mauritel" / "Bluetooth" / "Unknown" —
+ *  turns the raw network_type/network_name columns into one readable line
+ *  for the dashboard, so Ghaly can tell at a glance what connection someone
+ *  (Starlink, a carrier, a local Wi-Fi) was on. */
+function friendlyNetwork(?string $type, ?string $name): string
+{
+    $labels = [
+        'wifi' => 'Wi-Fi',
+        'cellular' => 'Cellular',
+        'bluetooth' => 'Bluetooth',
+        'ethernet' => 'Ethernet',
+        'other' => 'Other',
+        'none' => 'Offline',
+    ];
+    $label = $labels[$type] ?? 'Unknown';
+    if ($name) return "{$label} — {$name}";
+    return $label;
+}
+
 /** "2h 15m" / "12m" / "<1m" / "0m" — durable, readable, never a raw
  *  millisecond count. */
 function formatDuration(int $ms): string
@@ -56,6 +75,7 @@ if (!file_exists($dbConfigPath)) {
         $users = $pdo->query(
             'SELECT r.name, r.phone, r.device_id, r.last_lat, r.last_lng, r.last_location_at,
                     r.description, r.photo_base64, r.blocked, r.created_at,
+                    r.device_model, r.android_version, r.app_version, r.network_type, r.network_name,
                     u.app_opens, u.total_ms, u.feature_usage
              FROM registrations r
              LEFT JOIN usage_stats u ON u.device_id = r.device_id
@@ -138,6 +158,10 @@ foreach ($users as $u) {
         'time_spent' => formatDuration($totalMs),
         'features' => $features,
         'blocked' => (bool) $u['blocked'],
+        'device_model' => $u['device_model'] ?: null,
+        'android_version' => $u['android_version'] ?: null,
+        'app_version' => $u['app_version'] ?: null,
+        'network' => friendlyNetwork($u['network_type'] ?: null, $u['network_name'] ?: null),
     ];
 }
 
@@ -380,6 +404,10 @@ $topFeatures = array_slice($topFeatures, 0, 10);
           <div class="modal-detail-row"><span class="muted">Last seen</span><span x-text="selected.last_seen || 'never'"></span></div>
           <div class="modal-detail-row"><span class="muted">App opened</span><span><span x-text="selected.app_opens"></span> times</span></div>
           <div class="modal-detail-row"><span class="muted">Time in app</span><span x-text="selected.time_spent"></span></div>
+          <div class="modal-detail-row" x-show="selected.device_model"><span class="muted">Phone</span><span x-text="selected.device_model"></span></div>
+          <div class="modal-detail-row" x-show="selected.android_version"><span class="muted">Android</span><span x-text="selected.android_version"></span></div>
+          <div class="modal-detail-row" x-show="selected.app_version"><span class="muted">App version</span><span x-text="selected.app_version"></span></div>
+          <div class="modal-detail-row"><span class="muted">Network</span><span x-text="selected.network"></span></div>
           <div class="modal-detail-row" x-show="selected.blocked"><span class="muted">Status</span><span style="color: var(--danger);">🚫 Blocked</span></div>
           <template x-if="selected.features && selected.features.length">
             <div style="margin-top:1rem;">

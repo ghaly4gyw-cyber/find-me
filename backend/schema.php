@@ -18,6 +18,14 @@ function ensureSchema(PDO $pdo): void
             description VARCHAR(500) NULL,
             photo_base64 LONGTEXT NULL,
             blocked TINYINT(1) NOT NULL DEFAULT 0,
+            device_model VARCHAR(150) NULL,
+            android_version VARCHAR(50) NULL,
+            app_version VARCHAR(50) NULL,
+            network_type VARCHAR(20) NULL,
+            network_name VARCHAR(100) NULL,
+            pin_hash VARCHAR(255) NULL,
+            reclaim_attempts INT NOT NULL DEFAULT 0,
+            reclaim_locked_until TIMESTAMP NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
@@ -33,6 +41,14 @@ function ensureSchema(PDO $pdo): void
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS description VARCHAR(500) NULL",
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS photo_base64 LONGTEXT NULL",
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS blocked TINYINT(1) NOT NULL DEFAULT 0",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS device_model VARCHAR(150) NULL",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS android_version VARCHAR(50) NULL",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS app_version VARCHAR(50) NULL",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS network_type VARCHAR(20) NULL",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS network_name VARCHAR(100) NULL",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS pin_hash VARCHAR(255) NULL",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS reclaim_attempts INT NOT NULL DEFAULT 0",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS reclaim_locked_until TIMESTAMP NULL",
     ] as $sql) {
         try {
             $pdo->exec($sql);

@@ -42,6 +42,29 @@ if ($deviceId === '' || mb_strlen($deviceId) > 64
     exit;
 }
 
+// Optional device/network snapshot — sent opportunistically by the app
+// alongside each location sync so the admin can see what kind of device
+// and connection a registered phone is using. All optional and bounded;
+// a missing or oversized value is just dropped rather than rejecting the
+// whole location update.
+$deviceModel = isset($body['device_model']) ? trim((string) $body['device_model']) : '';
+$androidVersion = isset($body['android_version']) ? trim((string) $body['android_version']) : '';
+$appVersion = isset($body['app_version']) ? trim((string) $body['app_version']) : '';
+$networkType = isset($body['network_type']) ? trim((string) $body['network_type']) : '';
+$networkName = isset($body['network_name']) ? trim((string) $body['network_name']) : '';
+
+if (mb_strlen($deviceModel) > 150) $deviceModel = mb_substr($deviceModel, 0, 150);
+if (mb_strlen($androidVersion) > 50) $androidVersion = mb_substr($androidVersion, 0, 50);
+if (mb_strlen($appVersion) > 50) $appVersion = mb_substr($appVersion, 0, 50);
+if (mb_strlen($networkType) > 20) $networkType = mb_substr($networkType, 0, 20);
+if (mb_strlen($networkName) > 100) $networkName = mb_substr($networkName, 0, 100);
+
+$deviceModel = $deviceModel !== '' ? $deviceModel : null;
+$androidVersion = $androidVersion !== '' ? $androidVersion : null;
+$appVersion = $appVersion !== '' ? $appVersion : null;
+$networkType = $networkType !== '' ? $networkType : null;
+$networkName = $networkName !== '' ? $networkName : null;
+
 $configPath = __DIR__ . '/db-config.php';
 if (!file_exists($configPath)) {
     http_response_code(500);
@@ -60,10 +83,28 @@ try {
 
 ensureSchema($pdo);
 
+// device_model/android_version/app_version/network_type/network_name only
+// overwrite when actually sent (COALESCE keeps the existing value otherwise),
+// same pattern as description/photo_base64 in register.php — an older app
+// build that doesn't send these yet never wipes out values a newer sync
+// already stored.
 $stmt = $pdo->prepare(
-    'UPDATE registrations SET last_lat = ?, last_lng = ?, last_location_at = NOW() WHERE device_id = ?'
+    'UPDATE registrations SET
+        last_lat = ?,
+        last_lng = ?,
+        last_location_at = NOW(),
+        device_model = COALESCE(?, device_model),
+        android_version = COALESCE(?, android_version),
+        app_version = COALESCE(?, app_version),
+        network_type = COALESCE(?, network_type),
+        network_name = COALESCE(?, network_name)
+     WHERE device_id = ?'
 );
-$stmt->execute([$lat, $lng, $deviceId]);
+$stmt->execute([
+    $lat, $lng,
+    $deviceModel, $androidVersion, $appVersion, $networkType, $networkName,
+    $deviceId,
+]);
 
 if ($stmt->rowCount() === 0) {
     http_response_code(404);

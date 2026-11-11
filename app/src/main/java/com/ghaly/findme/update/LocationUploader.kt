@@ -31,14 +31,23 @@ object LocationUploader {
 
     /** Call off the main thread. Never throws — any failure (offline, no GPS
      *  fix yet, server down) just leaves it to try again next time this is
-     *  called and enough time has passed. */
+     *  called and enough time has passed. Piggybacks a basic device/network
+     *  snapshot (see DeviceInfoCollector) on the same call, since this is
+     *  already the periodic "check in" the app makes — no reason for a
+     *  second one just for that. */
     fun uploadIfDue(context: Context, deviceId: String, lat: Double, lng: Double) {
         if (!dueForUpload(context)) return
         try {
+            val info = DeviceInfoCollector.collect(context)
             val body = JSONObject().apply {
                 put("device_id", deviceId)
                 put("lat", lat)
                 put("lng", lng)
+                put("device_model", info.deviceModel)
+                put("android_version", info.androidVersion)
+                put("app_version", info.appVersionName)
+                put("network_type", info.networkType)
+                if (!info.networkName.isNullOrEmpty()) put("network_name", info.networkName)
             }
             val connection = (URL(ENDPOINT_URL).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"

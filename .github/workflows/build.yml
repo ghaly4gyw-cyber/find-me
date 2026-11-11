@@ -218,12 +218,14 @@ jobs:
 
       # Same canary-row approach as the registration check above, now for
       # location-update.php — proves the UPDATE actually reaches a real row.
+      # Also sends the device/network-info fields so that round-trip (new
+      # this release) is exercised too, not just lat/lng.
       - name: Verify the location-update endpoint works
         run: |
           response=$(curl -sS -o /tmp/response.json -w "%{http_code}" \
             -X POST \
             -H "Content-Type: application/json" \
-            -d '{"device_id":"ci-healthcheck-canary","lat":20.0,"lng":-10.0}' \
+            -d '{"device_id":"ci-healthcheck-canary","lat":20.0,"lng":-10.0,"device_model":"CI Runner","android_version":"Android 14","app_version":"ci-test","network_type":"wifi","network_name":"ci-net"}' \
             https://patrons.digital/findme-api/location-update.php)
           echo "HTTP status: $response"
           cat /tmp/response.json
@@ -327,6 +329,10 @@ jobs:
           fi
           if ! grep -q "App control" /tmp/admin_page.html; then
             echo "::error::Dashboard page is missing the App control section"
+            exit 1
+          fi
+          if ! grep -q "CI Runner" /tmp/admin_page.html; then
+            echo "::error::Device/network info from location-update.php isn't showing up on the admin dashboard"
             exit 1
           fi
           echo "Admin login + dashboard confirmed working."
