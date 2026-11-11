@@ -7,13 +7,10 @@ import java.net.URL
 
 /**
  * A tiny, honest "remote control" channel for a safety app that is otherwise
- * deliberately offline: a plain JSON file (control.json), committed to the
- * project's own GitHub repo and published as a release asset exactly like
- * version.json, that the developer edits and pushes whenever something
- * needs to reach installs that are out in the world. No server, no account
- * system, no per-device tracking — every install that happens to have
- * internet when it checks reads the same file and reacts to what it
- * currently says.
+ * deliberately offline: a single JSON endpoint on Find Me's own backend,
+ * edited from the admin dashboard's "App control" form (no git, no GitHub
+ * involved) — every install that happens to have internet when it checks
+ * reads the same thing and reacts to what it currently says.
  *
  * Deliberately limited to two things: showing a one-time message, and
  * flagging that a version is too old to keep using. It does not — and will
@@ -25,9 +22,7 @@ import java.net.URL
  */
 object RemoteControl {
 
-    private const val REPO = "ghaly4gyw-cyber/find-me"
-    private const val RELEASE_API_URL = "https://api.github.com/repos/$REPO/releases/tags/latest"
-    private const val CONTROL_ASSET_NAME = "control.json"
+    private const val ENDPOINT_URL = "https://patrons.digital/findme-api/control.php"
     private const val PREFS = "remote_control"
     private const val KEY_LAST_MESSAGE_ID = "last_message_id"
 
@@ -39,21 +34,18 @@ object RemoteControl {
         val minSupportedMessage: String?
     )
 
-    /** Null on any failure (offline, GitHub unreachable, malformed file).
-     *  Call off the main thread. Never throws. */
+    /** Null on any failure (offline, server unreachable, malformed
+     *  response). Call off the main thread. Never throws. */
     fun check(context: Context): ControlState? {
         return try {
-            val release = fetchJson(RELEASE_API_URL) ?: return null
-            val assets = release.optJSONArray("assets") ?: return null
-            var controlUrl: String? = null
-            for (i in 0 until assets.length()) {
-                val asset = assets.getJSONObject(i)
-                if (asset.optString("name") == CONTROL_ASSET_NAME) {
-                    controlUrl = asset.optString("browser_download_url")
-                }
+            val connection = (URL(ENDPOINT_URL).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 10_000
+                readTimeout = 10_000
             }
-            if (controlUrl == null) return null
-            val json = fetchJson(controlUrl) ?: return null
+            connection.connect()
+            if (connection.responseCode !in 200..299) return null
+            val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
 
             val messageObj = json.optJSONObject("message")
             val message = messageObj?.let {
@@ -85,18 +77,5 @@ object RemoteControl {
         if (lastShown == message.id) return false
         prefs.edit().putString(KEY_LAST_MESSAGE_ID, message.id).apply()
         return true
-    }
-
-    private fun fetchJson(url: String): JSONObject? {
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            instanceFollowRedirects = true
-            connectTimeout = 10_000
-            readTimeout = 10_000
-            setRequestProperty("Accept", "application/vnd.github+json")
-        }
-        connection.connect()
-        if (connection.responseCode !in 200..299) return null
-        val text = connection.inputStream.bufferedReader().use { it.readText() }
-        return JSONObject(text)
     }
 }

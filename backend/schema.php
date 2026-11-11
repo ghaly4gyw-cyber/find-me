@@ -68,6 +68,29 @@ function ensureSchema(PDO $pdo): void
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     );
+
+    // Single-row table (id always 1) holding the admin-editable remote
+    // control settings — replaces the old "edit control.json and push to
+    // GitHub" workflow with a form on the dashboard. message_id is
+    // regenerated (see admin/control-save.php) every time the one-time
+    // message text actually changes, which is what makes it show again on
+    // devices that already saw an earlier one. min_supported_version = 0
+    // means no forced update is in effect.
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS app_control (
+            id INT PRIMARY KEY,
+            message_id VARCHAR(64) NULL,
+            message_title VARCHAR(200) NULL,
+            message_body VARCHAR(1000) NULL,
+            min_supported_version BIGINT NOT NULL DEFAULT 0,
+            min_supported_message VARCHAR(500) NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+    $pdo->exec(
+        "INSERT INTO app_control (id, min_supported_version) VALUES (1, 0)
+         ON DUPLICATE KEY UPDATE id = id"
+    );
 }
 
 /** Shared by every endpoint that needs the database — one place to change

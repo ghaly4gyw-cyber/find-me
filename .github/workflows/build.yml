@@ -275,6 +275,22 @@ jobs:
           fi
           echo "Feedback endpoint confirmed working."
 
+      # control.php is what RemoteControl.kt now reads instead of GitHub's
+      # control.json — a plain GET, no auth, same as the old public file.
+      # Confirms it responds with the shape the app expects (defaults to
+      # min_supported_version 0 / no message on a fresh row).
+      - name: Verify the control endpoint responds
+        run: |
+          response=$(curl -sS -o /tmp/response.json -w "%{http_code}" https://patrons.digital/findme-api/control.php)
+          echo "HTTP status: $response"
+          cat /tmp/response.json
+          echo
+          if [ "$response" != "200" ] || ! grep -q '"min_supported_version"' /tmp/response.json; then
+            echo "::error::Control endpoint didn't respond as expected"
+            exit 1
+          fi
+          echo "Control endpoint confirmed working."
+
       # Full login round-trip: posts the real admin password, follows the
       # redirect, and confirms the resulting page is actually the logged-in
       # dashboard (not another login form), lists the canary user, and
@@ -307,6 +323,10 @@ jobs:
           fi
           if ! grep -q "Suggestions from users" /tmp/admin_page.html; then
             echo "::error::Dashboard page is missing the feedback section"
+            exit 1
+          fi
+          if ! grep -q "App control" /tmp/admin_page.html; then
+            echo "::error::Dashboard page is missing the App control section"
             exit 1
           fi
           echo "Admin login + dashboard confirmed working."

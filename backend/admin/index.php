@@ -42,6 +42,7 @@ function formatDuration(int $ms): string
 
 $users = [];
 $feedback = [];
+$appControl = null;
 $error = null;
 $dbConfigPath = __DIR__ . '/../db-config.php';
 
@@ -63,8 +64,24 @@ if (!file_exists($dbConfigPath)) {
         $feedback = $pdo->query(
             'SELECT device_id, name, message, created_at FROM feedback ORDER BY created_at DESC LIMIT 200'
         )->fetchAll(PDO::FETCH_ASSOC);
+        $appControl = $pdo->query(
+            'SELECT message_title, message_body, min_supported_version, min_supported_message FROM app_control WHERE id = 1'
+        )->fetch(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         $error = 'Could not reach the database.';
+    }
+}
+
+// Read-only reference for the form below — the version the public download
+// page is currently serving (written by the deploy-backend CI job), so
+// Ghaly knows which version number means "everyone currently on the latest
+// build" when setting a forced-update floor.
+$publishedVersion = null;
+$publishedVersionPath = __DIR__ . '/../download/version.json';
+if (file_exists($publishedVersionPath)) {
+    $decoded = json_decode((string) file_get_contents($publishedVersionPath), true);
+    if (is_array($decoded)) {
+        $publishedVersion = $decoded;
     }
 }
 
@@ -214,10 +231,15 @@ $topFeatures = array_slice($topFeatures, 0, 10);
 <div class="top">
   <h1>Find Me <span>— Admin</span></h1>
   <div>
-    <a class="details-link" href="../download/" target="_blank" rel="noopener" style="margin-top: 0; margin-right: 8px;">⬇️ Download page</a>
+    <a class="details-link" href="https://github.com/ghaly4gyw-cyber/find-me/releases/download/latest/app-debug.apk" style="margin-top: 0; margin-right: 8px;" download>⬇️ Download APK</a>
+    <a class="details-link" href="../download/" target="_blank" rel="noopener" style="margin-top: 0; margin-right: 8px;">🔗 Download page</a>
     <a class="logout" href="logout.php">Log out</a>
   </div>
 </div>
+
+<?php if (isset($_GET['control_saved'])): ?>
+  <p style="color: var(--accent-2); background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 1rem; margin-bottom: 1rem;">✅ Saved — installs will pick this up next time they're online.</p>
+<?php endif; ?>
 
 <?php if ($error): ?>
   <p style="color: var(--danger);"><?= htmlspecialchars($error) ?></p>
@@ -229,6 +251,42 @@ $topFeatures = array_slice($topFeatures, 0, 10);
     <div class="stat"><div class="n"><?= $totalAppOpens ?></div><div class="l">App opens (all users)</div></div>
     <div class="stat"><div class="n"><?= htmlspecialchars(formatDuration($totalMsAcrossUsers)) ?></div><div class="l">Time in app (all users)</div></div>
     <div class="stat"><div class="n"><?= count($feedback) ?></div><div class="l">Suggestions received</div></div>
+  </div>
+
+  <div class="section-title">App control</div>
+  <div class="panel-box">
+    <p class="muted" style="margin: 0 0 1rem; font-size: 0.85rem;">
+      <?php if ($publishedVersion): ?>
+        Currently published: version <?= htmlspecialchars((string) ($publishedVersion['versionName'] ?? '?')) ?>
+        (code <?= htmlspecialchars((string) ($publishedVersion['versionCode'] ?? '?')) ?>).
+      <?php endif; ?>
+      This replaces editing control.json on GitHub — anything saved here reaches every installed copy the next time it's online.
+    </p>
+    <form method="post" action="control-save.php">
+      <div style="margin-bottom: 1rem;">
+        <label style="display:block; font-size:0.85rem; color: var(--muted); margin-bottom: 4px;">One-time message (shown once per device — leave both fields blank to send nothing)</label>
+        <input type="text" name="message_title" placeholder="Title" maxlength="200"
+               value="<?= htmlspecialchars($appControl['message_title'] ?? '') ?>"
+               style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); margin-bottom:6px;">
+        <textarea name="message_body" placeholder="Body" maxlength="1000" rows="2"
+                  style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); resize:vertical;"><?= htmlspecialchars($appControl['message_body'] ?? '') ?></textarea>
+      </div>
+      <div style="margin-bottom: 1rem; display:flex; gap:1rem; flex-wrap:wrap;">
+        <div style="flex:1; min-width:160px;">
+          <label style="display:block; font-size:0.85rem; color: var(--muted); margin-bottom: 4px;">Force update at version code (0 = off — never blocks)</label>
+          <input type="number" name="min_supported_version" min="0" step="1"
+                 value="<?= htmlspecialchars((string) ($appControl['min_supported_version'] ?? 0)) ?>"
+                 style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel-2); color:var(--text);">
+        </div>
+        <div style="flex:2; min-width:220px;">
+          <label style="display:block; font-size:0.85rem; color: var(--muted); margin-bottom: 4px;">Forced-update message (shown on the lock screen)</label>
+          <input type="text" name="min_supported_message" maxlength="500"
+                 value="<?= htmlspecialchars($appControl['min_supported_message'] ?? '') ?>"
+                 style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel-2); color:var(--text);">
+        </div>
+      </div>
+      <button type="submit" style="padding:10px 20px; border-radius:10px; border:none; background:var(--accent); color:#06130f; font-weight:700; cursor:pointer;">Save</button>
+    </form>
   </div>
 
   <div class="section-title">Most used features</div>
