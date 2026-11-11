@@ -397,5 +397,5 @@
     <string name="activation_approved_toast">%1$s activé</string>
     <string name="activation_rejected_toast">%1$s rejeté</string>
     <string name="kill_switch_gate_title">Application temporairement désactivée</string>
-    <string name="kill_switch_gate_default_message">L'application a été temporairement désactivée. Contactez les administrateurs pour plus d'informations.</string>
+    <string name="kill_switch_gate_default_message">L\'application a été temporairement désactivée. Contactez les administrateurs pour plus d\'informations.</string>
 </resources>
