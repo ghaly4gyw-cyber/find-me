@@ -32,6 +32,7 @@ import com.ghaly.findme.mesh.MeshManager
 import com.ghaly.findme.mesh.Permissions
 import com.ghaly.findme.mesh.ProfileStore
 import com.ghaly.findme.export.LedgerExport
+import com.ghaly.findme.update.RemoteControl
 import com.ghaly.findme.update.UpdateChecker
 import com.ghaly.findme.update.UpdateInstaller
 import com.ghaly.findme.util.AnrWatchdog
@@ -273,6 +274,7 @@ class MainActivity : AppCompatActivity() {
 
         refreshPermissionState()
         checkForUpdates(manual = false)
+        checkRemoteControl()
 
         lifecycleScope.launch {
             while (true) {
@@ -554,7 +556,8 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.tools_calculator),
             getString(R.string.tools_accounts),
             getString(R.string.tools_check_for_updates),
-            getString(R.string.tools_share_debug_log)
+            getString(R.string.tools_share_debug_log),
+            getString(R.string.tools_about)
         )
         AlertDialog.Builder(this)
             .setTitle(R.string.tools_dialog_title)
@@ -565,6 +568,10 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (which == 4) {
                     shareDebugLog()
+                    return@setItems
+                }
+                if (which == 5) {
+                    showAboutDialog()
                     return@setItems
                 }
                 val fragment = when (which) {
@@ -627,6 +634,63 @@ class MainActivity : AppCompatActivity() {
                 .setNegativeButton(R.string.update_later_button, null)
                 .show()
         }
+    }
+
+    /** Reads control.json (see RemoteControl) whenever the phone happens to
+     *  have internet — same quiet, best-effort spirit as the update check.
+     *  Never blocks anything: a message shows once and can just be
+     *  dismissed, and an outdated-version notice only asks to update, with
+     *  a "Later" button right next to it. Nothing here can touch the mesh,
+     *  location, or any other safety feature. */
+    private fun checkRemoteControl() {
+        if (!hasActiveNetwork()) return
+        lifecycleScope.launch {
+            val state = withContext(Dispatchers.IO) { RemoteControl.check(this@MainActivity) } ?: return@launch
+
+            state.message?.let { msg ->
+                if (RemoteControl.shouldShowMessage(this@MainActivity, msg)) {
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle(msg.title.ifEmpty { getString(R.string.app_name) })
+                        .setMessage(msg.body)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                }
+            }
+
+            if (state.minSupportedVersionCode > 0 &&
+                UpdateChecker.currentVersionCode(this@MainActivity) < state.minSupportedVersionCode
+            ) {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle(R.string.remote_control_update_required_title)
+                    .setMessage(state.minSupportedMessage ?: getString(R.string.remote_control_update_required_default))
+                    .setPositiveButton(R.string.remote_control_check_now_button) { _, _ -> checkForUpdates(manual = true) }
+                    .setNegativeButton(R.string.update_later_button, null)
+                    .show()
+            }
+        }
+    }
+
+    /** "Made by GYW" with a link to his own site — a small, honest credit,
+     *  not a dependency: the app works exactly the same whether or not
+     *  anyone ever opens it. */
+    private fun showAboutDialog() {
+        val versionName = try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
+        } catch (e: Exception) {
+            "?"
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.about_dialog_title)
+            .setMessage(getString(R.string.about_dialog_body, versionName))
+            .setPositiveButton(R.string.about_visit_website_button) { _, _ ->
+                try {
+                    startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://md-ghaly.com")))
+                } catch (e: Exception) {
+                    // no browser available — nothing more useful to do here
+                }
+            }
+            .setNegativeButton(R.string.about_close_button, null)
+            .show()
     }
 
     private fun startUpdateDownload(update: UpdateChecker.UpdateInfo) {

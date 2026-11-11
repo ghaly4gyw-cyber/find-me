@@ -1,0 +1,6 @@
+{
+  "_comment": "Edit and push this file to reach installed copies of Find Me the next time they have internet. 'message' shows once per device (change its id to show a new one; set it to null to show nothing). 'min_supported_version' nudges anyone below that versionCode to update (0 = no requirement) — it never blocks the app, only asks.",
+  "message": null,
+  "min_supported_version": 0,
+  "min_supported_message": null
+}

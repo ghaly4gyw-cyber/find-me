@@ -177,6 +177,14 @@
     <string name="update_downloading_message">This won\'t take long. The app will ask you to install once it\'s done.</string>
     <string name="update_download_failed">Couldn\'t download the update. Check your connection and try again.</string>
     <string name="update_allow_install_toast">Turn on \"Allow from this source\" for Find Me, then come back.</string>
+    <string name="tools_about">ℹ️ About</string>
+    <string name="about_dialog_title">About Find Me</string>
+    <string name="about_dialog_body">Version %s\n\nMade by GYW\nmd-ghaly.com</string>
+    <string name="about_visit_website_button">Visit website</string>
+    <string name="about_close_button">Close</string>
+    <string name="remote_control_update_required_title">Update needed</string>
+    <string name="remote_control_update_required_default">This version is outdated. Please update to keep using Find Me.</string>
+    <string name="remote_control_check_now_button">Check now</string>
 
     <string name="crash_dialog_title">The app crashed last time — here\'s why</string>
     <string name="crash_dialog_copy_button">Copy</string>
