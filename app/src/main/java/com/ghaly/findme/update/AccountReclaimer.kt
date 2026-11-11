@@ -71,6 +71,9 @@ object AccountReclaimer {
                     activated = json.optBoolean("activated", false),
                     isAdmin = json.optBoolean("is_admin", false)
                 )
+                json.optJSONArray("activation_codes")?.let { codes ->
+                    com.ghaly.findme.util.ActivationCodes.updateKnownCodes(context, (0 until codes.length()).map { codes.optString(it, "") })
+                }
                 restoreBackup(json.optString("backup_json", "").ifEmpty { null })
                 return Result.Success(name, phone)
             }

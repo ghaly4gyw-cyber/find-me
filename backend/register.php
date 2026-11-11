@@ -135,4 +135,5 @@ echo json_encode([
     'contact_code' => $contactCode,
     'activated' => $activated,
     'is_admin' => isAdminPhone($phone),
+    'activation_codes' => currentActivationCodes($pdo),
 ]);

@@ -1112,7 +1112,7 @@ class MainActivity : AppCompatActivity() {
 
         view.findViewById<Button>(R.id.activationCodeSubmitButton).setOnClickListener {
             val code = codeInput.text?.toString().orEmpty()
-            if (ActivationCodes.isValid(code)) {
+            if (ActivationCodes.isValid(this, code)) {
                 ProfileStore.markActivatedLocally(this)
                 val phone = ProfileStore.get(this).phone
                 if (phone != null) {

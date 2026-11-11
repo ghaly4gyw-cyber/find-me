@@ -72,9 +72,25 @@ if ($action === 'add_admin') {
         exit;
     }
 
+    // Optional initial offline code — same format rule as code-save.php,
+    // checked the same way so a duplicate can't slip in through this form.
+    $code = strtoupper(trim((string) ($_POST['code'] ?? '')));
+    if ($code !== '') {
+        if (!preg_match('/^[A-Z0-9]{6,16}$/', $code)) {
+            header('Location: index.php?admin_error=' . rawurlencode('Offline code must be 6-16 letters/numbers, or left blank.'));
+            exit;
+        }
+        $codeTaken = $pdo->prepare('SELECT 1 FROM admin_accounts WHERE offline_code = ?');
+        $codeTaken->execute([$code]);
+        if ($codeTaken->fetchColumn()) {
+            header('Location: index.php?admin_error=' . rawurlencode('That offline code is already in use by another admin.'));
+            exit;
+        }
+    }
+
     $hash = password_hash($password, PASSWORD_DEFAULT);
-    $pdo->prepare('INSERT INTO admin_accounts (username, name, password_hash, role) VALUES (?, ?, ?, ?)')
-        ->execute([$username, $name, $hash, $role]);
+    $pdo->prepare('INSERT INTO admin_accounts (username, name, password_hash, role, offline_code) VALUES (?, ?, ?, ?, ?)')
+        ->execute([$username, $name, $hash, $role, $code !== '' ? $code : null]);
     logAdminAction($pdo, $admin, 'add_admin', "{$username} ({$role})");
     header('Location: index.php?control_saved=1');
     exit;

@@ -68,6 +68,7 @@ $pendingActivations = [];
 $adminAccounts = [];
 $auditLog = [];
 $lastKillSwitchChange = null;
+$ownAccount = null;
 $error = null;
 $dbConfigPath = __DIR__ . '/../db-config.php';
 
@@ -101,7 +102,7 @@ if (!file_exists($dbConfigPath)) {
             "SELECT id, phone, name, device_id, requested_at FROM activation_requests WHERE status = 'pending' ORDER BY requested_at ASC"
         )->fetchAll(PDO::FETCH_ASSOC);
         $adminAccounts = $pdo->query(
-            'SELECT username, name, role, created_at FROM admin_accounts ORDER BY created_at ASC'
+            'SELECT username, name, role, offline_code, created_at FROM admin_accounts ORDER BY created_at ASC'
         )->fetchAll(PDO::FETCH_ASSOC);
         $auditLog = $pdo->query(
             'SELECT admin_name, action, detail, created_at FROM admin_audit_log ORDER BY id DESC LIMIT 30'
@@ -109,6 +110,13 @@ if (!file_exists($dbConfigPath)) {
         $lastKillSwitchChange = $pdo->query(
             "SELECT admin_name, action, created_at FROM admin_audit_log WHERE action IN ('kill_switch_on', 'kill_switch_off') ORDER BY id DESC LIMIT 1"
         )->fetch(PDO::FETCH_ASSOC);
+        $ownAccount = null;
+        foreach ($adminAccounts as $a) {
+            if ($a['username'] === ($admin['username'] ?? '')) {
+                $ownAccount = $a;
+                break;
+            }
+        }
     } catch (PDOException $e) {
         $error = 'Could not reach the database.';
     }
@@ -333,6 +341,9 @@ $topFeatures = array_slice($topFeatures, 0, 10);
   .audit-row:last-child { border-bottom: none; }
   .audit-row .who { color: var(--accent-2); }
   .audit-row .when { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+
+  .own-code-box { background: var(--panel-2); border: 1px dashed var(--accent-2); border-radius: 10px; padding: 0.8rem 1rem; display: inline-block; }
+  .own-code-box .code { font-family: monospace; font-size: 1.2rem; font-weight: 700; color: var(--accent-2); letter-spacing: 1px; }
 </style>
 </head>
 <body x-data="{ search: '', selected: null }">
@@ -375,6 +386,20 @@ $topFeatures = array_slice($topFeatures, 0, 10);
 
   <div class="section-title">Your account</div>
   <div class="panel-box">
+    <p class="muted" style="margin: 0 0 0.6rem; font-size: 0.85rem;">Your offline activation code — entering this in the app unlocks it instantly, no internet needed. Share it only with someone you personally vouch for.</p>
+    <div style="margin-bottom: 1.2rem;">
+      <?php if (!empty($ownAccount['offline_code'])): ?>
+        <div class="own-code-box" style="margin-bottom: 0.8rem;"><span class="code"><?= htmlspecialchars($ownAccount['offline_code']) ?></span></div>
+      <?php else: ?>
+        <p class="pending-badge" style="margin-bottom: 0.8rem; display: inline-block;">No code set yet</p>
+      <?php endif; ?>
+      <form method="post" action="code-save.php" class="mini-form"
+            onsubmit="return confirm('Changing your code won\'t reach any device until it\'s next online, and a device that already has the old code may keep accepting it until then. Continue?');">
+        <input type="hidden" name="username" value="<?= htmlspecialchars($admin['username']) ?>">
+        <input type="text" name="code" placeholder="New code (6-16 letters/numbers)" pattern="[A-Za-z0-9]{6,16}" required style="text-transform:uppercase;">
+        <button type="submit">Change my code</button>
+      </form>
+    </div>
     <form method="post" action="admin-save.php" class="mini-form">
       <input type="hidden" name="action" value="reset_password">
       <input type="hidden" name="username" value="<?= htmlspecialchars($admin['username']) ?>">
@@ -489,14 +514,26 @@ $topFeatures = array_slice($topFeatures, 0, 10);
   <div class="section-title">Manage admins</div>
   <div class="panel-box">
     <table class="admin-table" style="margin-bottom: 1.2rem;">
-      <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Added</th><th>Reset password</th></tr></thead>
+      <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Offline code</th><th>Reset password</th></tr></thead>
       <tbody>
         <?php foreach ($adminAccounts as $a): ?>
         <tr>
           <td><?= htmlspecialchars($a['username']) ?></td>
           <td><?= htmlspecialchars($a['name']) ?></td>
           <td><span class="role-badge <?= $a['role'] === 'super_admin' ? 'super' : 'admin' ?>"><?= $a['role'] === 'super_admin' ? 'Super admin' : 'Admin' ?></span></td>
-          <td class="muted"><?= htmlspecialchars($a['created_at']) ?></td>
+          <td>
+            <?php if (!empty($a['offline_code'])): ?>
+              <span style="font-family:monospace; color: var(--accent-2);"><?= htmlspecialchars($a['offline_code']) ?></span><br>
+            <?php else: ?>
+              <span class="muted">none set</span><br>
+            <?php endif; ?>
+            <form method="post" action="code-save.php" class="mini-form" style="display:flex; align-items:center; margin-top:4px;"
+                  onsubmit="return confirm('Changing this won\'t reach any device until it\'s next online, and a device with the old code may keep accepting it until then. Continue?');">
+              <input type="hidden" name="username" value="<?= htmlspecialchars($a['username']) ?>">
+              <input type="text" name="code" placeholder="New code" pattern="[A-Za-z0-9]{6,16}" required style="margin-bottom:0; width:120px; text-transform:uppercase;">
+              <button type="submit" class="small-btn">Set</button>
+            </form>
+          </td>
           <td>
             <form method="post" action="admin-save.php" class="mini-form" style="display:flex; align-items:center;">
               <input type="hidden" name="action" value="reset_password">
@@ -509,12 +546,13 @@ $topFeatures = array_slice($topFeatures, 0, 10);
         <?php endforeach; ?>
       </tbody>
     </table>
-    <p class="muted" style="font-size: 0.8rem; margin-bottom: 0.6rem;">Add a new admin — they log in with this username and password; "Admin" can block/unblock users and approve/reject activations; "Super admin" also gets the kill switch, app control, and this screen.</p>
+    <p class="muted" style="font-size: 0.8rem; margin-bottom: 0.6rem;">Add a new admin — they log in with this username and password; "Admin" can block/unblock users and approve/reject activations; "Super admin" also gets the kill switch, app control, and this screen. An initial offline code is optional — you can always set or change it afterward above.</p>
     <form method="post" action="admin-save.php" class="mini-form">
       <input type="hidden" name="action" value="add_admin">
       <input type="text" name="username" placeholder="username" pattern="[a-z0-9_]{3,32}" required>
       <input type="text" name="name" placeholder="Full name" maxlength="100" required>
       <input type="password" name="password" placeholder="Password (min 8 chars)" minlength="8" required>
+      <input type="text" name="code" placeholder="Offline code (optional)" pattern="[A-Za-z0-9]{6,16}" style="text-transform:uppercase;">
       <select name="role">
         <option value="admin">Admin</option>
         <option value="super_admin">Super admin</option>

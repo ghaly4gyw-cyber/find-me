@@ -69,10 +69,13 @@ function ensureInitialAdmin(PDO $pdo): void
     }
     $config = adminConfig();
     $hash = password_hash((string) $config['password'], PASSWORD_DEFAULT);
+    // Seeded with the same code the Android app originally shipped with
+    // (YAKMP5MS), so this move to a database-backed, panel-changeable code
+    // doesn't itself change what already works on devices on day one.
     $stmt = $pdo->prepare(
-        'INSERT INTO admin_accounts (username, name, password_hash, role) VALUES (?, ?, ?, ?)'
+        'INSERT INTO admin_accounts (username, name, password_hash, role, offline_code) VALUES (?, ?, ?, ?, ?)'
     );
-    $stmt->execute(['ghaly', 'Mohamed Ghaly', $hash, 'super_admin']);
+    $stmt->execute(['ghaly', 'Mohamed Ghaly', $hash, 'super_admin', 'YAKMP5MS']);
 }
 
 /** One line in admin_audit_log per panel action that changes something —

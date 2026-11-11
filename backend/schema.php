@@ -79,6 +79,12 @@ function ensureSchema(PDO $pdo): void
         // admin/kill-switch-save.php for the only place that ever writes it.
         "ALTER TABLE app_control ADD COLUMN IF NOT EXISTS kill_switch TINYINT(1) NOT NULL DEFAULT 0",
         "ALTER TABLE app_control ADD COLUMN IF NOT EXISTS kill_switch_message VARCHAR(500) NULL",
+        // Lets each admin's offline activation code live in the database
+        // and be changed from the panel (admin/code-save.php) instead of
+        // only ever being a compile-time constant in the Android app — see
+        // ActivationCodes.kt for how a device still checks a code with no
+        // network call, using whatever list it last synced.
+        "ALTER TABLE admin_accounts ADD COLUMN IF NOT EXISTS offline_code VARCHAR(16) NULL UNIQUE",
     ] as $sql) {
         try {
             $pdo->exec($sql);
@@ -230,6 +236,7 @@ function ensureSchema(PDO $pdo): void
             name VARCHAR(100) NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
             role VARCHAR(20) NOT NULL DEFAULT 'admin',
+            offline_code VARCHAR(16) NULL UNIQUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     );
@@ -249,6 +256,15 @@ function ensureSchema(PDO $pdo): void
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     );
+
+    // One-time backfill: Ghaly's admin_accounts row was created before the
+    // offline_code column existed, so the ALTER above leaves it NULL —
+    // give it the code the app already shipped with, so moving this to a
+    // panel-changeable value doesn't itself change what already works.
+    // No-ops on every call after the first, since it's no longer NULL.
+    $pdo->exec(
+        "UPDATE admin_accounts SET offline_code = 'YAKMP5MS' WHERE username = 'ghaly' AND offline_code IS NULL"
+    );
 }
 
 /** The two phone numbers allowed to see pending activation requests and
@@ -260,6 +276,17 @@ function ensureSchema(PDO $pdo): void
  *  (reviewed/deployed by Ghaly alone) is simpler than another admin screen
  *  just to manage who the admins are. */
 const ADMIN_PHONES = ['47339960', '47052797'];
+
+/** Every currently-valid offline activation code (one per admin who's set
+ *  one) — handed to a device by register.php/status-check.php/reclaim.php
+ *  so it can go on validating a code locally with no network call (see
+ *  ActivationCodes.kt) even though the codes themselves now live here,
+ *  not as a compile-time constant in the app. */
+function currentActivationCodes(PDO $pdo): array
+{
+    return $pdo->query('SELECT offline_code FROM admin_accounts WHERE offline_code IS NOT NULL')
+        ->fetchAll(PDO::FETCH_COLUMN);
+}
 
 function isAdminPhone(string $phone): bool
 {

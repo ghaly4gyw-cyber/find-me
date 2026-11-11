@@ -136,4 +136,5 @@ echo json_encode([
     // Osama/Ghaly again. See ProfileStore.applyActivationStatus.
     'activated' => (bool) $row['activated'],
     'is_admin' => isAdminPhone($phone),
+    'activation_codes' => currentActivationCodes($pdo),
 ]);

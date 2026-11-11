@@ -2,6 +2,7 @@ package com.ghaly.findme.update
 
 import android.content.Context
 import com.ghaly.findme.mesh.ProfileStore
+import com.ghaly.findme.util.ActivationCodes
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -79,6 +80,9 @@ object BlockChecker {
                 activated = json.optBoolean("activated", false),
                 isAdmin = json.optBoolean("is_admin", false)
             )
+            json.optJSONArray("activation_codes")?.let { codes ->
+                ActivationCodes.updateKnownCodes(context, (0 until codes.length()).map { codes.optString(it, "") })
+            }
         } catch (e: Exception) {
             // Offline or server down — cached state (if any) is left as-is.
         }

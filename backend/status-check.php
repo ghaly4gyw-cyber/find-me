@@ -74,4 +74,5 @@ echo json_encode([
     'still_registered' => $row !== false,
     'activated' => $row !== false && (bool) $row['activated'],
     'is_admin' => $row !== false && isAdminPhone($row['phone']),
+    'activation_codes' => currentActivationCodes($pdo),
 ]);
