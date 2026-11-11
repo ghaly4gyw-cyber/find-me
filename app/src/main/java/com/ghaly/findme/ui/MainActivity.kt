@@ -408,6 +408,12 @@ class MainActivity : AppCompatActivity() {
                 startUpdateDownload(update)
             }
         }
+
+        // Re-checked on every return to the app too, not just on a fresh
+        // launch — otherwise someone who opened the app offline, then
+        // regained signal while it stayed in the background, would only
+        // see the forced-update gate the next time the process restarts.
+        checkRemoteControl()
     }
 
     override fun onStop() {
@@ -654,11 +660,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Reads control.json (see RemoteControl) whenever the phone happens to
-     *  have internet — same quiet, best-effort spirit as the update check.
-     *  Never blocks anything: a message shows once and can just be
-     *  dismissed, and an outdated-version notice only asks to update, with
-     *  a "Later" button right next to it. Nothing here can touch the mesh,
-     *  location, or any other safety feature. */
+     *  have internet. A plain message still shows once and can just be
+     *  dismissed — but a version below [ControlState.minSupportedVersionCode]
+     *  is now a hard gate (see [showForcedUpdateGate]), not a nudge: no
+     *  "Later" button, not dismissible, shown again every time the app is
+     *  opened or returned to until the update actually completes. This is a
+     *  deliberate, explicit override of this file's own earlier "nothing
+     *  here ever blocks" design, made at Ghaly's direct, repeated request —
+     *  he was told plainly that someone who reaches just enough signal to
+     *  see the gate but not enough to finish the download will have no
+     *  working safety app (mesh/SOS/location, all of it) until they do, and
+     *  chose full control over that risk anyway. Still true regardless:
+     *  nothing here can touch the mesh, location, or any other safety
+     *  feature directly — this only ever gates the UI in front of them. */
     private fun checkRemoteControl() {
         if (!hasActiveNetwork()) return
         lifecycleScope.launch {
@@ -677,12 +691,37 @@ class MainActivity : AppCompatActivity() {
             if (state.minSupportedVersionCode > 0 &&
                 UpdateChecker.currentVersionCode(this@MainActivity) < state.minSupportedVersionCode
             ) {
-                AlertDialog.Builder(this@MainActivity)
-                    .setTitle(R.string.remote_control_update_required_title)
-                    .setMessage(state.minSupportedMessage ?: getString(R.string.remote_control_update_required_default))
-                    .setPositiveButton(R.string.remote_control_check_now_button) { _, _ -> checkForUpdates(manual = true) }
-                    .setNegativeButton(R.string.update_later_button, null)
-                    .show()
+                showForcedUpdateGate(state.minSupportedMessage)
+            }
+        }
+    }
+
+    /** The hard update gate itself: not cancelable, no negative button, no
+     *  way to reach the UI behind it. Tapping the one button fetches the
+     *  real release info and goes straight into the same download/install
+     *  flow as a manual update check — the gate dialog only dismisses once
+     *  that's actually underway, not on tap. If the download can't start
+     *  (lost signal again in the meantime), the button re-enables so they
+     *  can retry rather than getting stuck on a dead button. */
+    private fun showForcedUpdateGate(message: String?) {
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.remote_control_update_required_title)
+            .setMessage(message ?: getString(R.string.remote_control_update_required_default))
+            .setCancelable(false)
+            .setPositiveButton(R.string.remote_control_check_now_button, null)
+            .show()
+        dialog.setCanceledOnTouchOutside(false)
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { button ->
+            button.isEnabled = false
+            lifecycleScope.launch {
+                val update = withContext(Dispatchers.IO) { UpdateChecker.check(this@MainActivity) }
+                if (update == null) {
+                    Toast.makeText(this@MainActivity, R.string.update_no_internet, Toast.LENGTH_SHORT).show()
+                    button.isEnabled = true
+                    return@launch
+                }
+                dialog.dismiss()
+                startUpdateDownload(update)
             }
         }
     }
