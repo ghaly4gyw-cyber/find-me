@@ -16,6 +16,8 @@ import com.ghaly.findme.model.LedgerEntry
 import com.ghaly.findme.model.ListingKind
 import com.ghaly.findme.model.MarketListing
 import com.ghaly.findme.model.Note
+import com.ghaly.findme.model.OnlineContact
+import com.ghaly.findme.model.OnlineMessage
 import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.model.Post
 import com.ghaly.findme.model.PostComment
@@ -443,6 +445,81 @@ class NoteAdapter(private val onLongClick: (Note) -> Unit = {}) : RecyclerView.A
         holder.text.text = n.text
         holder.time.text = timeAgo(holder.time.context, n.ts)
         holder.root.setOnLongClickListener { onLongClick(n); true }
+    }
+}
+
+class OnlineContactAdapter(
+    private val onClick: (OnlineContact) -> Unit = {},
+    private val onLongClick: (OnlineContact) -> Unit = {}
+) : RecyclerView.Adapter<OnlineContactAdapter.VH>() {
+    var items: List<OnlineContact> = emptyList()
+        set(value) {
+            field = value.sortedWith(compareByDescending<OnlineContact> { it.online }.thenBy { it.name.lowercase(Locale.US) })
+            notifyDataSetChanged()
+        }
+
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val root: View = v
+        val name: android.widget.TextView = v.findViewById(R.id.onlineContactName)
+        val status: android.widget.TextView = v.findViewById(R.id.onlineContactStatus)
+        val dot: View = v.findViewById(R.id.onlineContactDot)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_online_contact, parent, false)
+        return VH(v)
+    }
+
+    override fun getItemCount() = items.size
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val c = items[position]
+        holder.name.text = c.name
+        val context = holder.status.context
+        holder.status.text = when {
+            c.online -> context.getString(R.string.online_status_online)
+            c.lastSeenSecondsAgo == null -> context.getString(R.string.online_status_unknown)
+            c.lastSeenSecondsAgo < 60 -> context.getString(R.string.online_status_offline)
+            c.lastSeenSecondsAgo < 3600 -> context.getString(R.string.online_status_last_seen_min, c.lastSeenSecondsAgo / 60)
+            else -> context.getString(R.string.online_status_last_seen_hr, c.lastSeenSecondsAgo / 3600)
+        }
+        holder.dot.background = context.getDrawable(
+            if (c.online) R.drawable.bg_online_dot_on else R.drawable.bg_online_dot_off
+        )
+        holder.root.setOnClickListener { onClick(c) }
+        holder.root.setOnLongClickListener { onLongClick(c); true }
+    }
+}
+
+class OnlineMessageAdapter : RecyclerView.Adapter<OnlineMessageAdapter.VH>() {
+    var items: List<OnlineMessage> = emptyList()
+        set(value) {
+            field = value.sortedBy { it.ts }
+            notifyDataSetChanged()
+        }
+
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val row: View = v.findViewById(R.id.onlineBubbleRow)
+        val text: android.widget.TextView = v.findViewById(R.id.onlineMessageText)
+        val time: android.widget.TextView = v.findViewById(R.id.onlineMessageTime)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_online_message, parent, false)
+        return VH(v)
+    }
+
+    override fun getItemCount() = items.size
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val m = items[position]
+        holder.text.text = m.body
+        holder.time.text = timeAgo(holder.time.context, m.ts)
+        // Same absolute-Gravity approach as ChatAdapter — see its comment for why.
+        (holder.row as android.widget.LinearLayout).gravity =
+            if (m.mine) android.view.Gravity.RIGHT else android.view.Gravity.LEFT
     }
 }
 

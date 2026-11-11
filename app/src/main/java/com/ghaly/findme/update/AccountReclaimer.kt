@@ -4,6 +4,7 @@ import android.content.Context
 import com.ghaly.findme.mesh.ProfileStore
 import com.ghaly.findme.repo.LedgerRepository
 import com.ghaly.findme.repo.NotesRepository
+import com.ghaly.findme.repo.OnlineContactsRepository
 import com.ghaly.findme.repo.SavedPlaceRepository
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -94,6 +95,7 @@ object AccountReclaimer {
             )
             NotesRepository.restoreFromBackup(bundle.optJSONArray("notes")?.toString() ?: "[]")
             SavedPlaceRepository.restoreFromBackup(bundle.optJSONArray("places")?.toString() ?: "[]")
+            OnlineContactsRepository.restoreFromBackup(bundle.optJSONArray("onlineContacts")?.toString() ?: "[]")
         } catch (e: Exception) {
             // A corrupt/old-format backup shouldn't block the reclaim itself
             // (the account/profile side already succeeded) — worst case the

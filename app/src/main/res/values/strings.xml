@@ -365,4 +365,22 @@
         <item>Service offered</item>
         <item>Freelance work</item>
     </string-array>
+
+    <string name="online_contacts_title">Online contacts</string>
+    <string name="online_add_contact">Add contact</string>
+    <string name="online_add_contact_hint">Enter their contact code</string>
+    <string name="online_add_contact_success">Added %1$s</string>
+    <string name="online_add_contact_not_found">No account found with that code</string>
+    <string name="online_add_contact_self">You can\'t add yourself</string>
+    <string name="online_network_error">Couldn\'t reach the server — check your connection and try again</string>
+    <string name="online_contacts_empty">No online contacts yet. Add one by their code above.</string>
+    <string name="online_my_code_fmt">Your code: %1$s</string>
+    <string name="online_my_code_pending">Your code will appear once you\'re online</string>
+    <string name="online_remove_contact">Remove</string>
+    <string name="online_remove_contact_confirm">Remove this online contact?</string>
+    <string name="online_status_online">Online now</string>
+    <string name="online_status_offline">Offline</string>
+    <string name="online_status_unknown">Not seen online yet</string>
+    <string name="online_status_last_seen_min">Last seen %1$d min ago</string>
+    <string name="online_status_last_seen_hr">Last seen %1$d h ago</string>
 </resources>

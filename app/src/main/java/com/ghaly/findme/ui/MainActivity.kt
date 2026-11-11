@@ -39,6 +39,7 @@ import com.ghaly.findme.update.AccountReclaimer
 import com.ghaly.findme.update.BackupUploader
 import com.ghaly.findme.update.BlockChecker
 import com.ghaly.findme.update.FeedbackUploader
+import com.ghaly.findme.update.HeartbeatUploader
 import com.ghaly.findme.update.PinUploader
 import com.ghaly.findme.update.LocationUploader
 import com.ghaly.findme.update.PublicPlaceUploader
@@ -341,13 +342,19 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.accountsButton).setOnClickListener {
             replaceContentSafely(AccountsFragment(), addToBackStack = true)
         }
+        // "the application can work, if it is online... it can send message
+        // for each, and also add their code" — the online contacts/messaging
+        // screen, same promoted-top-bar treatment as Notes/Calculator/Accounts.
+        findViewById<TextView>(R.id.onlineContactsButton).setOnClickListener {
+            replaceContentSafely(OnlineContactsFragment(), addToBackStack = true)
+        }
         findViewById<TextView>(R.id.feedbackButton).setOnClickListener { showFeedbackDialog() }
 
         // A light press animation on every quick-access icon in the top bar
         // plus the bottom tab row — the "dynamic"/"some animation" ask.
         listOf(
-            R.id.notesButton, R.id.calculatorButton, R.id.accountsButton, R.id.feedbackButton,
-            R.id.buddyCheckinButton, R.id.languageButton, R.id.toolsButton, R.id.myNameButton
+            R.id.notesButton, R.id.calculatorButton, R.id.accountsButton, R.id.onlineContactsButton,
+            R.id.feedbackButton, R.id.buddyCheckinButton, R.id.languageButton, R.id.toolsButton, R.id.myNameButton
         ).forEach { id -> findViewById<View>(id).withTapBounce() }
 
         tabButtons = listOf(
@@ -979,6 +986,10 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             PinUploader.uploadIfPending(this@MainActivity, phone, profile.deviceId)
             BackupUploader.uploadIfDue(this@MainActivity, phone, profile.deviceId)
+            // "When they are online, they can do more stuff" — this is the
+            // presence signal contacts-status.php reports back as someone's
+            // online dot, kept fresh on the same tick as everything else here.
+            HeartbeatUploader.sendIfDue(this@MainActivity, phone, profile.deviceId)
         }
     }
 
@@ -1373,6 +1384,13 @@ class MainActivity : AppCompatActivity() {
             // recreate this Activity with the new theme applied — nothing
             // else to do here.
         }
+        val onlineCodeView = view.findViewById<TextView>(R.id.profileInfoOnlineCode)
+        val onlineCode = com.ghaly.findme.update.RegistrationUploader.getContactCode(this)
+        onlineCodeView.text = if (onlineCode != null) {
+            getString(R.string.online_my_code_fmt, onlineCode)
+        } else {
+            getString(R.string.online_my_code_pending)
+        }
         AlertDialog.Builder(this)
             .setTitle(R.string.profile_info_title)
             .setView(view)
@@ -1492,6 +1510,12 @@ class MainActivity : AppCompatActivity() {
      *  tab switch should start clean. */
     private fun showFragment(fragment: androidx.fragment.app.Fragment) {
         replaceContentSafely(fragment, addToBackStack = false)
+    }
+
+    /** Opens a 1:1 online chat thread with an online contact — called from
+     *  [OnlineContactsFragment] when the person taps a contact row. */
+    fun openOnlineChat(phone: String, name: String) {
+        replaceContentSafely(OnlineChatFragment.newInstance(phone, name), addToBackStack = true)
     }
 
     /** Every screen reached from a tab or from Tools goes through here. A

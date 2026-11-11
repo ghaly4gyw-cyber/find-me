@@ -56,6 +56,15 @@ function ensureSchema(PDO $pdo): void
         // name+phone profile row itself.
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS backup_json LONGTEXT NULL",
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS backup_updated_at TIMESTAMP NULL",
+        // Short shareable code ("add a contact by their code") so two miners
+        // who aren't near each other can still reach each other online — see
+        // generateContactCode() below and add-contact.php.
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS contact_code VARCHAR(10) NULL UNIQUE",
+        // A lightweight "I'm online right now" heartbeat (heartbeat.php),
+        // deliberately separate from last_location_at — online presence
+        // shouldn't require sharing location. contacts-status.php reports a
+        // phone as online if this is recent enough.
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP NULL",
     ] as $sql) {
         try {
             $pdo->exec($sql);
@@ -139,6 +148,82 @@ function ensureSchema(PDO $pdo): void
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     );
+
+    // Who each account added by contact code (add-contact.php) — one-directional
+    // (like a phonebook entry), not a mutual friend request. Lets two miners who
+    // aren't physically near each other stay reachable online by text once one
+    // of them has entered the other's code.
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS contacts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            owner_phone VARCHAR(32) NOT NULL,
+            contact_phone VARCHAR(32) NOT NULL,
+            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY owner_contact (owner_phone, contact_phone)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+
+    // Online text messages between two accounts — separate from the mesh's own
+    // offline Bluetooth/Wi-Fi chat, which never touches the server at all. Only
+    // reached when both the sender (to send) and recipient (to fetch) have
+    // internet, per "when they are online they can do more stuff". Polled by
+    // the app (fetch-messages.php), not pushed — no notification service here.
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS messages (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            from_phone VARCHAR(32) NOT NULL,
+            to_phone VARCHAR(32) NOT NULL,
+            body VARCHAR(2000) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_to_phone_id (to_phone, id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+}
+
+/** Generates a short, human-typeable contact code (6 characters, no 0/O/1/I
+ *  to avoid mix-ups when someone reads it aloud or copies it by hand) and
+ *  retries on the astronomically unlikely chance of a collision. Called once
+ *  per account, the first time register.php sees it doesn't have one yet. */
+function generateContactCode(PDO $pdo): string
+{
+    $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    for ($attempt = 0; $attempt < 20; $attempt++) {
+        $code = '';
+        for ($i = 0; $i < 6; $i++) {
+            $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        }
+        $check = $pdo->prepare('SELECT 1 FROM registrations WHERE contact_code = ?');
+        $check->execute([$code]);
+        if ($check->fetchColumn() === false) {
+            return $code;
+        }
+    }
+    // Never realistically reached (32^6 ≈ 1 billion combinations), but return
+    // something rather than loop forever.
+    return strtoupper(bin2hex(random_bytes(4)));
+}
+
+/** Shared "does this device currently own this phone number" check, used by
+ *  every online-contacts/messaging endpoint. On failure it writes the
+ *  matching HTTP status + JSON error itself (404 if the phone isn't
+ *  registered at all, 403 if a different device owns it now), so a caller
+ *  just does: if (!requireOwnerDevice($pdo, $phone, $deviceId)) exit; */
+function requireOwnerDevice(PDO $pdo, string $phone, string $deviceId): bool
+{
+    $stmt = $pdo->prepare('SELECT device_id FROM registrations WHERE phone = ?');
+    $stmt->execute([$phone]);
+    $currentDeviceId = $stmt->fetchColumn();
+    if ($currentDeviceId === false) {
+        http_response_code(404);
+        echo json_encode(['status' => 'error', 'reason' => 'not_registered']);
+        return false;
+    }
+    if ($currentDeviceId !== $deviceId) {
+        http_response_code(403);
+        echo json_encode(['status' => 'error', 'reason' => 'not_the_registered_device']);
+        return false;
+    }
+    return true;
 }
 
 /** Mauritanian mobile numbers only — mirrors PhoneValidator.kt on the app

@@ -490,6 +490,117 @@ jobs:
           fi
           echo "PIN/reclaim/backup round-trip confirmed working."
 
+      # Exercises the online contacts/messaging feature end to end — "when
+      # they are online, they can do more stuff": text messages and an
+      # online/offline dot, reached by adding someone's contact code. Uses a
+      # third fixed canary pair (kept entirely separate from the ones above,
+      # since this touches its own contacts/messages tables and heartbeats).
+      # Note: unlike the other canary checks, send-message.php has no upsert
+      # to reuse, so this does leave one small new row in `messages` per CI
+      # run — acceptable, since each row is just a short text string.
+      - name: Verify online contacts, heartbeat, and messaging
+        run: |
+          set -e
+          PHONE_A="40000001"
+          PHONE_B="40000002"
+          DEV_A="ci-healthcheck-canary-online-a"
+          DEV_B="ci-healthcheck-canary-online-b"
+
+          echo "--- register both canary devices and capture their contact codes ---"
+          response=$(curl -sS -o /tmp/ra.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"name\":\"CI Online Canary A\",\"phone\":\"$PHONE_A\",\"device_id\":\"$DEV_A\"}" \
+            https://patrons.digital/findme-api/register.php)
+          cat /tmp/ra.json; echo
+          if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/ra.json; then
+            echo "::error::register.php failed for canary A"; exit 1
+          fi
+          CODE_A=$(grep -oP '"contact_code":"\K[^"]+' /tmp/ra.json)
+          if [ -z "$CODE_A" ]; then
+            echo "::error::register.php didn't return a contact_code for canary A"; exit 1
+          fi
+
+          response=$(curl -sS -o /tmp/rb.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"name\":\"CI Online Canary B\",\"phone\":\"$PHONE_B\",\"device_id\":\"$DEV_B\"}" \
+            https://patrons.digital/findme-api/register.php)
+          cat /tmp/rb.json; echo
+          if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/rb.json; then
+            echo "::error::register.php failed for canary B"; exit 1
+          fi
+
+          echo "--- canary A sends a heartbeat ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE_A\",\"device_id\":\"$DEV_A\"}" \
+            https://patrons.digital/findme-api/heartbeat.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/r.json; then
+            echo "::error::heartbeat.php failed"; exit 1
+          fi
+
+          echo "--- canary B adds canary A by contact code ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE_B\",\"device_id\":\"$DEV_B\",\"contact_code\":\"$CODE_A\"}" \
+            https://patrons.digital/findme-api/add-contact.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "200" ] || ! grep -q "\"phone\":\"$PHONE_A\"" /tmp/r.json; then
+            echo "::error::add-contact.php failed"; exit 1
+          fi
+
+          echo "--- an unknown contact code is rejected ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE_B\",\"device_id\":\"$DEV_B\",\"contact_code\":\"ZZZZZZ\"}" \
+            https://patrons.digital/findme-api/add-contact.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "404" ] || ! grep -q '"contact_code_not_found"' /tmp/r.json; then
+            echo "::error::add-contact.php didn't reject an unknown code"; exit 1
+          fi
+
+          echo "--- canary B sees canary A as online ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE_B\",\"device_id\":\"$DEV_B\",\"phones\":[\"$PHONE_A\"]}" \
+            https://patrons.digital/findme-api/contacts-status.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "200" ] || ! grep -q '"online":true' /tmp/r.json; then
+            echo "::error::contacts-status.php didn't report canary A as online"; exit 1
+          fi
+
+          echo "--- canary A sends canary B a message ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE_A\",\"device_id\":\"$DEV_A\",\"to_phone\":\"$PHONE_B\",\"body\":\"CI canary ping\"}" \
+            https://patrons.digital/findme-api/send-message.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/r.json; then
+            echo "::error::send-message.php failed"; exit 1
+          fi
+
+          echo "--- canary B fetches it ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE_B\",\"device_id\":\"$DEV_B\",\"since_id\":0}" \
+            https://patrons.digital/findme-api/fetch-messages.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "200" ] || ! grep -q 'CI canary ping' /tmp/r.json; then
+            echo "::error::fetch-messages.php didn't return the message to canary B"; exit 1
+          fi
+
+          echo "--- a non-owner device is rejected ---"
+          response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" \
+            -d "{\"phone\":\"$PHONE_A\",\"device_id\":\"some-other-device\"}" \
+            https://patrons.digital/findme-api/heartbeat.php)
+          cat /tmp/r.json; echo
+          if [ "$response" != "403" ]; then
+            echo "::error::heartbeat.php let a non-owner device act as canary A"; exit 1
+          fi
+
+          echo "Online contacts/heartbeat/messaging round-trip confirmed working."
+
       # Ghaly's standing instruction: every release from here on forces
       # every older install to update — "force all the clients and people to
       # update... If they does not update, then they does not get anything."

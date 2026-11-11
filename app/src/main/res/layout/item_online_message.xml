@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/onlineBubbleRow"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+
+    <TextView
+        android:id="@+id/onlineMessageText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_card"
+        android:textColor="@color/white"
+        android:padding="10dp"
+        android:maxWidth="260dp"
+        tools:text="On my way, should be there in an hour." />
+
+    <TextView
+        android:id="@+id/onlineMessageTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/sand_300"
+        android:textSize="11sp"
+        tools:text="2 min ago" />
+
+</LinearLayout>

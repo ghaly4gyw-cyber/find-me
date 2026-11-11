@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:background="@color/sand_700">
+
+        <TextView
+            android:id="@+id/onlineMyCodeText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/sand_300"
+            android:textSize="13sp"
+            tools:text="Your code: 7K3P9A" />
+
+        <Button
+            android:id="@+id/addOnlineContactButton"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/online_add_contact"
+            android:textColor="@color/teal_400" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/onlineContactsEmptyText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="24dp"
+        android:text="@string/online_contacts_empty"
+        android:textColor="@color/sand_300"
+        android:visibility="gone" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/onlineContactsList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:padding="8dp" />
+
+</LinearLayout>

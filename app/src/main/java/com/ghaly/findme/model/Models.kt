@@ -182,6 +182,30 @@ data class Note(
     val ts: Long
 )
 
+/** An account added by its contact code (see add-contact.php) so it stays
+ *  reachable online even when nowhere near on the mesh. [online] and
+ *  [lastSeenSecondsAgo] are refreshed from contacts-status.php and never
+ *  persisted — only [phone]/[name]/[addedAt] are saved to disk. */
+data class OnlineContact(
+    val phone: String,
+    val name: String,
+    val addedAt: Long,
+    val online: Boolean = false,
+    val lastSeenSecondsAgo: Int? = null
+)
+
+/** One online message, sent or received through send-message.php /
+ *  fetch-messages.php — entirely separate from the offline mesh's own
+ *  [ChatMessage], which never touches the server. */
+data class OnlineMessage(
+    val id: Long,
+    val otherPartyPhone: String,
+    val otherPartyName: String?,
+    val body: String,
+    val ts: Long,
+    val mine: Boolean
+)
+
 /** Which of two currencies a ledger amount is tracked in. The app never
  *  touches real money transfers — it just remembers who owes what, in
  *  whichever currency the deal was actually made in. */

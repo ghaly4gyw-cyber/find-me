@@ -35,4 +35,9 @@
     <!-- Shared surface for the unified top-tools + bottom-tabs nav dock. -->
     <color name="nav_surface">#FFFFFF</color>
     <color name="nav_divider">#DED4BC</color>
+
+    <!-- Online/offline presence dot — not defined in values-night, so the
+         same clearly-green/clearly-grey meaning holds in both themes. -->
+    <color name="online_dot_on">#2E9E5B</color>
+    <color name="online_dot_off">#8A8A8A</color>
 </resources>

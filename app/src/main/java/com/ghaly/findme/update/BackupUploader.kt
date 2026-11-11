@@ -3,6 +3,7 @@ package com.ghaly.findme.update
 import android.content.Context
 import com.ghaly.findme.repo.LedgerRepository
 import com.ghaly.findme.repo.NotesRepository
+import com.ghaly.findme.repo.OnlineContactsRepository
 import com.ghaly.findme.repo.SavedPlaceRepository
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -44,6 +45,7 @@ object BackupUploader {
                 .put("ledgerAccounts", org.json.JSONArray(accountsJson))
                 .put("notes", org.json.JSONArray(NotesRepository.exportForBackup()))
                 .put("places", org.json.JSONArray(SavedPlaceRepository.exportForBackup()))
+                .put("onlineContacts", org.json.JSONArray(OnlineContactsRepository.exportForBackup()))
 
             val body = JSONObject()
                 .put("phone", phone)

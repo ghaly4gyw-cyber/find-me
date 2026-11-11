@@ -24,9 +24,18 @@ object RegistrationUploader {
     private const val PREFS = "registration_uploader"
     private const val KEY_UPLOADED = "uploaded"
     private const val KEY_CONFLICT_PENDING = "conflict_pending"
+    private const val KEY_CONTACT_CODE = "contact_code"
 
     fun isUploaded(context: Context): Boolean {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_UPLOADED, false)
+    }
+
+    /** The short code register.php generated for this account (see
+     *  add-contact.php) — null until the first successful upload. Shown in
+     *  the profile info dialog so it can be shared with someone who wants to
+     *  add this account as an online contact. */
+    fun getContactCode(context: Context): String? {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_CONTACT_CODE, null)
     }
 
     /** Call off the main thread. Never throws — any failure (offline, server
@@ -67,9 +76,11 @@ object RegistrationUploader {
 
             when {
                 responseCode in 200..299 && json?.optString("status") == "ok" -> {
-                    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                    val code = json.optString("contact_code", "")
+                    val editor = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                         .putBoolean(KEY_UPLOADED, true)
-                        .apply()
+                    if (code.isNotEmpty()) editor.putString(KEY_CONTACT_CODE, code)
+                    editor.apply()
                 }
                 responseCode == 409 -> {
                     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()

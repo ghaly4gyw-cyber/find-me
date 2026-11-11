@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/onlineChatTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:textColor="@color/white"
+        android:textSize="15sp"
+        android:background="@color/sand_700"
+        tools:text="Miner-9C21" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/onlineChatList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:padding="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="@color/sand_700">
+
+        <EditText
+            android:id="@+id/onlineChatInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="@string/chat_hint"
+            android:textColor="@color/white"
+            android:textColorHint="@color/sand_300"
+            android:inputType="text" />
+
+        <Button
+            android:id="@+id/onlineChatSendButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/send" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -13,6 +13,7 @@ import com.ghaly.findme.model.LinkedPeer
 import com.ghaly.findme.model.ListingKind
 import com.ghaly.findme.model.MarketListing
 import com.ghaly.findme.model.Note
+import com.ghaly.findme.model.OnlineContact
 import com.ghaly.findme.model.PeerPosition
 import com.ghaly.findme.model.Post
 import com.ghaly.findme.model.RadioTransmission
@@ -1057,6 +1058,98 @@ object NotesRepository {
                 .apply()
         } catch (e: Exception) {
             // best-effort cache — losing it just means the notes are gone
+        }
+    }
+}
+
+/** Accounts added by contact code (see add-contact.php / AddContactDialog),
+ *  so they stay reachable by online text message even when nowhere near on
+ *  the mesh. Only [OnlineContact.phone]/[name]/[addedAt] are persisted —
+ *  [OnlineContact.online]/[lastSeenSecondsAgo] are refreshed in-memory from
+ *  contacts-status.php and never written to disk, same spirit as
+ *  PeerRepository's live roster vs. its disk cache. */
+object OnlineContactsRepository {
+    private const val PREFS = "find_me_online_contacts"
+    private const val KEY_DATA = "contacts_json"
+
+    private var appContext: Context? = null
+    private val _contacts = MutableStateFlow<List<OnlineContact>>(emptyList())
+    val contacts: StateFlow<List<OnlineContact>> = _contacts
+
+    fun init(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        loadFromDisk()
+    }
+
+    fun add(phone: String, name: String) {
+        if (_contacts.value.any { it.phone == phone }) return
+        val contact = OnlineContact(phone = phone, name = name, addedAt = System.currentTimeMillis())
+        _contacts.update { listOf(contact) + it }
+        saveToDisk()
+    }
+
+    fun remove(phone: String) {
+        _contacts.update { list -> list.filter { it.phone != phone } }
+        saveToDisk()
+    }
+
+    /** Merges fresh online/last-seen info (from contacts-status.php) into the
+     *  in-memory list — never persisted, and never touches phone/name/addedAt. */
+    fun applyStatus(statuses: Map<String, Pair<Boolean, Int?>>) {
+        _contacts.update { list ->
+            list.map { contact ->
+                val status = statuses[contact.phone] ?: return@map contact
+                contact.copy(online = status.first, lastSeenSecondsAgo = status.second)
+            }
+        }
+    }
+
+    /** See LedgerRepository.exportForBackup. */
+    fun exportForBackup(): String {
+        return appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_DATA, null) ?: "[]"
+    }
+
+    /** See LedgerRepository.restoreFromBackup. */
+    fun restoreFromBackup(contactsJson: String) {
+        val ctx = appContext ?: return
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_DATA, contactsJson).apply()
+        loadFromDisk()
+    }
+
+    private fun loadFromDisk() {
+        val ctx = appContext ?: return
+        try {
+            val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(KEY_DATA, null) ?: return
+            val arr = JSONArray(json)
+            val loaded = mutableListOf<OnlineContact>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                loaded += OnlineContact(
+                    phone = o.getString("phone"),
+                    name = o.getString("name"),
+                    addedAt = o.optLong("addedAt", System.currentTimeMillis())
+                )
+            }
+            _contacts.value = loaded
+        } catch (e: Exception) {
+            // corrupted/old cache format — just start empty, nothing to recover
+        }
+    }
+
+    private fun saveToDisk() {
+        val ctx = appContext ?: return
+        try {
+            val arr = JSONArray()
+            for (c in _contacts.value) {
+                arr.put(JSONObject().put("phone", c.phone).put("name", c.name).put("addedAt", c.addedAt))
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY_DATA, arr.toString())
+                .apply()
+        } catch (e: Exception) {
+            // best-effort cache — losing it just means the contact list is gone
         }
     }
 }

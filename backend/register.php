@@ -104,4 +104,17 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute([$deviceId, $phone, $name, $description, $photoBase64]);
 
-echo json_encode(['status' => 'ok']);
+// Every account gets a short contact code, generated once and kept for the
+// life of the account — "add their code" (a friend-code to reach someone by,
+// not just see who's nearby). A re-sync of an already-registered phone just
+// returns the existing code unchanged.
+$stmt = $pdo->prepare('SELECT contact_code FROM registrations WHERE phone = ?');
+$stmt->execute([$phone]);
+$contactCode = $stmt->fetchColumn();
+if ($contactCode === false || $contactCode === null || $contactCode === '') {
+    $contactCode = generateContactCode($pdo);
+    $pdo->prepare('UPDATE registrations SET contact_code = ? WHERE phone = ?')
+        ->execute([$contactCode, $phone]);
+}
+
+echo json_encode(['status' => 'ok', 'contact_code' => $contactCode]);

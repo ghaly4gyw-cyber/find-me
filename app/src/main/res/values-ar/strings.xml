@@ -357,4 +357,22 @@
         <item>خدمة مقدَّمة</item>
         <item>عمل حر</item>
     </string-array>
+
+    <string name="online_contacts_title">جهات الاتصال عبر الإنترنت</string>
+    <string name="online_add_contact">إضافة جهة اتصال</string>
+    <string name="online_add_contact_hint">أدخل رمز جهة الاتصال</string>
+    <string name="online_add_contact_success">تمت إضافة %1$s</string>
+    <string name="online_add_contact_not_found">لا يوجد حساب بهذا الرمز</string>
+    <string name="online_add_contact_self">لا يمكنك إضافة نفسك</string>
+    <string name="online_network_error">تعذّر الوصول إلى الخادم — تحقق من اتصالك وحاول مرة أخرى</string>
+    <string name="online_contacts_empty">لا توجد جهات اتصال عبر الإنترنت حتى الآن. أضف واحدة برمزها أعلاه.</string>
+    <string name="online_my_code_fmt">رمزك: %1$s</string>
+    <string name="online_my_code_pending">سيظهر رمزك عندما تكون متصلاً بالإنترنت</string>
+    <string name="online_remove_contact">إزالة</string>
+    <string name="online_remove_contact_confirm">إزالة جهة الاتصال هذه؟</string>
+    <string name="online_status_online">متصل الآن</string>
+    <string name="online_status_offline">غير متصل</string>
+    <string name="online_status_unknown">لم يُشاهد متصلاً بعد</string>
+    <string name="online_status_last_seen_min">آخر ظهور منذ %1$d دقيقة</string>
+    <string name="online_status_last_seen_hr">آخر ظهور منذ %1$d ساعة</string>
 </resources>

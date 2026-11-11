@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_card_ripple"
+    android:padding="12dp"
+    android:layout_marginBottom="8dp"
+    android:stateListAnimator="@animator/press_scale"
+    android:clickable="true"
+    android:focusable="true">
+
+    <View
+        android:id="@+id/onlineContactDot"
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_online_dot_off" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/onlineContactName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            tools:text="Miner-9C21" />
+
+        <TextView
+            android:id="@+id/onlineContactStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/sand_300"
+            android:textSize="12sp"
+            tools:text="Online now" />
+
+    </LinearLayout>
+
+</LinearLayout>
