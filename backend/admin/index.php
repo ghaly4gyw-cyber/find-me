@@ -213,7 +213,10 @@ $topFeatures = array_slice($topFeatures, 0, 10);
 <body x-data="{ search: '', selected: null }">
 <div class="top">
   <h1>Find Me <span>— Admin</span></h1>
-  <a class="logout" href="logout.php">Log out</a>
+  <div>
+    <a class="details-link" href="../download/" target="_blank" rel="noopener" style="margin-top: 0; margin-right: 8px;">⬇️ Download page</a>
+    <a class="logout" href="logout.php">Log out</a>
+  </div>
 </div>
 
 <?php if ($error): ?>

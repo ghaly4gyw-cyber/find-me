@@ -67,8 +67,29 @@ jobs:
 
   deploy-backend:
     runs-on: ubuntu-latest
+    # Waits for the build job so it can reuse the exact same APK it just
+    # produced (via download-artifact below) for the public download page,
+    # instead of building a second copy.
+    needs: build
     steps:
       - uses: actions/checkout@v4
+
+      # The public download page (backend/download/) serves this straight
+      # off the host — the same APK the build job just published to GitHub
+      # Releases, so patrons.digital always has what GitHub has.
+      - name: Download the APK built by the build job
+        uses: actions/download-artifact@v4
+        with:
+          name: find-me-debug-apk
+          path: backend/download/
+
+      - name: Write version.json and control.json for the download page
+        run: |
+          VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' app/build.gradle.kts)
+          VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          echo "{\"versionCode\": $VERSION_CODE, \"versionName\": \"$VERSION_NAME\"}" > backend/download/version.json
+          cp control.json backend/download/control.json
+          ls -la backend/download/
 
       # db-config.php holds real credentials and is rendered here, in this
       # disposable runner, from the committed placeholder template — it is
@@ -291,3 +312,28 @@ jobs:
           echo "Admin login + dashboard confirmed working."
         env:
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
+      # The public download page needs no login — proves the page itself
+      # renders AND that the real APK file landed on the host and isn't
+      # empty/truncated (a broken upload would otherwise look "successful"
+      # while leaving a 0-byte or missing file for real users to hit).
+      - name: Verify the public download page and APK are live
+        run: |
+          status=$(curl -sS -o /tmp/download_page.html -w "%{http_code}" https://patrons.digital/findme-api/download/)
+          echo "HTTP status for download page: $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::Download page didn't return 200"
+            exit 1
+          fi
+          if grep -q "التطبيق غير متوفر للتحميل حاليًا" /tmp/download_page.html; then
+            echo "::error::Download page is live but reports the APK as missing"
+            exit 1
+          fi
+          apk_status=$(curl -sS -o /dev/null -w "%{http_code}" https://patrons.digital/findme-api/download/app-debug.apk)
+          apk_size=$(curl -sSI https://patrons.digital/findme-api/download/app-debug.apk | grep -i '^content-length' | tr -d '\r' | cut -d' ' -f2)
+          echo "APK status: $apk_status, size: ${apk_size:-unknown} bytes"
+          if [ "$apk_status" != "200" ] || [ -z "$apk_size" ] || [ "$apk_size" -lt 1000000 ]; then
+            echo "::error::APK on the host is missing or suspiciously small"
+            exit 1
+          fi
+          echo "Public download page and APK confirmed live on the host."

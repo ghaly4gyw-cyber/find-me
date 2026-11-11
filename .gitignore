@@ -18,3 +18,10 @@ local.properties
 bin/
 gen/
 out/
+
+# Generated at deploy time by the deploy-backend CI job (the built APK plus
+# a copy of version.json/control.json) for the public download page — never
+# committed, only ever produced fresh inside the disposable CI runner.
+/backend/download/app-debug.apk
+/backend/download/version.json
+/backend/download/control.json
