@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $configPath = __DIR__ . '/../db-config.php';
 if (!file_exists($configPath)) {
     http_response_code(500);
-    die('Server not configured — db-config.php is missing.');
+    die('الخادم غير مهيأ — ملف db-config.php غير موجود.');
 }
 $config = require $configPath;
 
@@ -32,7 +32,7 @@ try {
     $pdo = connectDb($config);
 } catch (PDOException $e) {
     http_response_code(500);
-    die('Could not reach the database.');
+    die('تعذّر الاتصال بقاعدة البيانات.');
 }
 
 ensureSchema($pdo);
@@ -42,7 +42,7 @@ $action = (string) ($_POST['action'] ?? '');
 if ($action === 'add_admin') {
     if (($admin['role'] ?? '') !== 'super_admin') {
         http_response_code(403);
-        die('Super admin only.');
+        die('هذا للمشرف العام فقط.');
     }
     $username = strtolower(trim((string) ($_POST['username'] ?? '')));
     $name = trim((string) ($_POST['name'] ?? ''));
@@ -50,15 +50,15 @@ if ($action === 'add_admin') {
     $role = (string) ($_POST['role'] ?? 'admin');
 
     if (!preg_match('/^[a-z0-9_]{3,32}$/', $username)) {
-        header('Location: index.php?admin_error=' . rawurlencode('Username must be 3-32 lowercase letters, numbers, or underscores.'));
+        header('Location: index.php?admin_error=' . rawurlencode('اسم المستخدم يجب أن يكون 3-32 حرفًا إنجليزيًا صغيرًا أو رقمًا أو شرطة سفلية.'));
         exit;
     }
     if ($name === '' || mb_strlen($name) > 100) {
-        header('Location: index.php?admin_error=' . rawurlencode('Enter a name (up to 100 characters).'));
+        header('Location: index.php?admin_error=' . rawurlencode('أدخل الاسم (حتى 100 حرف).'));
         exit;
     }
     if (mb_strlen($password) < 8) {
-        header('Location: index.php?admin_error=' . rawurlencode('Password must be at least 8 characters.'));
+        header('Location: index.php?admin_error=' . rawurlencode('كلمة المرور يجب ألا تقل عن 8 أحرف.'));
         exit;
     }
     if (!in_array($role, ['admin', 'super_admin'], true)) {
@@ -68,7 +68,7 @@ if ($action === 'add_admin') {
     $exists = $pdo->prepare('SELECT 1 FROM admin_accounts WHERE username = ?');
     $exists->execute([$username]);
     if ($exists->fetchColumn()) {
-        header('Location: index.php?admin_error=' . rawurlencode('That username is already taken.'));
+        header('Location: index.php?admin_error=' . rawurlencode('اسم المستخدم هذا مُستخدم بالفعل.'));
         exit;
     }
 
@@ -77,13 +77,13 @@ if ($action === 'add_admin') {
     $code = strtoupper(trim((string) ($_POST['code'] ?? '')));
     if ($code !== '') {
         if (!preg_match('/^[A-Z0-9]{6,16}$/', $code)) {
-            header('Location: index.php?admin_error=' . rawurlencode('Offline code must be 6-16 letters/numbers, or left blank.'));
+            header('Location: index.php?admin_error=' . rawurlencode('الرمز غير المتصل يجب أن يكون 6-16 حرفًا/رقمًا، أو يُترك فارغًا.'));
             exit;
         }
         $codeTaken = $pdo->prepare('SELECT 1 FROM admin_accounts WHERE offline_code = ?');
         $codeTaken->execute([$code]);
         if ($codeTaken->fetchColumn()) {
-            header('Location: index.php?admin_error=' . rawurlencode('That offline code is already in use by another admin.'));
+            header('Location: index.php?admin_error=' . rawurlencode('هذا الرمز مُستخدم بالفعل من قبل مشرف آخر.'));
             exit;
         }
     }
@@ -104,10 +104,10 @@ if ($action === 'reset_password') {
     $isSuperAdmin = ($admin['role'] ?? '') === 'super_admin';
     if (!$isSelf && !$isSuperAdmin) {
         http_response_code(403);
-        die('You can only reset your own password.');
+        die('يمكنك فقط إعادة تعيين كلمة مرورك أنت.');
     }
     if (mb_strlen($password) < 8) {
-        header('Location: index.php?admin_error=' . rawurlencode('Password must be at least 8 characters.'));
+        header('Location: index.php?admin_error=' . rawurlencode('كلمة المرور يجب ألا تقل عن 8 أحرف.'));
         exit;
     }
 

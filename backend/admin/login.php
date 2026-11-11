@@ -7,7 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $configPath = __DIR__ . '/../db-config.php';
     if (!file_exists($configPath)) {
         http_response_code(500);
-        die('Server not configured — db-config.php is missing.');
+        die('الخادم غير مهيأ — ملف db-config.php غير موجود.');
     }
     $config = require $configPath;
 
@@ -33,17 +33,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: index.php');
             exit;
         }
-        $error = 'Wrong username or password.';
+        $error = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
     } catch (PDOException $e) {
-        $error = 'Could not reach the database.';
+        $error = 'تعذّر الاتصال بقاعدة البيانات.';
     }
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<title>Find Me — Admin</title>
+<title>Find Me — لوحة التحكم</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {
@@ -52,40 +52,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
   * { box-sizing: border-box; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-family: "Segoe UI", Tahoma, system-ui, -apple-system, sans-serif;
     background: var(--bg); color: var(--text); display: flex; align-items: center;
     justify-content: center; min-height: 100vh; margin: 0; padding: 1rem;
   }
   form {
-    background: var(--panel); border: 1px solid var(--border); padding: 2rem;
+    background: var(--panel); border: 1px solid var(--border); padding: 1.6rem;
     border-radius: 14px; width: 100%; max-width: 300px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
   }
-  h1 { font-size: 1.25rem; margin: 0 0 1.25rem; }
+  h1 { font-size: 1.2rem; margin: 0 0 1rem; text-align: center; }
   h1 span { color: var(--accent-2); }
-  label { font-size: 0.82rem; color: var(--muted); }
+  label { font-size: 0.8rem; color: var(--muted); }
   input {
-    width: 100%; padding: 11px 12px; margin-top: 6px; margin-bottom: 18px;
+    width: 100%; padding: 10px 12px; margin-top: 5px; margin-bottom: 14px;
     border-radius: 8px; border: 1px solid var(--border); background: var(--bg);
-    color: var(--text); box-sizing: border-box; font-size: 1rem;
+    color: var(--text); box-sizing: border-box; font-size: 1rem; direction: ltr; text-align: right;
   }
   input:focus { outline: none; border-color: var(--accent); }
   button {
     width: 100%; padding: 11px; border: 0; border-radius: 8px; background: var(--accent);
-    color: #fff; font-weight: 600; cursor: pointer; font-size: 1rem;
+    color: #fff; font-weight: 600; cursor: pointer; font-size: 0.98rem;
   }
   button:hover { background: var(--accent-2); color: #0c1716; }
-  .error { color: var(--danger); margin: -0.5rem 0 1rem; font-size: 0.88rem; }
+  .error { color: var(--danger); margin: -0.4rem 0 1rem; font-size: 0.85rem; }
 </style>
 </head>
 <body>
 <form method="post">
-  <h1>Find Me <span>— Admin</span></h1>
+  <h1>Find Me <span>— لوحة التحكم</span></h1>
   <?php if ($error): ?><p class="error"><?= htmlspecialchars($error) ?></p><?php endif; ?>
-  <label for="username">Username</label>
+  <label for="username">اسم المستخدم</label>
   <input type="text" id="username" name="username" autocomplete="username" autofocus required>
-  <label for="password">Password</label>
+  <label for="password">كلمة المرور</label>
   <input type="password" id="password" name="password" autocomplete="current-password" required>
-  <button type="submit">Log in</button>
+  <button type="submit">تسجيل الدخول</button>
 </form>
 </body>
 </html>

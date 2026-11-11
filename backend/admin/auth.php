@@ -35,7 +35,7 @@ function requireSuperAdmin(): array
     $admin = requireAdminLogin();
     if (($admin['role'] ?? '') !== 'super_admin') {
         http_response_code(403);
-        die('Super admin only.');
+        die('هذا للمشرف العام فقط.');
     }
     return $admin;
 }
@@ -49,7 +49,7 @@ function adminConfig(): array
     $path = __DIR__ . '/../admin-config.php';
     if (!file_exists($path)) {
         http_response_code(500);
-        die('Admin not configured — admin-config.php is missing.');
+        die('الإدارة غير مهيأة — ملف admin-config.php غير موجود.');
     }
     return require $path;
 }

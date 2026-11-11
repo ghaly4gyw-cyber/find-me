@@ -28,7 +28,7 @@ if ($requestId <= 0 || !in_array($decision, ['approve', 'reject'], true)) {
 $configPath = __DIR__ . '/../db-config.php';
 if (!file_exists($configPath)) {
     http_response_code(500);
-    die('Server not configured — db-config.php is missing.');
+    die('الخادم غير مهيأ — ملف db-config.php غير موجود.');
 }
 $config = require $configPath;
 
@@ -36,7 +36,7 @@ try {
     $pdo = connectDb($config);
 } catch (PDOException $e) {
     http_response_code(500);
-    die('Could not reach the database.');
+    die('تعذّر الاتصال بقاعدة البيانات.');
 }
 
 ensureSchema($pdo);

@@ -345,19 +345,19 @@ jobs:
             echo "::error::Dashboard page didn't contain the expected user content"
             exit 1
           fi
-          if ! grep -q "Most used features" /tmp/admin_page.html; then
+          if ! grep -q "أكثر الميزات استخدامًا" /tmp/admin_page.html; then
             echo "::error::Dashboard page is missing the usage-analytics section"
             exit 1
           fi
-          if ! grep -q "Suggestions from users" /tmp/admin_page.html; then
+          if ! grep -q "اقتراحات المستخدمين" /tmp/admin_page.html; then
             echo "::error::Dashboard page is missing the feedback section"
             exit 1
           fi
-          if ! grep -q "App control" /tmp/admin_page.html; then
+          if ! grep -q "التحكم في التطبيق" /tmp/admin_page.html; then
             echo "::error::Dashboard page is missing the App control section"
             exit 1
           fi
-          if ! grep -q "Public places" /tmp/admin_page.html; then
+          if ! grep -q "الأماكن العامة" /tmp/admin_page.html; then
             echo "::error::Dashboard page is missing the Public places section"
             exit 1
           fi

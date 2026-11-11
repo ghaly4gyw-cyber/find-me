@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $configPath = __DIR__ . '/../db-config.php';
 if (!file_exists($configPath)) {
     http_response_code(500);
-    die('Server not configured — db-config.php is missing.');
+    die('الخادم غير مهيأ — ملف db-config.php غير موجود.');
 }
 $config = require $configPath;
 
@@ -30,7 +30,7 @@ try {
     $pdo = connectDb($config);
 } catch (PDOException $e) {
     http_response_code(500);
-    die('Could not reach the database.');
+    die('تعذّر الاتصال بقاعدة البيانات.');
 }
 
 ensureSchema($pdo);
@@ -42,18 +42,18 @@ $isSelf = $targetUsername === ($admin['username'] ?? '');
 $isSuperAdmin = ($admin['role'] ?? '') === 'super_admin';
 if (!$isSelf && !$isSuperAdmin) {
     http_response_code(403);
-    die('You can only change your own code.');
+    die('يمكنك فقط تغيير رمزك أنت.');
 }
 
 if (!preg_match('/^[A-Z0-9]{6,16}$/', $code)) {
-    header('Location: index.php?admin_error=' . rawurlencode('Code must be 6-16 letters/numbers.'));
+    header('Location: index.php?admin_error=' . rawurlencode('الرمز يجب أن يكون 6-16 حرفًا/رقمًا.'));
     exit;
 }
 
 $targetExists = $pdo->prepare('SELECT 1 FROM admin_accounts WHERE username = ?');
 $targetExists->execute([$targetUsername]);
 if (!$targetExists->fetchColumn()) {
-    header('Location: index.php?admin_error=' . rawurlencode('That admin account does not exist.'));
+    header('Location: index.php?admin_error=' . rawurlencode('حساب المشرف هذا غير موجود.'));
     exit;
 }
 
