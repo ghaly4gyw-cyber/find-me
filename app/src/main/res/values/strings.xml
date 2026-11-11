@@ -198,6 +198,8 @@
     <string name="profile_info_phone_fmt">Phone: %s</string>
     <string name="profile_info_description_fmt">Note: %s</string>
     <string name="profile_info_none">—</string>
+    <string name="registration_conflict_title">This phone number is already registered</string>
+    <string name="registration_conflict_body">Your name and phone number are already registered to a different phone. This device can keep working as-is, but you may want to check with whoever set this up.</string>
 
     <string name="crash_dialog_title">The app crashed last time — here\'s why</string>
     <string name="crash_dialog_copy_button">Copy</string>

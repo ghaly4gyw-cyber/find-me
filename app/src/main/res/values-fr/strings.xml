@@ -195,6 +195,8 @@
     <string name="profile_info_phone_fmt">Téléphone : %s</string>
     <string name="profile_info_description_fmt">Note : %s</string>
     <string name="profile_info_none">—</string>
+    <string name="registration_conflict_title">Ce numéro de téléphone est déjà enregistré</string>
+    <string name="registration_conflict_body">Votre nom et votre numéro de téléphone sont déjà enregistrés sur un autre appareil. Cet appareil peut continuer à fonctionner tel quel, mais vous devriez peut-être vérifier auprès de la personne qui a configuré ceci.</string>
 
     <string name="crash_dialog_title">L\'application a planté la dernière fois — voici pourquoi</string>
     <string name="crash_dialog_copy_button">Copier</string>

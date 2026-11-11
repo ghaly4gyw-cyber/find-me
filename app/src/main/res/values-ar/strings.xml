@@ -195,6 +195,8 @@
     <string name="profile_info_phone_fmt">الهاتف: %s</string>
     <string name="profile_info_description_fmt">ملاحظة: %s</string>
     <string name="profile_info_none">—</string>
+    <string name="registration_conflict_title">رقم الهاتف هذا مسجّل بالفعل</string>
+    <string name="registration_conflict_body">اسمك ورقم هاتفك مسجّلان بالفعل على جهاز آخر. يمكن لهذا الجهاز الاستمرار في العمل كما هو، لكن قد ترغب في التحقق من ذلك مع من قام بهذا الإعداد.</string>
 
     <string name="crash_dialog_title">توقف التطبيق في المرة الماضية — إليك السبب</string>
     <string name="crash_dialog_copy_button">نسخ</string>

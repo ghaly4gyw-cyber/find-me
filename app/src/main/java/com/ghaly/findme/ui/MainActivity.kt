@@ -32,6 +32,7 @@ import com.ghaly.findme.mesh.MeshManager
 import com.ghaly.findme.mesh.Permissions
 import com.ghaly.findme.mesh.ProfileStore
 import com.ghaly.findme.export.LedgerExport
+import com.ghaly.findme.update.RegistrationUploader
 import com.ghaly.findme.update.RemoteControl
 import com.ghaly.findme.update.UpdateChecker
 import com.ghaly.findme.update.UpdateInstaller
@@ -290,6 +291,7 @@ class MainActivity : AppCompatActivity() {
         refreshPermissionState()
         checkForUpdates(manual = false)
         checkRemoteControl()
+        checkRegistrationUpload()
 
         lifecycleScope.launch {
             while (true) {
@@ -685,6 +687,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Opportunistically syncs the local registration to the backend
+     *  whenever the phone happens to be online — same quiet, best-effort
+     *  spirit as checkForUpdates/checkRemoteControl. Registering itself never
+     *  depends on this; it only uploads what's already saved locally so the
+     *  server can enforce "one phone number, one device" across installs. */
+    private fun checkRegistrationUpload() {
+        if (!ProfileStore.isRegistered(this)) return
+        val profile = ProfileStore.get(this)
+        val phone = profile.phone
+        if (phone.isNullOrBlank()) return
+        if (!hasActiveNetwork()) return
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                RegistrationUploader.uploadIfNeeded(this@MainActivity, profile.name, phone, profile.deviceId)
+            }
+            if (RegistrationUploader.consumePendingConflict(this@MainActivity)) {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle(R.string.registration_conflict_title)
+                    .setMessage(R.string.registration_conflict_body)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+            }
+        }
+    }
+
     /** "Made by GYW" with a link to his own site — a small, honest credit,
      *  not a dependency: the app works exactly the same whether or not
      *  anyone ever opens it. */
@@ -845,6 +872,7 @@ class MainActivity : AppCompatActivity() {
             )
             if (isFirstRunGate) {
                 ProfileStore.markRegistered(this)
+                checkRegistrationUpload()
             }
             refreshNameButton(nameButton)
             mesh?.sendProfile()
