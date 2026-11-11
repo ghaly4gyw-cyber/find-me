@@ -54,11 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     background: var(--bg); color: var(--text); display: flex; align-items: center;
-    justify-content: center; height: 100vh; margin: 0;
+    justify-content: center; min-height: 100vh; margin: 0; padding: 1rem;
   }
   form {
     background: var(--panel); border: 1px solid var(--border); padding: 2rem;
-    border-radius: 14px; width: 300px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    border-radius: 14px; width: 100%; max-width: 300px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
   }
   h1 { font-size: 1.25rem; margin: 0 0 1.25rem; }
   h1 span { color: var(--accent-2); }

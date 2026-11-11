@@ -333,7 +333,8 @@ $topFeatures = array_slice($topFeatures, 0, 10);
     font-weight: 700; cursor: pointer; font-size: 0.88rem;
   }
 
-  .admin-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .admin-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 520px; }
   .admin-table th, .admin-table td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
   .admin-table th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; }
 
@@ -344,6 +345,33 @@ $topFeatures = array_slice($topFeatures, 0, 10);
 
   .own-code-box { background: var(--panel-2); border: 1px dashed var(--accent-2); border-radius: 10px; padding: 0.8rem 1rem; display: inline-block; }
   .own-code-box .code { font-family: monospace; font-size: 1.2rem; font-weight: 700; color: var(--accent-2); letter-spacing: 1px; }
+
+  /* Phone-sized screens — the layout above already wraps and stacks
+     reasonably on its own (flex-wrap, auto-fill grid), so this only
+     tightens what still looks or behaves like a desktop page on a small
+     screen: a cramped top bar, side-by-side form fields that are too
+     narrow to tap accurately, and tables that would otherwise force the
+     whole page to scroll sideways. */
+  @media (max-width: 640px) {
+    body { padding: 0.9rem; }
+    .top { flex-direction: column; align-items: stretch; gap: 0.6rem; }
+    .top h1 { font-size: 1.1rem; }
+    .top > div { display: flex; flex-wrap: wrap; gap: 8px; }
+    .top > div a { margin: 0 !important; flex: 1; text-align: center; }
+    .stats { gap: 0.5rem; }
+    .stat { flex: 1 1 calc(50% - 0.5rem); min-width: 0; padding: 0.7rem 0.8rem; }
+    .card-grid { grid-template-columns: 1fr; }
+    .mini-form input, .mini-form select, .mini-form button { width: 100%; margin-right: 0; }
+    .mini-form { display: flex; flex-direction: column; }
+    .request-row { flex-direction: column; align-items: stretch; }
+    .request-actions { display: flex; gap: 6px; }
+    .request-actions form { flex: 1; }
+    .request-actions button { width: 100%; }
+    .admin-table td form.mini-form { flex-direction: row; flex-wrap: wrap; }
+    .admin-table td form.mini-form input { width: auto; flex: 1; min-width: 90px; }
+    .modal-box { width: calc(100% - 1.5rem); max-width: none; }
+    .toolbar input { max-width: 100%; }
+  }
 </style>
 </head>
 <body x-data="{ search: '', selected: null }">
@@ -513,6 +541,7 @@ $topFeatures = array_slice($topFeatures, 0, 10);
   <?php if ($isSuperAdmin): ?>
   <div class="section-title">Manage admins</div>
   <div class="panel-box">
+    <div class="table-scroll">
     <table class="admin-table" style="margin-bottom: 1.2rem;">
       <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Offline code</th><th>Reset password</th></tr></thead>
       <tbody>
@@ -546,6 +575,7 @@ $topFeatures = array_slice($topFeatures, 0, 10);
         <?php endforeach; ?>
       </tbody>
     </table>
+    </div>
     <p class="muted" style="font-size: 0.8rem; margin-bottom: 0.6rem;">Add a new admin — they log in with this username and password; "Admin" can block/unblock users and approve/reject activations; "Super admin" also gets the kill switch, app control, and this screen. An initial offline code is optional — you can always set or change it afterward above.</p>
     <form method="post" action="admin-save.php" class="mini-form">
       <input type="hidden" name="action" value="add_admin">
