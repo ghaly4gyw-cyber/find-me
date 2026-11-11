@@ -6,6 +6,7 @@ import androidx.core.os.LocaleListCompat
 import com.ghaly.findme.util.AnrWatchdog
 import com.ghaly.findme.util.AppLog
 import com.ghaly.findme.util.CrashLog
+import com.ghaly.findme.util.ThemePrefs
 
 /** Most of the people who will ever install this app read Arabic first, so the
  *  app should open in Arabic out of the box — not whatever language the phone's
@@ -25,6 +26,9 @@ class FindMeApplication : Application() {
         // reported "shrinking" — this writes down everything, continuously,
         // so the next report is a real sequence of events instead of a guess.
         AppLog.install(this)
+        // Follow-system by default; only matters here if someone already
+        // chose a manual Light/Dark override — see ThemePrefs.
+        ThemePrefs.applyStored(this)
         if (AppCompatDelegate.getApplicationLocales().isEmpty) {
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("ar"))
         }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Styles are picked whole per resource config — a style with the same
+     name redefined in values-night/ would replace the ENTIRE style, not
+     merge with it, silently dropping every item only set in values/themes.xml.
+     So the day/night difference for status/nav bar icon contrast is pushed
+     down into a plain bool resource instead, referenced once from the one
+     Theme.FindMe definition in values/themes.xml. -->
+<resources>
+    <bool name="is_light_status_bar">true</bool>
+</resources>

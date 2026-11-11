@@ -1,17 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.FindMe" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Material3 DayNight base. Light values live here, dark values in
+         values-night/colors.xml + values-night/bools.xml — see
+         util/ThemePrefs.kt for how the active mode is chosen (follow
+         system, or a manual Light/Dark override). -->
+    <style name="Theme.FindMe" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/amber_500</item>
+        <item name="colorOnPrimary">@color/color_on_accent</item>
         <item name="colorPrimaryDark">@color/sand_900</item>
+        <item name="colorSecondary">@color/teal_400</item>
         <item name="colorAccent">@color/teal_400</item>
+        <item name="colorSurface">@color/night_panel</item>
+        <item name="colorOnSurface">@color/white</item>
+        <item name="android:colorBackground">@color/sand_900</item>
+        <item name="colorError">@color/sos_red</item>
         <item name="android:statusBarColor" tools:targetApi="21">@color/sand_900</item>
+        <item name="android:navigationBarColor" tools:targetApi="21">@color/nav_surface</item>
         <item name="android:windowBackground">@color/sand_900</item>
+        <!-- Light theme = light status/nav bar surfaces, so their icons
+             need to render dark to stay visible; values-night/bools.xml
+             flips this bool to false for the dark theme (see bools.xml for
+             why it's a bool resource and not a second copy of this style). -->
+        <item name="android:windowLightStatusBar" tools:targetApi="23">@bool/is_light_status_bar</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">@bool/is_light_status_bar</item>
     </style>
 
     <!-- Rounded, ripple-backed pill button for primary tap actions. -->
     <style name="FindMe.Button.Pill" parent="android:Widget.Material.Button">
         <item name="android:background">@drawable/bg_button_pill</item>
-        <item name="android:textColor">@color/sand_900</item>
+        <item name="android:textColor">@color/color_on_accent</item>
         <item name="android:textStyle">bold</item>
         <item name="android:stateListAnimator">@animator/press_scale</item>
     </style>
@@ -46,7 +63,7 @@
 
     <style name="CalcButtonEquals" parent="CalcButtonBase">
         <item name="android:background">@drawable/bg_button_pill</item>
-        <item name="android:textColor">@color/sand_900</item>
+        <item name="android:textColor">@color/color_on_accent</item>
         <item name="android:textStyle">bold</item>
     </style>
 </resources>

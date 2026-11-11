@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -41,7 +42,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="@string/profile_info_locked_note"
-        android:textColor="@color/sand_700"
+        android:textColor="@color/sand_300"
         android:textSize="12sp" />
 
     <TextView
@@ -61,5 +62,15 @@
         android:padding="6dp"
         android:text="@string/profile_set_pin_button"
         android:textColor="@color/teal_400" />
+
+    <TextView
+        android:id="@+id/profileInfoThemeButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="6dp"
+        android:padding="6dp"
+        android:textColor="@color/teal_400"
+        tools:text="🌓 Theme: Follow system" />
 
 </LinearLayout>

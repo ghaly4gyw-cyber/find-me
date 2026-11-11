@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DARK ("black") theme — this is the app's original "desert night" look,
+     moved here unchanged so values/colors.xml can hold the new LIGHT
+     ("white") theme under the exact same names. Every layout and drawable
+     keeps referencing the same @color/* names; Android picks this file
+     automatically whenever the device/app is in dark mode (see
+     util/ThemePrefs.kt for how that's chosen), so no layout had to change
+     to support the new theme. -->
+<resources>
+    <color name="sand_900">#0E1B1D</color>
+    <color name="sand_700">#1B3236</color>
+    <color name="sand_300">#AFC9C7</color>
+    <color name="amber_500">#F2A541</color>
+    <color name="sos_red">#FF4D5E</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+
+    <color name="teal_400">#39C5BB</color>
+    <color name="teal_700">#123B3A</color>
+    <color name="night_panel">#16292C</color>
+    <color name="divider">#28474B</color>
+    <color name="ripple_light">#33FFFFFF</color>
+    <color name="ripple_dark">#22000000</color>
+
+    <!-- Text drawn directly on the bright amber accent (pill buttons, the
+         calculator's equals key) always wants to stay dark, in both
+         themes, since the amber itself barely changes brightness between
+         them — kept separate from "white" so repainting "white" per-theme
+         below never flips this. -->
+    <color name="color_on_accent">#1A1208</color>
+
+    <!-- Shared surface for the unified top-tools + bottom-tabs nav dock. -->
+    <color name="nav_surface">#16292C</color>
+    <color name="nav_divider">#28474B</color>
+</resources>

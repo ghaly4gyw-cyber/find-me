@@ -237,6 +237,11 @@
     <string name="set_pin_dialog_message">يُستخدم لنقل حسابك إلى هاتف جديد إذا فُقد هذا الهاتف أو تعطّل. 4–8 أرقام. اتركه فارغاً لإزالته.</string>
     <string name="signed_out_title">تم تسجيل الخروج</string>
     <string name="signed_out_body">تم تسجيل هذا الحساب للتو على هاتف آخر، لذا تم تسجيل خروج هذا الهاتف منه. كل ما تم حفظه هنا (الحسابات والملاحظات والأماكن) يبقى على هذا الهاتف — لكن عليك التسجيل من جديد لمواصلة استخدام إيجادني.</string>
+    <string name="profile_theme_button_fmt">🌓 المظهر: %s</string>
+    <string name="theme_changed_toast_fmt">تم ضبط المظهر على %s</string>
+    <string name="theme_mode_system">حسب النظام</string>
+    <string name="theme_mode_light">فاتح</string>
+    <string name="theme_mode_dark">داكن</string>
 
     <string name="tools_suggest_feature">💡 اقترح ميزة</string>
     <string name="feedback_dialog_title">هل هناك شيء تريد إضافته؟</string>

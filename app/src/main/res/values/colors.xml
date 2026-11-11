@@ -1,20 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- LIGHT ("white") theme — the default resource bucket, used whenever the
+     device/app isn't in dark mode. Same color names as values-night/colors.xml
+     (the original "desert night" dark palette), repainted for a bright warm-sand
+     surface with dark text, so every existing layout and drawable renders
+     correctly in both themes without being touched. See util/ThemePrefs.kt
+     for how the active theme is chosen (follow system, or a manual override). -->
 <resources>
-    <!-- "Desert night" theme: cool deep teal-night base, warm gold accent,
-         a fresh teal highlight for selection/active states. -->
-    <color name="sand_900">#0E1B1D</color>
-    <color name="sand_700">#1B3236</color>
-    <color name="sand_300">#AFC9C7</color>
-    <color name="amber_500">#F2A541</color>
-    <color name="sos_red">#FF4D5E</color>
-    <color name="white">#FFFFFF</color>
+    <color name="sand_900">#F6F1E6</color>
+    <color name="sand_700">#ECE3CF</color>
+    <color name="sand_300">#4F6260</color>
+    <color name="amber_500">#C97A1C</color>
+    <color name="sos_red">#D3273D</color>
+    <color name="white">#17211F</color>
     <color name="black">#000000</color>
 
-    <!-- New accents for the UI polish pass -->
-    <color name="teal_400">#39C5BB</color>
-    <color name="teal_700">#123B3A</color>
-    <color name="night_panel">#16292C</color>
-    <color name="divider">#28474B</color>
-    <color name="ripple_light">#33FFFFFF</color>
+    <color name="teal_400">#0E7E78</color>
+    <!-- Unlike the dark theme, this is a light tint here — it's a surface
+         (selected tab chip, account-entry-count badge) paired with the
+         theme-adaptive "white"/"teal_400" text colors on top, the same way
+         night_panel pairs with "white" elsewhere. -->
+    <color name="teal_700">#CFEBE8</color>
+    <color name="night_panel">#FFFFFF</color>
+    <color name="divider">#DED4BC</color>
+    <color name="ripple_light">#22000000</color>
     <color name="ripple_dark">#22000000</color>
+
+    <!-- Text drawn directly on the bright amber accent (pill buttons, the
+         calculator's equals key) always wants to stay dark, in both
+         themes, since the amber itself barely changes brightness between
+         them — kept separate from "white" so repainting "white" per-theme
+         never flips this. -->
+    <color name="color_on_accent">#1A1208</color>
+
+    <!-- Shared surface for the unified top-tools + bottom-tabs nav dock. -->
+    <color name="nav_surface">#FFFFFF</color>
+    <color name="nav_divider">#DED4BC</color>
 </resources>

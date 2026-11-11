@@ -49,6 +49,7 @@ import com.ghaly.findme.util.AnrWatchdog
 import com.ghaly.findme.util.AppLog
 import com.ghaly.findme.util.CrashLog
 import com.ghaly.findme.util.PhoneValidator
+import com.ghaly.findme.util.ThemePrefs
 import com.ghaly.findme.util.withTapBounce
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
@@ -1324,6 +1325,22 @@ class MainActivity : AppCompatActivity() {
         )
         view.findViewById<TextView>(R.id.profileInfoPinButton).setOnClickListener {
             showSetPinDialog(current.phone)
+        }
+        val themeButton = view.findViewById<TextView>(R.id.profileInfoThemeButton)
+        themeButton.text = getString(
+            R.string.profile_theme_button_fmt,
+            ThemePrefs.labelFor(this, ThemePrefs.currentMode(this))
+        )
+        themeButton.setOnClickListener {
+            val newMode = ThemePrefs.cycle(this)
+            Toast.makeText(
+                this,
+                getString(R.string.theme_changed_toast_fmt, ThemePrefs.labelFor(this, newMode)),
+                Toast.LENGTH_SHORT
+            ).show()
+            // ThemePrefs.cycle() already triggered AppCompatDelegate to
+            // recreate this Activity with the new theme applied — nothing
+            // else to do here.
         }
         AlertDialog.Builder(this)
             .setTitle(R.string.profile_info_title)

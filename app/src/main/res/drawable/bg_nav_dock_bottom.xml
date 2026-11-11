@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mirror of bg_nav_dock_top.xml for the bottom tab bar — same shared
+     "nav_surface" dock color, rounded on the top edge instead, so both the
+     top tools row and the bottom tab row read as one consistent nav system
+     framing the content, not two unrelated strips. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/nav_surface" />
+    <corners
+        android:topLeftRadius="20dp"
+        android:topRightRadius="20dp" />
+</shape>

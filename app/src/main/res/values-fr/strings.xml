@@ -237,6 +237,11 @@
     <string name="set_pin_dialog_message">Permet de transférer votre compte sur un nouveau téléphone si celui-ci est perdu ou cassé. 4 à 8 chiffres. Laissez vide pour le supprimer.</string>
     <string name="signed_out_title">Déconnecté</string>
     <string name="signed_out_body">Ce compte vient d\'être enregistré sur un autre téléphone, donc celui-ci en a été déconnecté. Tout ce qui est enregistré ici (comptes, notes, lieux) reste sur ce téléphone — mais vous devrez vous réinscrire pour continuer à utiliser Trouve-Moi.</string>
+    <string name="profile_theme_button_fmt">🌓 Thème : %s</string>
+    <string name="theme_changed_toast_fmt">Thème réglé sur %s</string>
+    <string name="theme_mode_system">Suivre le système</string>
+    <string name="theme_mode_light">Clair</string>
+    <string name="theme_mode_dark">Sombre</string>
 
     <string name="tools_suggest_feature">💡 Suggérer une fonctionnalité</string>
     <string name="feedback_dialog_title">Souhaitez-vous qu\'on ajoute quelque chose ?</string>

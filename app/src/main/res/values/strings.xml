@@ -240,6 +240,11 @@
     <string name="set_pin_dialog_message">Used to move your account to a new phone if this one is ever lost or broken. 4–8 digits. Leave blank to remove it.</string>
     <string name="signed_out_title">Signed out</string>
     <string name="signed_out_body">This account was just registered on a different phone, so this phone has been signed out of it. Everything saved here (accounts, notes, places) stays on this phone — but you\'ll need to register again to keep using Find Me.</string>
+    <string name="profile_theme_button_fmt">🌓 Theme: %s</string>
+    <string name="theme_changed_toast_fmt">Theme set to %s</string>
+    <string name="theme_mode_system">Follow system</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
 
     <string name="tools_suggest_feature">💡 Suggest a feature</string>
     <string name="feedback_dialog_title">Anything you\'d like to see added?</string>
