@@ -32,13 +32,14 @@ class MeshForegroundService : Service() {
 
     companion object {
         private const val CHANNEL_ID = "find_me_mesh"
-        private const val FALL_CHANNEL_ID = "find_me_fall"
         private const val WEATHER_CHANNEL_ID = "find_me_weather"
         private const val SOS_RECEIVED_CHANNEL_ID = "find_me_sos_received"
+        private const val LINK_CHANNEL_ID = "find_me_link"
         private const val NOTIFICATION_ID = 1001
-        private const val FALL_NOTIFICATION_ID = 1002
         private const val WEATHER_NOTIFICATION_ID = 1004
         private const val SOS_RECEIVED_NOTIFICATION_ID = 1007
+        private const val LINK_REQUEST_NOTIFICATION_ID = 1008
+        private const val LINK_RESPONSE_NOTIFICATION_ID = 1009
         private const val WATCHDOG_INTERVAL_MS = 60_000L
         private const val RING_DURATION_MS = 15_000L
         private const val INACTIVITY_THRESHOLD_MS = 20 * 60_000L // 20 minutes of no touches
@@ -61,7 +62,6 @@ class MeshForegroundService : Service() {
     lateinit var mesh: MeshManager
         private set
     private lateinit var locationTracker: LocationTracker
-    private lateinit var fallDetector: FallDetector
     private lateinit var pressureWatcher: PressureWatcher
     private val ringSignal: PhysicalSignal by lazy { PhysicalSignal(applicationContext) }
 
@@ -120,6 +120,7 @@ class MeshForegroundService : Service() {
         com.ghaly.findme.repo.PeerRepository.init(applicationContext)
         com.ghaly.findme.repo.ProfileRepository.init(applicationContext)
         com.ghaly.findme.repo.SavedPlaceRepository.init(applicationContext)
+        com.ghaly.findme.repo.LinkRepository.init(applicationContext)
         com.ghaly.findme.repo.SosRepository.init(applicationContext)
         com.ghaly.findme.repo.InactivityRepository.init(applicationContext)
         com.ghaly.findme.repo.PostRepository.init(applicationContext)
@@ -144,13 +145,14 @@ class MeshForegroundService : Service() {
             }
         }
         mesh.onSosReceived = { senderName -> notifySosReceived(senderName) }
+        mesh.onLinkRequestReceived = { fromName -> notifyLinkRequest(fromName) }
+        mesh.onLinkResponseReceived = { peerName, accepted -> if (accepted) notifyLinkAccepted(peerName) }
         mesh.onLiveLocationBoost = { active -> setLiveLocationBoost(active) }
         locationTracker = LocationTracker(applicationContext) { lat, lon, accuracyM ->
             mesh.sendPosition(lat, lon, currentBatteryPct())
             mesh.updateMyAccuracy(accuracyM)
             com.ghaly.findme.repo.TrailRepository.record(lat, lon)
         }
-        fallDetector = FallDetector(applicationContext) { onPossibleFallDetected() }
         pressureWatcher = PressureWatcher(applicationContext) { dropHpa, minutes ->
             notifyPressureDrop(dropHpa, minutes)
         }
@@ -173,7 +175,6 @@ class MeshForegroundService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification())
         mesh.start()
         locationTracker.start(currentIntervalMs)
-        fallDetector.start()
         pressureWatcher.start()
         startWatchdog()
         return START_STICKY
@@ -186,7 +187,6 @@ class MeshForegroundService : Service() {
         ringStopJob?.cancel()
         serviceJob.cancel()
         locationTracker.stop()
-        fallDetector.stop()
         pressureWatcher.stop()
         ringSignal.stop()
         try {
@@ -275,47 +275,6 @@ class MeshForegroundService : Service() {
         mesh.sendInactive(loc?.first ?: 0.0, loc?.second ?: 0.0)
     }
 
-    /** The accelerometer heuristic thinks this phone just took a fall. Raise the
-     *  same "may be incapacitated" alert the 20-minute idle timer would — no
-     *  need to wait that long when there's already a strong physical signal —
-     *  and post a one-off notification so the person can see why, and clear it
-     *  with a single touch to the phone if they're actually fine. */
-    private fun onPossibleFallDetected() {
-        raiseInactiveAlert()
-        notifyPossibleFall()
-    }
-
-    private fun notifyPossibleFall() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                FALL_CHANNEL_ID,
-                getString(R.string.fall_notification_channel),
-                NotificationManager.IMPORTANCE_HIGH
-            )
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
-        }
-        val openAppIntent = PendingIntent.getActivity(
-            this, 1, Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-        val notification = NotificationCompat.Builder(this, FALL_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(getString(R.string.fall_notification_title))
-            .setContentText(getString(R.string.fall_notification_text))
-            .setContentIntent(openAppIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .build()
-        try {
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.notify(FALL_NOTIFICATION_ID, notification)
-        } catch (e: SecurityException) {
-            // POST_NOTIFICATIONS not granted — the mesh alert itself still went
-            // out to teammates, this notification is just a local nice-to-have.
-        }
-    }
-
     /** The loud, impossible-to-miss alert for someone ELSE's SOS — a quiet
      *  new row in the SOS tab's list isn't enough if nobody happens to have
      *  that tab open. High-priority channel with its own vibration pattern
@@ -357,6 +316,73 @@ class MeshForegroundService : Service() {
             // POST_NOTIFICATIONS not granted — the SOS itself still landed in
             // the SOS tab, this notification is just what would have pushed it
             // in front of the person right away.
+        }
+    }
+
+    /** Someone else's phone just asked this one for a mutual location link —
+     *  a lower-urgency notification than SOS (default importance, no alarm
+     *  vibration pattern), but still a real notification rather than only a
+     *  quiet row in the peer list, since the request sits waiting for a
+     *  reply and the person may not have the app open at all. */
+    private fun notifyLinkRequest(fromName: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                LINK_CHANNEL_ID,
+                getString(R.string.link_notification_channel),
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+        val openAppIntent = PendingIntent.getActivity(
+            this, 7, Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val notification = NotificationCompat.Builder(this, LINK_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(getString(R.string.link_request_notification_title))
+            .setContentText(getString(R.string.link_request_notification_text_fmt, fromName))
+            .setContentIntent(openAppIntent)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+        try {
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.notify(LINK_REQUEST_NOTIFICATION_ID, notification)
+        } catch (e: SecurityException) {
+            // POST_NOTIFICATIONS not granted — the request itself still landed
+            // (see Peers / the profile dialog), just without this nudge.
+        }
+    }
+
+    /** A link request this phone sent earlier was just accepted. */
+    private fun notifyLinkAccepted(peerName: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                LINK_CHANNEL_ID,
+                getString(R.string.link_notification_channel),
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+        val openAppIntent = PendingIntent.getActivity(
+            this, 8, Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val notification = NotificationCompat.Builder(this, LINK_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(getString(R.string.link_accepted_notification_title))
+            .setContentText(getString(R.string.link_accepted_notification_text_fmt, peerName))
+            .setContentIntent(openAppIntent)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+        try {
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.notify(LINK_RESPONSE_NOTIFICATION_ID, notification)
+        } catch (e: SecurityException) {
+            // Same as above — the linked state itself is already saved.
         }
     }
 

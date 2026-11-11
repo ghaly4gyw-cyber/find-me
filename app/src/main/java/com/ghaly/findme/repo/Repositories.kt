@@ -8,6 +8,8 @@ import com.ghaly.findme.model.LedgerBook
 import com.ghaly.findme.model.LedgerCurrency
 import com.ghaly.findme.model.LedgerDirection
 import com.ghaly.findme.model.LedgerEntry
+import com.ghaly.findme.model.LinkRequest
+import com.ghaly.findme.model.LinkedPeer
 import com.ghaly.findme.model.ListingKind
 import com.ghaly.findme.model.MarketListing
 import com.ghaly.findme.model.Note
@@ -762,6 +764,117 @@ object SavedPlaceRepository {
                 .apply()
         } catch (e: Exception) {
             // best-effort cache — losing it just means the saved places are gone
+        }
+    }
+}
+
+/** Mutual "location link" relationships — two people who agreed to keep
+ *  sharing their position continuously (see [LinkedPeer]). Confirmed links
+ *  persist to disk the same way saved places do, so they survive an app
+ *  restart. Pending handshakes (sent or received, not yet answered) are
+ *  deliberately kept in-memory only — they're meant to be answered within
+ *  the same session; if the app restarts mid-handshake, the simplest and
+ *  safest thing is for whichever side still wants it to just ask again. */
+object LinkRepository {
+    private const val PREFS = "find_me_links"
+    private const val KEY_LINKED = "linked_json"
+
+    private var appContext: Context? = null
+    private val _linked = MutableStateFlow<List<LinkedPeer>>(emptyList())
+    val linked: StateFlow<List<LinkedPeer>> = _linked
+    private val _incoming = MutableStateFlow<List<LinkRequest>>(emptyList())
+    val incoming: StateFlow<List<LinkRequest>> = _incoming
+    private val _outgoing = MutableStateFlow<List<LinkRequest>>(emptyList())
+    val outgoing: StateFlow<List<LinkRequest>> = _outgoing
+
+    fun init(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        loadFromDisk()
+    }
+
+    fun isLinked(deviceId: String): Boolean = _linked.value.any { it.deviceId == deviceId }
+    fun hasOutgoingRequest(deviceId: String): Boolean = _outgoing.value.any { it.peerId == deviceId }
+    fun hasIncomingRequest(deviceId: String): Boolean = _incoming.value.any { it.peerId == deviceId }
+
+    /** Called when this device sends a link request to [targetId]. */
+    fun addOutgoingRequest(targetId: String, targetName: String, requestId: String) {
+        if (isLinked(targetId) || hasOutgoingRequest(targetId)) return
+        _outgoing.update { it + LinkRequest(targetId, targetName, requestId, System.currentTimeMillis()) }
+    }
+
+    /** Called when a LINK_REQUEST addressed to this device arrives. */
+    fun addIncomingRequest(fromId: String, fromName: String, requestId: String) {
+        if (isLinked(fromId) || hasIncomingRequest(fromId)) return
+        _incoming.update { it + LinkRequest(fromId, fromName, requestId, System.currentTimeMillis()) }
+    }
+
+    /** This device answering an incoming request — removes it from the
+     *  pending list and, if accepted, adds the confirmed link. */
+    fun resolveIncomingRequest(fromId: String, accept: Boolean) {
+        val req = _incoming.value.find { it.peerId == fromId } ?: return
+        _incoming.update { list -> list.filter { it.peerId != fromId } }
+        if (accept && !isLinked(fromId)) {
+            _linked.update { it + LinkedPeer(fromId, req.peerName, System.currentTimeMillis()) }
+            saveToDisk()
+        }
+    }
+
+    /** A LINK_RESPONSE came back for a request this device sent earlier. */
+    fun resolveOutgoingRequest(peerId: String, peerName: String, accepted: Boolean) {
+        val wasPending = hasOutgoingRequest(peerId)
+        _outgoing.update { list -> list.filter { it.peerId != peerId } }
+        if (accepted && wasPending && !isLinked(peerId)) {
+            _linked.update { it + LinkedPeer(peerId, peerName, System.currentTimeMillis()) }
+            saveToDisk()
+        }
+    }
+
+    /** Either side can unlink — removes locally; the caller is responsible
+     *  for telling the other side too (see MeshManager.sendUnlink). */
+    fun removeLink(peerId: String) {
+        _linked.update { list -> list.filter { it.deviceId != peerId } }
+        saveToDisk()
+    }
+
+    private fun loadFromDisk() {
+        val ctx = appContext ?: return
+        try {
+            val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(KEY_LINKED, null) ?: return
+            val arr = JSONArray(json)
+            val loaded = mutableListOf<LinkedPeer>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                loaded += LinkedPeer(
+                    deviceId = o.getString("deviceId"),
+                    name = o.getString("name"),
+                    ts = o.optLong("ts", System.currentTimeMillis())
+                )
+            }
+            _linked.value = loaded
+        } catch (e: Exception) {
+            // corrupted/old cache format — just start empty, nothing to recover
+        }
+    }
+
+    private fun saveToDisk() {
+        val ctx = appContext ?: return
+        try {
+            val arr = JSONArray()
+            for (p in _linked.value) {
+                arr.put(
+                    JSONObject()
+                        .put("deviceId", p.deviceId)
+                        .put("name", p.name)
+                        .put("ts", p.ts)
+                )
+            }
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(KEY_LINKED, arr.toString())
+                .apply()
+        } catch (e: Exception) {
+            // best-effort cache — losing it just means the links are gone
         }
     }
 }

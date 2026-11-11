@@ -50,6 +50,20 @@
     <string name="call">اتصال</string>
     <string name="whatsapp">واتساب</string>
     <string name="no_phone_shared">لم يتم مشاركة رقم هاتف</string>
+
+    <string name="link_request">🔗 طلب ربط الموقع</string>
+    <string name="link_cancel_request">⏳ إلغاء الطلب</string>
+    <string name="link_accept">✅ قبول الربط</string>
+    <string name="link_decline">رفض</string>
+    <string name="link_unlink">🔓 إلغاء الربط</string>
+    <string name="link_status_none">غير مرتبط بعد — الربط يجعلكما تريان موقع بعضكما دائماً، حتى يقوم أحدكما بإلغاء الربط.</string>
+    <string name="link_status_outgoing">في انتظار موافقة %s على طلب الربط…</string>
+    <string name="link_status_incoming">%s يريد ربط موقعه بموقعك.</string>
+    <string name="link_status_linked">🔗 مرتبطان — يمكنكما دائماً رؤية موقع بعضكما.</string>
+    <string name="link_requested_toast">تم إرسال طلب الربط إلى %s.</string>
+    <string name="link_accepted_toast">أنت الآن مرتبط مع %s.</string>
+    <string name="link_declined_toast">تم رفض طلب الربط من %s.</string>
+    <string name="link_unlinked_toast">تم إلغاء الربط مع %s.</string>
     <string name="edit_profile">تعديل الملف الشخصي</string>
     <string name="tab_map">الخريطة</string>
     <string name="map_center_you">أنت</string>
@@ -103,12 +117,14 @@
     <string name="sms_bridge_failed">تعذر الإرسال، على الأرجح لا توجد تغطية الآن. ستتم المحاولة مرة أخرى لاحقًا.</string>
     <string name="sms_bridge_no_contact_set">حدد رقم جهة اتصال الطوارئ أولاً.</string>
 
-    <string name="fall_notification_channel">احتمال وقوع سقوط</string>
-    <string name="fall_notification_title">احتمال وقوع سقوط</string>
-    <string name="fall_notification_text">افتح إيجادني إذا كنت بخير، ستُلغى هذه التنبيه فور لمسك للهاتف.</string>
     <string name="sos_received_notification_channel">تنبيه نجدة</string>
     <string name="sos_received_notification_title">شخص ما يحتاج إلى مساعدة</string>
     <string name="sos_received_notification_text_fmt">%s يحتاج إلى مساعدة — افتح تبويب النجدة لمعرفة موقعه.</string>
+    <string name="link_notification_channel">ربط الموقع</string>
+    <string name="link_request_notification_title">طلب ربط الموقع</string>
+    <string name="link_request_notification_text_fmt">%s يريد ربط موقعه بموقعك.</string>
+    <string name="link_accepted_notification_title">تم قبول ربط الموقع</string>
+    <string name="link_accepted_notification_text_fmt">%s قبل طلب ربط الموقع الخاص بك.</string>
 
     <string name="tools_dialog_title">أدوات</string>
     <string name="tools_notes">📝 ملاحظات</string>

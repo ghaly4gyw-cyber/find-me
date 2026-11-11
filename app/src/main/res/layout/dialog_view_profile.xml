@@ -77,4 +77,46 @@
         android:textSize="12sp"
         android:text="@string/no_phone_shared" />
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="16dp"
+        android:background="@color/divider" />
+
+    <TextView
+        android:id="@+id/viewProfileLinkStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textColor="@color/sand_300"
+        android:textSize="12sp"
+        android:gravity="center"
+        tools:text="Not linked yet"
+        xmlns:tools="http://schemas.android.com/tools" />
+
+    <LinearLayout
+        android:id="@+id/viewProfileLinkRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <Button
+            android:id="@+id/linkDeclineButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:visibility="gone"
+            android:text="@string/link_decline" />
+
+        <Button
+            android:id="@+id/linkActionButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="@string/link_request" />
+    </LinearLayout>
+
 </LinearLayout>

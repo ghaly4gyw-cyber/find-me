@@ -301,6 +301,16 @@ class MeshManager(private val context: Context) {
      *  every carrier-pigeon replay of one already known. */
     var onSosReceived: ((senderName: String) -> Unit)? = null
 
+    /** Set by the service to push a notification the moment another phone
+     *  asks THIS one for a mutual location link — so it's noticed even if
+     *  the person doesn't currently have the peer list or that person's
+     *  profile open. */
+    var onLinkRequestReceived: ((fromName: String) -> Unit)? = null
+
+    /** Set by the service to notify when a link request THIS phone sent
+     *  earlier gets answered — true if the other side accepted. */
+    var onLinkResponseReceived: ((peerName: String, accepted: Boolean) -> Unit)? = null
+
     /** Set by the service to switch GPS fix frequency between the normal
      *  battery-conserving cadence (30-120s, scaled by battery level) and a
      *  short, frequent one — the map screen calls [setLiveLocationBoost]
@@ -558,6 +568,38 @@ class MeshManager(private val context: Context) {
                     )
                 )
             }
+            MsgType.LINK_REQUEST -> {
+                // Flood-relayed like a targeted chat (the other person may be
+                // several hops away), but only acted on by whoever it's
+                // actually addressed to — everyone else just relays it on.
+                val obj = JSONObject(envelope.payload)
+                if (obj.optString("to", "") == myId && envelope.originId != myId) {
+                    com.ghaly.findme.repo.LinkRepository.addIncomingRequest(
+                        fromId = envelope.originId,
+                        fromName = envelope.originName,
+                        requestId = obj.optString("requestId", envelope.id)
+                    )
+                    onLinkRequestReceived?.invoke(envelope.originName)
+                }
+            }
+            MsgType.LINK_RESPONSE -> {
+                val obj = JSONObject(envelope.payload)
+                if (obj.optString("to", "") == myId && envelope.originId != myId) {
+                    val accepted = obj.optBoolean("accepted", false)
+                    com.ghaly.findme.repo.LinkRepository.resolveOutgoingRequest(
+                        peerId = envelope.originId,
+                        peerName = envelope.originName,
+                        accepted = accepted
+                    )
+                    onLinkResponseReceived?.invoke(envelope.originName, accepted)
+                }
+            }
+            MsgType.LINK_UNLINK -> {
+                val obj = JSONObject(envelope.payload)
+                if (obj.optString("to", "") == myId && envelope.originId != myId) {
+                    com.ghaly.findme.repo.LinkRepository.removeLink(envelope.originId)
+                }
+            }
         }
     }
 
@@ -645,6 +687,66 @@ class MeshManager(private val context: Context) {
             targetId = targetId,
             photoBase64 = photoBase64
         )
+    }
+
+    /** Asks [targetId] to start a mutual "location link" — flood-relayed like
+     *  a targeted chat so it reaches them even several hops away, but only
+     *  the addressed phone acts on it. Records the outgoing request locally
+     *  right away so the UI can show "pending" without waiting for a reply
+     *  that may never come (e.g. the other phone is out of the mesh entirely). */
+    fun sendLinkRequest(targetId: String, targetName: String) {
+        val requestId = UUID.randomUUID().toString()
+        com.ghaly.findme.repo.LinkRepository.addOutgoingRequest(targetId, targetName, requestId)
+        val payload = JSONObject().put("to", targetId).put("requestId", requestId)
+        val envelope = Envelope(
+            id = UUID.randomUUID().toString(),
+            type = MsgType.LINK_REQUEST,
+            originId = myId,
+            originName = myName,
+            hop = 0,
+            ts = System.currentTimeMillis(),
+            payload = payload.toString()
+        )
+        seenIds.add(envelope.id)
+        broadcast(envelope)
+    }
+
+    /** Answers an incoming link request from [requesterId] — resolves it
+     *  locally (confirming the link if accepted) and tells the requester's
+     *  phone the outcome, the same flood-relayed way the request arrived. */
+    fun respondToLinkRequest(requesterId: String, requestId: String, accept: Boolean) {
+        com.ghaly.findme.repo.LinkRepository.resolveIncomingRequest(requesterId, accept)
+        val payload = JSONObject().put("to", requesterId).put("requestId", requestId).put("accepted", accept)
+        val envelope = Envelope(
+            id = UUID.randomUUID().toString(),
+            type = MsgType.LINK_RESPONSE,
+            originId = myId,
+            originName = myName,
+            hop = 0,
+            ts = System.currentTimeMillis(),
+            payload = payload.toString()
+        )
+        seenIds.add(envelope.id)
+        broadcast(envelope)
+    }
+
+    /** Breaks an existing location link — removes it locally and tells the
+     *  other side, so neither phone keeps drawing the other's "linked" line
+     *  on the radar once one person ends it. */
+    fun sendUnlink(peerId: String) {
+        com.ghaly.findme.repo.LinkRepository.removeLink(peerId)
+        val payload = JSONObject().put("to", peerId)
+        val envelope = Envelope(
+            id = UUID.randomUUID().toString(),
+            type = MsgType.LINK_UNLINK,
+            originId = myId,
+            originName = myName,
+            hop = 0,
+            ts = System.currentTimeMillis(),
+            payload = payload.toString()
+        )
+        seenIds.add(envelope.id)
+        broadcast(envelope)
     }
 
     /** Direct-sends a push-to-talk clip to every phone we're currently connected to —

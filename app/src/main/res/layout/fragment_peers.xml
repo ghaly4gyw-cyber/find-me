@@ -27,15 +27,30 @@
         android:textSize="13sp"
         android:text="@string/export_report" />
 
-    <TextView
+    <LinearLayout
         android:id="@+id/emptyText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:padding="24dp"
         android:gravity="center"
-        android:text="@string/no_peers"
-        android:textColor="@color/sand_300" />
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:textSize="40sp"
+            android:text="🧭" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="@string/no_peers"
+            android:textColor="@color/sand_300" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"

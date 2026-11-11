@@ -84,6 +84,17 @@ class RadarMapView @JvmOverloads constructor(
             invalidate()
         }
 
+    /** Device ids this phone has a confirmed, mutual location link with (see
+     *  LinkRepository) — drawn as a solid, always-on line distinct from the
+     *  temporary, one-sided, dashed "Follow" line: a link is a standing
+     *  relationship both sides agreed to, not something either person set up
+     *  silently just by tapping a dot. */
+    var linkedDeviceIds: Set<String> = emptySet()
+        set(value) {
+            field = value
+            invalidate()
+        }
+
     /** Id of the saved place currently being "navigated to" — same idea as
      *  [followedDeviceId] but for a fixed spot instead of a moving person.
      *  Distance is clamped to the edge of the radar just like everything
@@ -187,6 +198,16 @@ class RadarMapView @JvmOverloads constructor(
         style = Paint.Style.STROKE
         strokeWidth = 4f
         pathEffect = android.graphics.DashPathEffect(floatArrayOf(18f, 14f), 0f)
+    }
+    /** Solid (not dashed) line to a linked peer — "solid" is deliberate here
+     *  too, same reasoning as the Qibla line: a link doesn't come and go the
+     *  way a tap-to-follow line does, so it shouldn't look temporary. Violet
+     *  so it's never confused with the amber follow line or the teal
+     *  place/Qibla lines. */
+    private val linkedLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#B388EB")
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
     }
     /** A solid, distinct-colored line for the Qibla direction — deliberately
      *  not dashed like the follow lines, so it doesn't read as "navigating
@@ -369,6 +390,7 @@ class RadarMapView @JvmOverloads constructor(
         val dots = mutableListOf<DotHit>()
         var followPx: Float? = null
         var followPy: Float? = null
+        val linkedPositions = mutableListOf<Pair<Float, Float>>()
         if (mine != null) {
             for (p in peers) {
                 if (p.lat == 0.0 && p.lon == 0.0) continue
@@ -398,6 +420,9 @@ class RadarMapView @JvmOverloads constructor(
                 if (p.deviceId == followedDeviceId) {
                     followPx = px
                     followPy = py
+                }
+                if (p.deviceId in linkedDeviceIds) {
+                    linkedPositions += px to py
                 }
             }
         }
@@ -454,6 +479,13 @@ class RadarMapView @JvmOverloads constructor(
                 if (!started) { path.moveTo(px, py); started = true } else path.lineTo(px, py)
             }
             canvas.drawPath(path, trailPaint)
+        }
+
+        // standing location-link lines — drawn before the (possibly
+        // overlapping) follow line so a temporary follow on top of an
+        // existing link still reads clearly as both.
+        for ((lx, ly) in linkedPositions) {
+            canvas.drawLine(ccx, ccy, lx, ly, linkedLinePaint)
         }
 
         // the "follow"/"navigate to" lines — drawn before the center dot so it sits on top

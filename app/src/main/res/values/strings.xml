@@ -50,6 +50,20 @@
     <string name="call">Call</string>
     <string name="whatsapp">WhatsApp</string>
     <string name="no_phone_shared">No phone number shared</string>
+
+    <string name="link_request">🔗 Request location link</string>
+    <string name="link_cancel_request">⏳ Cancel request</string>
+    <string name="link_accept">✅ Accept link</string>
+    <string name="link_decline">Decline</string>
+    <string name="link_unlink">🔓 Unlink</string>
+    <string name="link_status_none">Not linked — a link keeps you both visible on each other\'s map, until either of you unlinks.</string>
+    <string name="link_status_outgoing">Waiting for %s to accept your link request…</string>
+    <string name="link_status_incoming">%s wants to link locations with you.</string>
+    <string name="link_status_linked">🔗 Linked — you can both always see each other\'s position.</string>
+    <string name="link_requested_toast">Link request sent to %s.</string>
+    <string name="link_accepted_toast">You\'re now linked with %s.</string>
+    <string name="link_declined_toast">Declined %s\'s link request.</string>
+    <string name="link_unlinked_toast">Unlinked from %s.</string>
     <string name="edit_profile">Edit profile</string>
     <string name="tab_map">Map</string>
     <string name="map_center_you">You</string>
@@ -106,12 +120,14 @@
     <string name="sms_bridge_failed">Couldn\'t send — probably no signal right now. It\'ll keep trying.</string>
     <string name="sms_bridge_no_contact_set">Set an emergency contact number first.</string>
 
-    <string name="fall_notification_channel">Possible fall detected</string>
-    <string name="fall_notification_title">Possible fall detected</string>
-    <string name="fall_notification_text">Open Find Me if you\'re okay — this alert clears the moment you touch your phone.</string>
     <string name="sos_received_notification_channel">SOS alert</string>
     <string name="sos_received_notification_title">Someone needs help</string>
     <string name="sos_received_notification_text_fmt">%s needs help — open the SOS tab for their location.</string>
+    <string name="link_notification_channel">Location link</string>
+    <string name="link_request_notification_title">Location link request</string>
+    <string name="link_request_notification_text_fmt">%s wants to link locations with you.</string>
+    <string name="link_accepted_notification_title">Location link accepted</string>
+    <string name="link_accepted_notification_text_fmt">%s accepted your location link request.</string>
 
     <string name="tools_dialog_title">Tools</string>
     <string name="tools_notes">📝 Notes</string>

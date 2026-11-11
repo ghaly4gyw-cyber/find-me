@@ -147,6 +147,14 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                 }
             }
         }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                com.ghaly.findme.repo.LinkRepository.linked.collect { links ->
+                    radar.linkedDeviceIds = links.map { it.deviceId }.toSet()
+                }
+            }
+        }
     }
 
     /** The dot on the radar looks exactly as confident whether the fix behind

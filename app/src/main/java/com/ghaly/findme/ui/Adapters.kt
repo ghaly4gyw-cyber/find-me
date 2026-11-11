@@ -65,9 +65,19 @@ class PeerAdapter(private val onClick: (PeerPosition) -> Unit = {}) : RecyclerVi
             notifyDataSetChanged()
         }
 
+    /** Device ids currently in a confirmed mutual location link (see
+     *  LinkRepository) — shown as a small badge so it's visible at a glance,
+     *  without opening each person's profile. */
+    var linkedDeviceIds: Set<String> = emptySet()
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
+
     class VH(v: View) : RecyclerView.ViewHolder(v) {
         val root: View = v
         val name: android.widget.TextView = v.findViewById(R.id.peerName)
+        val linkBadge: android.widget.TextView = v.findViewById(R.id.peerLinkBadge)
         val battery: android.widget.TextView = v.findViewById(R.id.peerBattery)
         val direction: android.widget.TextView = v.findViewById(R.id.peerDirection)
         val status: android.widget.TextView = v.findViewById(R.id.peerStatus)
@@ -86,6 +96,7 @@ class PeerAdapter(private val onClick: (PeerPosition) -> Unit = {}) : RecyclerVi
         val p = items[position]
         val context = holder.root.context
         holder.name.text = p.name
+        holder.linkBadge.visibility = if (p.deviceId in linkedDeviceIds) View.VISIBLE else View.GONE
         holder.status.text = context.getString(
             if (p.connected) R.string.status_in_range else R.string.status_last_known
         )

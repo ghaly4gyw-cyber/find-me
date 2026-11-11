@@ -8,10 +8,12 @@ import android.util.Base64
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.ghaly.findme.R
 import com.ghaly.findme.model.PeerPosition
+import com.ghaly.findme.repo.LinkRepository
 import com.ghaly.findme.repo.ProfileRepository
 import java.util.concurrent.TimeUnit
 
@@ -89,6 +91,69 @@ fun Fragment.showPeerProfileDialog(peer: PeerPosition, myLocation: Pair<Double, 
             }
         }
     }
+
+    val linkStatus = view.findViewById<TextView>(R.id.viewProfileLinkStatus)
+    val linkActionButton = view.findViewById<android.widget.Button>(R.id.linkActionButton)
+    val linkDeclineButton = view.findViewById<android.widget.Button>(R.id.linkDeclineButton)
+
+    fun refreshLinkUi() {
+        val incoming = LinkRepository.incoming.value.find { it.peerId == peer.deviceId }
+        when {
+            LinkRepository.isLinked(peer.deviceId) -> {
+                linkStatus.text = context.getString(R.string.link_status_linked)
+                linkDeclineButton.visibility = View.GONE
+                linkActionButton.visibility = View.VISIBLE
+                linkActionButton.text = context.getString(R.string.link_unlink)
+                linkActionButton.setOnClickListener {
+                    val mesh = (requireActivity() as? MainActivity)?.mesh
+                    mesh?.sendUnlink(peer.deviceId)
+                    Toast.makeText(context, context.getString(R.string.link_unlinked_toast, peer.name), Toast.LENGTH_SHORT).show()
+                    refreshLinkUi()
+                }
+            }
+            incoming != null -> {
+                linkStatus.text = context.getString(R.string.link_status_incoming, peer.name)
+                linkDeclineButton.visibility = View.VISIBLE
+                linkActionButton.visibility = View.VISIBLE
+                linkActionButton.text = context.getString(R.string.link_accept)
+                linkActionButton.setOnClickListener {
+                    val mesh = (requireActivity() as? MainActivity)?.mesh
+                    mesh?.respondToLinkRequest(incoming.peerId, incoming.requestId, accept = true)
+                    Toast.makeText(context, context.getString(R.string.link_accepted_toast, peer.name), Toast.LENGTH_SHORT).show()
+                    refreshLinkUi()
+                }
+                linkDeclineButton.setOnClickListener {
+                    val mesh = (requireActivity() as? MainActivity)?.mesh
+                    mesh?.respondToLinkRequest(incoming.peerId, incoming.requestId, accept = false)
+                    Toast.makeText(context, context.getString(R.string.link_declined_toast, peer.name), Toast.LENGTH_SHORT).show()
+                    refreshLinkUi()
+                }
+            }
+            LinkRepository.hasOutgoingRequest(peer.deviceId) -> {
+                linkStatus.text = context.getString(R.string.link_status_outgoing, peer.name)
+                linkDeclineButton.visibility = View.GONE
+                linkActionButton.visibility = View.VISIBLE
+                linkActionButton.text = context.getString(R.string.link_cancel_request)
+                linkActionButton.setOnClickListener {
+                    LinkRepository.resolveOutgoingRequest(peer.deviceId, peer.name, accepted = false)
+                    refreshLinkUi()
+                }
+            }
+            else -> {
+                linkStatus.text = context.getString(R.string.link_status_none)
+                linkDeclineButton.visibility = View.GONE
+                linkActionButton.visibility = View.VISIBLE
+                linkActionButton.text = context.getString(R.string.link_request)
+                linkActionButton.setOnClickListener {
+                    val mesh = (requireActivity() as? MainActivity)?.mesh
+                    mesh?.sendLinkRequest(peer.deviceId, peer.name)
+                    Toast.makeText(context, context.getString(R.string.link_requested_toast, peer.name), Toast.LENGTH_SHORT).show()
+                    refreshLinkUi()
+                }
+            }
+        }
+    }
+    refreshLinkUi()
 
     AlertDialog.Builder(context)
         .setView(view)

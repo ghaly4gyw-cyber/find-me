@@ -1,7 +1,7 @@
 package com.ghaly.findme.model
 
 /** Kinds of message that travel over the mesh. */
-enum class MsgType { POSITION, CHAT, SOS, SOS_CLEAR, INACTIVE, INACTIVE_CLEAR, POST, POST_COMMENT, GROUP_CHAT, PROFILE, PLACE, LISTING, RING }
+enum class MsgType { POSITION, CHAT, SOS, SOS_CLEAR, INACTIVE, INACTIVE_CLEAR, POST, POST_COMMENT, GROUP_CHAT, PROFILE, PLACE, LISTING, RING, LINK_REQUEST, LINK_RESPONSE, LINK_UNLINK }
 
 /**
  * Envelope every mesh message is wrapped in, so any device can relay it
@@ -113,6 +113,30 @@ data class MarketListing(
      *  and kept deliberately tiny since this travels over the Bluetooth/Wi-Fi
      *  mesh (and possibly several relay hops) like everything else here. */
     val photoBase64: String? = null
+)
+
+/** A confirmed, mutual "location link" with another person — both sides
+ *  agreed to keep sharing their position with each other continuously
+ *  (distinct from the one-sided, temporary "Follow" line, which anyone can
+ *  draw just by tapping a peer, with no consent from the other side). A
+ *  link is a standing relationship: it survives app restarts and keeps
+ *  showing a connecting line on the radar as long as both people's
+ *  positions are known, until either side unlinks. */
+data class LinkedPeer(
+    val deviceId: String,
+    val name: String,
+    val ts: Long
+)
+
+/** A link handshake in flight — either a request this phone sent that's
+ *  still awaiting a reply, or one someone else sent that this phone hasn't
+ *  answered yet. Purely in-memory: a short-lived handshake isn't worth
+ *  persisting across a restart, since the other side can always ask again. */
+data class LinkRequest(
+    val peerId: String,
+    val peerName: String,
+    val requestId: String,
+    val ts: Long
 )
 
 /** A spot the user marked themselves — their own current position, a

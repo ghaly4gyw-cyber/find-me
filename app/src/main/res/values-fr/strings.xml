@@ -50,6 +50,20 @@
     <string name="call">Appeler</string>
     <string name="whatsapp">WhatsApp</string>
     <string name="no_phone_shared">Aucun numéro de téléphone partagé</string>
+
+    <string name="link_request">🔗 Demander un lien de position</string>
+    <string name="link_cancel_request">⏳ Annuler la demande</string>
+    <string name="link_accept">✅ Accepter le lien</string>
+    <string name="link_decline">Refuser</string>
+    <string name="link_unlink">🔓 Rompre le lien</string>
+    <string name="link_status_none">Pas encore lié — un lien vous rend visibles en permanence l\'un à l\'autre, jusqu\'à ce que l\'un de vous rompe le lien.</string>
+    <string name="link_status_outgoing">En attente que %s accepte votre demande de lien…</string>
+    <string name="link_status_incoming">%s veut lier sa position avec la vôtre.</string>
+    <string name="link_status_linked">🔗 Lié — vous pouvez toujours voir la position l\'un de l\'autre.</string>
+    <string name="link_requested_toast">Demande de lien envoyée à %s.</string>
+    <string name="link_accepted_toast">Vous êtes maintenant lié à %s.</string>
+    <string name="link_declined_toast">Demande de lien de %s refusée.</string>
+    <string name="link_unlinked_toast">Lien rompu avec %s.</string>
     <string name="edit_profile">Modifier le profil</string>
     <string name="tab_map">Carte</string>
     <string name="map_center_you">Vous</string>
@@ -103,12 +117,14 @@
     <string name="sms_bridge_failed">Envoi impossible — probablement aucun signal pour le moment. Nouvelle tentative plus tard.</string>
     <string name="sms_bridge_no_contact_set">Définissez d\'abord un numéro de contact d\'urgence.</string>
 
-    <string name="fall_notification_channel">Chute possible détectée</string>
-    <string name="fall_notification_title">Chute possible détectée</string>
-    <string name="fall_notification_text">Ouvrez Trouve-Moi si vous allez bien — cette alerte s\'annule dès que vous touchez votre téléphone.</string>
     <string name="sos_received_notification_channel">Alerte de détresse</string>
     <string name="sos_received_notification_title">Quelqu\'un a besoin d\'aide</string>
     <string name="sos_received_notification_text_fmt">%s a besoin d\'aide — ouvrez l\'onglet Détresse pour sa position.</string>
+    <string name="link_notification_channel">Lien de position</string>
+    <string name="link_request_notification_title">Demande de lien de position</string>
+    <string name="link_request_notification_text_fmt">%s veut lier sa position avec la vôtre.</string>
+    <string name="link_accepted_notification_title">Lien de position accepté</string>
+    <string name="link_accepted_notification_text_fmt">%s a accepté votre demande de lien de position.</string>
 
     <string name="tools_dialog_title">Outils</string>
     <string name="tools_notes">📝 Notes</string>

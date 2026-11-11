@@ -73,6 +73,14 @@ class PeersFragment : Fragment(R.layout.fragment_peers) {
             }
         }
 
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                com.ghaly.findme.repo.LinkRepository.linked.collect { links ->
+                    adapter.linkedDeviceIds = links.map { it.deviceId }.toSet()
+                }
+            }
+        }
+
         // Refresh direction arrows periodically — my own position moves even when
         // nothing else about the peer list changes. Also drives the radio's
         // "N in range" count, since that's a live property of the direct
