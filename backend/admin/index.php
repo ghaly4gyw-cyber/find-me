@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/auth.php';
-requireAdminLogin();
+$admin = requireAdminLogin();
+$isSuperAdmin = ($admin['role'] ?? '') === 'super_admin';
 require __DIR__ . '/../schema.php';
 
 /** Friendly label for a screen key (the Kotlin fragment's class name, e.g.
@@ -63,6 +64,10 @@ $users = [];
 $feedback = [];
 $publicPlaces = [];
 $appControl = null;
+$pendingActivations = [];
+$adminAccounts = [];
+$auditLog = [];
+$lastKillSwitchChange = null;
 $error = null;
 $dbConfigPath = __DIR__ . '/../db-config.php';
 
@@ -75,7 +80,7 @@ if (!file_exists($dbConfigPath)) {
         ensureSchema($pdo);
         $users = $pdo->query(
             'SELECT r.name, r.phone, r.device_id, r.last_lat, r.last_lng, r.last_location_at,
-                    r.description, r.photo_base64, r.blocked, r.created_at,
+                    r.description, r.photo_base64, r.blocked, r.activated, r.created_at,
                     r.device_model, r.android_version, r.app_version, r.network_type, r.network_name,
                     u.app_opens, u.total_ms, u.feature_usage
              FROM registrations r
@@ -90,7 +95,19 @@ if (!file_exists($dbConfigPath)) {
              FROM public_places ORDER BY updated_at DESC LIMIT 500'
         )->fetchAll(PDO::FETCH_ASSOC);
         $appControl = $pdo->query(
-            'SELECT message_title, message_body, min_supported_version, min_supported_message FROM app_control WHERE id = 1'
+            'SELECT message_title, message_body, min_supported_version, min_supported_message, kill_switch, kill_switch_message FROM app_control WHERE id = 1'
+        )->fetch(PDO::FETCH_ASSOC);
+        $pendingActivations = $pdo->query(
+            "SELECT id, phone, name, device_id, requested_at FROM activation_requests WHERE status = 'pending' ORDER BY requested_at ASC"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $adminAccounts = $pdo->query(
+            'SELECT username, name, role, created_at FROM admin_accounts ORDER BY created_at ASC'
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $auditLog = $pdo->query(
+            'SELECT admin_name, action, detail, created_at FROM admin_audit_log ORDER BY id DESC LIMIT 30'
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $lastKillSwitchChange = $pdo->query(
+            "SELECT admin_name, action, created_at FROM admin_audit_log WHERE action IN ('kill_switch_on', 'kill_switch_off') ORDER BY id DESC LIMIT 1"
         )->fetch(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         $error = 'Could not reach the database.';
@@ -114,12 +131,19 @@ $onlineCutoff = time() - 15 * 60; // "online" = seen in the last 15 minutes
 $onlineCount = 0;
 $totalAppOpens = 0;
 $totalMsAcrossUsers = 0;
+$activatedCount = 0;
+$notActivatedCount = 0;
 $aggregateFeatures = []; // key => ['opens' => n, 'ms' => n]
 $detailsByDevice = [];
 
 foreach ($users as $u) {
     if ($u['last_location_at'] !== null && strtotime($u['last_location_at']) >= $onlineCutoff) {
         $onlineCount++;
+    }
+    if (!empty($u['activated'] ?? null) || isAdminPhone((string) $u['phone'])) {
+        $activatedCount++;
+    } else {
+        $notActivatedCount++;
     }
     $appOpens = (int) ($u['app_opens'] ?? 0);
     $totalMs = (int) ($u['total_ms'] ?? 0);
@@ -151,6 +175,7 @@ foreach ($users as $u) {
         }
     }
 
+    $isAdminUser = isAdminPhone((string) $u['phone']);
     $detailsByDevice[$u['device_id']] = [
         'name' => $u['name'],
         'phone' => $u['phone'],
@@ -163,6 +188,8 @@ foreach ($users as $u) {
         'time_spent' => formatDuration($totalMs),
         'features' => $features,
         'blocked' => (bool) $u['blocked'],
+        'activated' => (bool) $u['activated'] || $isAdminUser,
+        'is_admin' => $isAdminUser,
         'device_model' => $u['device_model'] ?: null,
         'android_version' => $u['android_version'] ?: null,
         'app_version' => $u['app_version'] ?: null,
@@ -256,20 +283,82 @@ $topFeatures = array_slice($topFeatures, 0, 10);
     background: var(--panel-2); color: var(--text); font-size: 0.95rem; cursor: pointer;
   }
   .modal-detail-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.85rem; }
+
+  .role-badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle; }
+  .role-badge.super { background: rgba(233,196,106,0.18); color: var(--warn); }
+  .role-badge.admin { background: rgba(79,209,197,0.15); color: var(--accent-2); }
+  .activated-badge { background: rgba(79,209,197,0.15); color: var(--accent-2); font-size: 0.72rem; padding: 2px 7px; border-radius: 6px; margin-left: 6px; }
+  .pending-badge { background: rgba(233,196,106,0.18); color: var(--warn); font-size: 0.72rem; padding: 2px 7px; border-radius: 6px; margin-left: 6px; }
+
+  .error-banner { color: var(--danger); background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 1rem; margin-bottom: 1rem; }
+  .success-banner { color: var(--accent-2); background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 1rem; margin-bottom: 1rem; }
+
+  .kill-box { background: var(--panel); border: 1px solid rgba(255,122,107,0.4); border-radius: 12px; padding: 1rem; }
+  .kill-box.active { border-color: var(--danger); background: rgba(255,122,107,0.08); }
+  .kill-status { font-weight: 700; font-size: 1.05rem; }
+  .kill-status.on { color: var(--danger); }
+  .kill-status.off { color: var(--accent-2); }
+  .kill-btn {
+    padding: 11px 22px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 0.95rem;
+  }
+  .kill-btn.turn-on { background: var(--danger); color: #1a0806; }
+  .kill-btn.turn-off { background: var(--accent); color: #06130f; }
+
+  .request-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .request-row:last-child { border-bottom: none; }
+  .request-info .name { font-weight: 600; }
+  .request-info .meta { color: var(--muted); font-size: 0.8rem; }
+  .request-actions form { display: inline; }
+  .approve-btn, .reject-btn, .small-btn {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2);
+    color: var(--text); font-size: 0.85rem; cursor: pointer; font-family: inherit;
+  }
+  .approve-btn { color: var(--accent-2); border-color: rgba(79,209,197,0.3); }
+  .reject-btn { color: var(--danger); border-color: rgba(255,122,107,0.35); margin-left: 6px; }
+
+  .mini-form input, .mini-form select {
+    padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2);
+    color: var(--text); font-size: 0.88rem; margin-right: 6px; margin-bottom: 6px;
+  }
+  .mini-form button {
+    padding: 8px 16px; border-radius: 8px; border: none; background: var(--accent); color: #06130f;
+    font-weight: 700; cursor: pointer; font-size: 0.88rem;
+  }
+
+  .admin-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .admin-table th, .admin-table td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  .admin-table th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; }
+
+  .own-code-box { background: var(--panel-2); border: 1px dashed var(--accent-2); border-radius: 10px; padding: 0.8rem 1rem; display: inline-block; }
+  .own-code-box .code { font-family: monospace; font-size: 1.2rem; font-weight: 700; color: var(--accent-2); letter-spacing: 1px; }
+
+  .audit-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid var(--border); gap: 0.5rem; }
+  .audit-row:last-child { border-bottom: none; }
+  .audit-row .who { color: var(--accent-2); }
+  .audit-row .when { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
 </style>
 </head>
 <body x-data="{ search: '', selected: null }">
 <div class="top">
-  <h1>Find Me <span>— Admin</span></h1>
+  <h1>Find Me <span>— Admin</span>
+    <span style="font-size: 0.85rem; color: var(--muted); font-weight: 400; margin-left: 10px;">
+      <?= htmlspecialchars($admin['name']) ?>
+      <span class="role-badge <?= $isSuperAdmin ? 'super' : 'admin' ?>"><?= $isSuperAdmin ? '👑 Super admin' : 'Admin' ?></span>
+    </span>
+  </h1>
   <div>
     <a class="details-link" href="https://github.com/ghaly4gyw-cyber/find-me/releases/download/latest/app-debug.apk" style="margin-top: 0; margin-right: 8px;" download>⬇️ Download APK</a>
     <a class="details-link" href="../download/" target="_blank" rel="noopener" style="margin-top: 0; margin-right: 8px;">🔗 Download page</a>
+    <a class="details-link" href="export-users.php" style="margin-top: 0; margin-right: 8px;">📄 Export CSV</a>
     <a class="logout" href="logout.php">Log out</a>
   </div>
 </div>
 
 <?php if (isset($_GET['control_saved'])): ?>
-  <p style="color: var(--accent-2); background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 1rem; margin-bottom: 1rem;">✅ Saved — installs will pick this up next time they're online.</p>
+  <p class="success-banner">✅ Saved — installs will pick this up next time they're online.</p>
+<?php endif; ?>
+<?php if (isset($_GET['admin_error'])): ?>
+  <p class="error-banner">⚠️ <?= htmlspecialchars($_GET['admin_error']) ?></p>
 <?php endif; ?>
 
 <?php if ($error): ?>
@@ -282,6 +371,59 @@ $topFeatures = array_slice($topFeatures, 0, 10);
     <div class="stat"><div class="n"><?= $totalAppOpens ?></div><div class="l">App opens (all users)</div></div>
     <div class="stat"><div class="n"><?= htmlspecialchars(formatDuration($totalMsAcrossUsers)) ?></div><div class="l">Time in app (all users)</div></div>
     <div class="stat"><div class="n"><?= count($feedback) ?></div><div class="l">Suggestions received</div></div>
+    <div class="stat"><div class="n"><?= $activatedCount ?></div><div class="l">Activated</div></div>
+    <div class="stat"><div class="n"><?= $notActivatedCount ?></div><div class="l">Not yet activated</div></div>
+    <div class="stat"><div class="n"><?= count($pendingActivations) ?></div><div class="l">Pending requests</div></div>
+  </div>
+
+  <div class="section-title">Your account</div>
+  <div class="panel-box">
+    <?php if (isset(ADMIN_OFFLINE_CODES[$admin['username']])): ?>
+      <p class="muted" style="margin: 0 0 0.6rem; font-size: 0.85rem;">Your offline activation code — share it only with someone you personally vouch for. Entering it unlocks their app instantly, no internet needed.</p>
+      <div class="own-code-box" style="margin-bottom: 1rem;">
+        <span class="code"><?= htmlspecialchars(ADMIN_OFFLINE_CODES[$admin['username']]) ?></span>
+      </div>
+    <?php endif; ?>
+    <form method="post" action="admin-save.php" class="mini-form">
+      <input type="hidden" name="action" value="reset_password">
+      <input type="hidden" name="username" value="<?= htmlspecialchars($admin['username']) ?>">
+      <input type="password" name="password" placeholder="New password (min 8 chars)" minlength="8" required>
+      <button type="submit">Change my password</button>
+    </form>
+  </div>
+
+  <?php if ($isSuperAdmin): ?>
+  <div class="section-title">Kill switch</div>
+  <div class="kill-box <?= !empty($appControl['kill_switch']) ? 'active' : '' ?>">
+    <p class="kill-status <?= !empty($appControl['kill_switch']) ? 'on' : 'off' ?>">
+      <?= !empty($appControl['kill_switch']) ? '🔴 App is turned OFF for everyone' : '🟢 App is ON — working normally' ?>
+    </p>
+    <p class="muted" style="font-size: 0.85rem; margin: 4px 0 1rem;">
+      Turning this on locks every phone that's online — including SOS, the map, and messaging — behind a full-screen
+      notice the next time it checks in. A phone with no signal at all won't know until it reconnects; there's no way
+      around that. This is a toggle, not permanent — flip it back off anytime to restore the app instantly.
+      <?php if ($lastKillSwitchChange): ?>
+        <br>Last changed by <?= htmlspecialchars($lastKillSwitchChange['admin_name']) ?>
+        (<?= $lastKillSwitchChange['action'] === 'kill_switch_on' ? 'turned off' : 'turned on' ?>)
+        · <?= htmlspecialchars($lastKillSwitchChange['created_at']) ?>
+      <?php endif; ?>
+    </p>
+    <form method="post" action="kill-switch-save.php">
+      <div style="margin-bottom: 1rem;">
+        <label style="display:block; font-size:0.85rem; color: var(--muted); margin-bottom: 4px;">Message shown on the lock screen (optional)</label>
+        <input type="text" name="kill_switch_message" maxlength="500"
+               value="<?= htmlspecialchars($appControl['kill_switch_message'] ?? '') ?>"
+               placeholder="e.g. App temporarily unavailable — contact Ghaly or Osama"
+               style="width:100%; max-width:420px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel-2); color:var(--text);">
+      </div>
+      <?php if (!empty($appControl['kill_switch'])): ?>
+        <input type="hidden" name="kill_switch" value="0">
+        <button type="submit" class="kill-btn turn-off" onclick="return confirm('Turn the app back on for everyone?');">🟢 Turn app back ON</button>
+      <?php else: ?>
+        <input type="hidden" name="kill_switch" value="1">
+        <button type="submit" class="kill-btn turn-on" onclick="return confirm('This locks EVERYONE out of the app, right now. Are you sure?');">🔴 Turn everything OFF</button>
+      <?php endif; ?>
+    </form>
   </div>
 
   <div class="section-title">App control</div>
@@ -319,6 +461,77 @@ $topFeatures = array_slice($topFeatures, 0, 10);
       <button type="submit" style="padding:10px 20px; border-radius:10px; border:none; background:var(--accent); color:#06130f; font-weight:700; cursor:pointer;">Save</button>
     </form>
   </div>
+  <?php else: ?>
+  <div class="section-title">App control</div>
+  <div class="panel-box">
+    <p class="muted" style="margin: 0; font-size: 0.85rem;">Only a super admin can change the kill switch or the forced-update/message settings.</p>
+  </div>
+  <?php endif; ?>
+
+  <div class="section-title">Pending activation requests</div>
+  <div class="panel-box">
+    <?php if (empty($pendingActivations)): ?>
+      <p class="empty" style="padding: 0.5rem 0;">No pending requests.</p>
+    <?php else: foreach ($pendingActivations as $r): ?>
+      <div class="request-row">
+        <div class="request-info">
+          <div class="name"><?= htmlspecialchars($r['name']) ?></div>
+          <div class="meta"><?= htmlspecialchars($r['phone']) ?> · requested <?= htmlspecialchars($r['requested_at']) ?></div>
+        </div>
+        <div class="request-actions">
+          <form method="post" action="activation-decide.php">
+            <input type="hidden" name="request_id" value="<?= (int) $r['id'] ?>">
+            <input type="hidden" name="decision" value="approve">
+            <button type="submit" class="approve-btn">✅ Approve</button>
+          </form>
+          <form method="post" action="activation-decide.php">
+            <input type="hidden" name="request_id" value="<?= (int) $r['id'] ?>">
+            <input type="hidden" name="decision" value="reject">
+            <button type="submit" class="reject-btn">🚫 Reject</button>
+          </form>
+        </div>
+      </div>
+    <?php endforeach; endif; ?>
+  </div>
+
+  <?php if ($isSuperAdmin): ?>
+  <div class="section-title">Manage admins</div>
+  <div class="panel-box">
+    <table class="admin-table" style="margin-bottom: 1.2rem;">
+      <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Added</th><th>Reset password</th></tr></thead>
+      <tbody>
+        <?php foreach ($adminAccounts as $a): ?>
+        <tr>
+          <td><?= htmlspecialchars($a['username']) ?></td>
+          <td><?= htmlspecialchars($a['name']) ?></td>
+          <td><span class="role-badge <?= $a['role'] === 'super_admin' ? 'super' : 'admin' ?>"><?= $a['role'] === 'super_admin' ? 'Super admin' : 'Admin' ?></span></td>
+          <td class="muted"><?= htmlspecialchars($a['created_at']) ?></td>
+          <td>
+            <form method="post" action="admin-save.php" class="mini-form" style="display:flex; align-items:center;">
+              <input type="hidden" name="action" value="reset_password">
+              <input type="hidden" name="username" value="<?= htmlspecialchars($a['username']) ?>">
+              <input type="password" name="password" placeholder="New password" minlength="8" required style="margin-bottom:0;">
+              <button type="submit" class="small-btn">Reset</button>
+            </form>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+    <p class="muted" style="font-size: 0.8rem; margin-bottom: 0.6rem;">Add a new admin — they log in with this username and password; "Admin" can block/unblock users and approve/reject activations; "Super admin" also gets the kill switch, app control, and this screen.</p>
+    <form method="post" action="admin-save.php" class="mini-form">
+      <input type="hidden" name="action" value="add_admin">
+      <input type="text" name="username" placeholder="username" pattern="[a-z0-9_]{3,32}" required>
+      <input type="text" name="name" placeholder="Full name" maxlength="100" required>
+      <input type="password" name="password" placeholder="Password (min 8 chars)" minlength="8" required>
+      <select name="role">
+        <option value="admin">Admin</option>
+        <option value="super_admin">Super admin</option>
+      </select>
+      <button type="submit">Add admin</button>
+    </form>
+  </div>
+  <?php endif; ?>
 
   <div class="section-title">Most used features</div>
   <div class="panel-box">
@@ -351,6 +564,9 @@ $topFeatures = array_slice($topFeatures, 0, 10);
         <span class="dot <?= $isOnline ? 'online' : 'offline' ?>"></span>
         <?= htmlspecialchars($u['name']) ?>
         <?php if ($u['blocked']): ?><span class="blocked-badge">🚫 Blocked</span><?php endif; ?>
+        <?php if (isAdminPhone((string) $u['phone'])): ?><span class="role-badge super">👑 Admin</span>
+        <?php elseif ($u['activated']): ?><span class="activated-badge">✅ Activated</span>
+        <?php else: ?><span class="pending-badge">⏳ Not activated</span><?php endif; ?>
       </div>
       <div class="phone"><?= htmlspecialchars($u['phone']) ?></div>
       <div class="row">
@@ -420,6 +636,18 @@ $topFeatures = array_slice($topFeatures, 0, 10);
     <?php endforeach; endif; ?>
   </div>
 
+  <div class="section-title">Admin activity</div>
+  <div class="panel-box">
+    <?php if (empty($auditLog)): ?>
+      <p class="empty" style="padding: 0.5rem 0;">Nothing logged yet.</p>
+    <?php else: foreach ($auditLog as $log): ?>
+      <div class="audit-row">
+        <span><span class="who"><?= htmlspecialchars($log['admin_name']) ?></span> — <?= htmlspecialchars(str_replace('_', ' ', $log['action'])) ?><?= $log['detail'] ? ' · ' . htmlspecialchars($log['detail']) : '' ?></span>
+        <span class="when"><?= htmlspecialchars($log['created_at']) ?></span>
+      </div>
+    <?php endforeach; endif; ?>
+  </div>
+
   <div class="modal-backdrop" x-show="selected" x-cloak @click.self="selected = null">
     <div class="modal-box" @click.stop>
       <template x-if="selected">
@@ -438,6 +666,8 @@ $topFeatures = array_slice($topFeatures, 0, 10);
           <div class="modal-detail-row" x-show="selected.app_version"><span class="muted">App version</span><span x-text="selected.app_version"></span></div>
           <div class="modal-detail-row"><span class="muted">Network</span><span x-text="selected.network"></span></div>
           <div class="modal-detail-row" x-show="selected.blocked"><span class="muted">Status</span><span style="color: var(--danger);">🚫 Blocked</span></div>
+          <div class="modal-detail-row" x-show="selected.is_admin"><span class="muted">Role</span><span>👑 Admin</span></div>
+          <div class="modal-detail-row" x-show="!selected.is_admin"><span class="muted">Activated</span><span x-text="selected.activated ? '✅ Yes' : '⏳ Not yet'"></span></div>
           <template x-if="selected.features && selected.features.length">
             <div style="margin-top:1rem;">
               <div class="muted" style="font-size:0.78rem;text-transform:uppercase;margin-bottom:6px;">Most used by this person</div>

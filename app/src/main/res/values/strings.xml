@@ -404,4 +404,6 @@
     <string name="activation_requested_at_fmt">Requested %1$s</string>
     <string name="activation_approved_toast">%1$s activated</string>
     <string name="activation_rejected_toast">%1$s rejected</string>
+    <string name="kill_switch_gate_title">App Temporarily Off</string>
+    <string name="kill_switch_gate_default_message">The app has been temporarily turned off. Contact the admins for more information.</string>
 </resources>

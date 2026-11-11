@@ -8,7 +8,7 @@
  */
 
 require __DIR__ . '/auth.php';
-requireAdminLogin();
+$admin = requireSuperAdmin();
 require __DIR__ . '/../schema.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -77,5 +77,7 @@ if ($hasMessage && $textChanged) {
     );
     $stmt->execute([$minSupportedVersion, $minSupportedMessage ?: null]);
 }
+
+logAdminAction($pdo, $admin, 'app_control_save', "min_version={$minSupportedVersion}");
 
 header('Location: index.php?control_saved=1');

@@ -1,17 +1,42 @@
 <?php
 require __DIR__ . '/auth.php';
+require __DIR__ . '/../schema.php';
 
 $error = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $config = adminConfig();
-    $submitted = (string) ($_POST['password'] ?? '');
-    if (hash_equals((string) $config['password'], $submitted)) {
-        session_regenerate_id(true);
-        $_SESSION['admin_logged_in'] = true;
-        header('Location: index.php');
-        exit;
+    $configPath = __DIR__ . '/../db-config.php';
+    if (!file_exists($configPath)) {
+        http_response_code(500);
+        die('Server not configured — db-config.php is missing.');
     }
-    $error = 'Wrong password.';
+    $config = require $configPath;
+
+    try {
+        $pdo = connectDb($config);
+        ensureSchema($pdo);
+        ensureInitialAdmin($pdo);
+
+        $username = strtolower(trim((string) ($_POST['username'] ?? '')));
+        $submitted = (string) ($_POST['password'] ?? '');
+
+        $stmt = $pdo->prepare('SELECT username, name, password_hash, role FROM admin_accounts WHERE username = ?');
+        $stmt->execute([$username]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($row && password_verify($submitted, (string) $row['password_hash'])) {
+            session_regenerate_id(true);
+            $_SESSION['admin'] = [
+                'username' => $row['username'],
+                'name' => $row['name'],
+                'role' => $row['role'],
+            ];
+            header('Location: index.php');
+            exit;
+        }
+        $error = 'Wrong username or password.';
+    } catch (PDOException $e) {
+        $error = 'Could not reach the database.';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -56,8 +81,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <form method="post">
   <h1>Find Me <span>— Admin</span></h1>
   <?php if ($error): ?><p class="error"><?= htmlspecialchars($error) ?></p><?php endif; ?>
+  <label for="username">Username</label>
+  <input type="text" id="username" name="username" autocomplete="username" autofocus required>
   <label for="password">Password</label>
-  <input type="password" id="password" name="password" autofocus required>
+  <input type="password" id="password" name="password" autocomplete="current-password" required>
   <button type="submit">Log in</button>
 </form>
 </body>

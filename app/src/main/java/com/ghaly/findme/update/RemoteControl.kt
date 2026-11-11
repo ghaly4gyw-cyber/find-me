@@ -12,13 +12,20 @@ import java.net.URL
  * involved) — every install that happens to have internet when it checks
  * reads the same thing and reacts to what it currently says.
  *
- * Deliberately limited to two things: showing a one-time message, and
- * flagging that a version is too old to keep using. It does not — and will
- * not — reach into the mesh, location, or any other safety feature. A
- * remote "off switch" for a device-finding tool is a safety hazard in
- * itself if this channel is ever wrong, delayed, spoofed, or just
- * unreachable (which, offline in the desert, it usually will be) — so
- * nothing here ever disables anything. At most it asks.
+ * Started out limited to two things: showing a one-time message, and
+ * flagging that a version is too old to keep using — see
+ * MainActivity.showForcedUpdateGate's own comment for why even that first
+ * step was already a deliberate override of "nothing here ever disables
+ * anything". killSwitch goes further still: a single global flag, settable
+ * only by the dashboard's super-admin, that puts up the same kind of
+ * full-screen gate for EVERY device, not just one behind on updates — see
+ * MainActivity.showKillSwitchGate. Added at Ghaly's explicit, repeated
+ * request, after being told plainly what it costs: a phone with no signal
+ * at all (which, lost in the desert, it usually will be) never learns it's
+ * on until it reconnects, and while it's on, SOS/mesh/location are all
+ * behind the same gate, for everyone who does check in. It remains a
+ * reversible toggle, not a one-way action — flipping it back off from the
+ * dashboard restores every connected device immediately.
  */
 object RemoteControl {
 
@@ -31,7 +38,9 @@ object RemoteControl {
     data class ControlState(
         val message: ControlMessage?,
         val minSupportedVersionCode: Long,
-        val minSupportedMessage: String?
+        val minSupportedMessage: String?,
+        val killSwitch: Boolean,
+        val killSwitchMessage: String?
     )
 
     /** Null on any failure (offline, server unreachable, malformed
@@ -62,7 +71,9 @@ object RemoteControl {
             ControlState(
                 message = message,
                 minSupportedVersionCode = json.optLong("min_supported_version", 0L),
-                minSupportedMessage = json.optString("min_supported_message", "").ifEmpty { null }
+                minSupportedMessage = json.optString("min_supported_message", "").ifEmpty { null },
+                killSwitch = json.optBoolean("kill_switch", false),
+                killSwitchMessage = json.optString("kill_switch_message", "").ifEmpty { null }
             )
         } catch (e: Exception) {
             null

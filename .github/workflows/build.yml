@@ -310,18 +310,25 @@ jobs:
             echo "::error::Control endpoint didn't respond as expected"
             exit 1
           fi
+          if ! grep -q '"kill_switch"' /tmp/response.json; then
+            echo "::error::Control endpoint is missing the kill_switch field"
+            exit 1
+          fi
           echo "Control endpoint confirmed working."
 
-      # Full login round-trip: posts the real admin password, follows the
-      # redirect, and confirms the resulting page is actually the logged-in
-      # dashboard (not another login form), lists the canary user, and
-      # renders the usage-analytics sections added alongside it — proves the
-      # session/auth/DB-query chain end to end, not just that the page loads.
+      # Full login round-trip: posts Ghaly's real username+password (his
+      # account self-seeds into admin_accounts, from the same ADMIN_PASSWORD
+      # secret as before, the very first time anyone logs in against a
+      # fresh database), follows the redirect, and confirms the resulting
+      # page is actually the logged-in dashboard (not another login form),
+      # lists the canary user, and renders the usage-analytics sections
+      # added alongside it — proves the session/auth/DB-query chain end to
+      # end, not just that the page loads.
       - name: Verify the admin dashboard login works
         run: |
           rm -f /tmp/cookies.txt
           curl -sS -c /tmp/cookies.txt -o /dev/null \
-            -X POST --data-urlencode "password=${ADMIN_PASSWORD}" \
+            -X POST --data-urlencode "username=ghaly" --data-urlencode "password=${ADMIN_PASSWORD}" \
             https://patrons.digital/findme-api/admin/login.php
           status=$(curl -sS -b /tmp/cookies.txt -o /tmp/admin_page.html -w "%{http_code}" \
             https://patrons.digital/findme-api/admin/index.php)

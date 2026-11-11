@@ -396,4 +396,6 @@
     <string name="activation_requested_at_fmt">طُلب في %1$s</string>
     <string name="activation_approved_toast">تم تفعيل %1$s</string>
     <string name="activation_rejected_toast">تم رفض %1$s</string>
+    <string name="kill_switch_gate_title">التطبيق متوقف مؤقتًا</string>
+    <string name="kill_switch_gate_default_message">تم إيقاف التطبيق مؤقتًا. تواصل مع المسؤولين لمزيد من المعلومات.</string>
 </resources>

@@ -89,6 +89,12 @@ class MainActivity : AppCompatActivity() {
      *  valid code gets entered, with no need to restart the app. */
     private var activationGateDialog: AlertDialog? = null
 
+    /** The non-dismissible global "turned off" gate (see RemoteControl's
+     *  killSwitch and showKillSwitchGate) — tracked the same way as
+     *  blockedGateDialog, so it clears itself the moment a super admin
+     *  flips the switch back off, next time this device checks in. */
+    private var killSwitchGateDialog: AlertDialog? = null
+
     /** Set once in onCreate — needed outside it by signOutDueToAccountMoved,
      *  which can fire from the periodic background tick, not just from a
      *  tap on the button itself. */
@@ -795,6 +801,13 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val state = withContext(Dispatchers.IO) { RemoteControl.check(this@MainActivity) } ?: return@launch
 
+            if (state.killSwitch) {
+                showKillSwitchGate(state.killSwitchMessage)
+                return@launch
+            }
+            killSwitchGateDialog?.dismiss()
+            killSwitchGateDialog = null
+
             state.message?.let { msg ->
                 if (RemoteControl.shouldShowMessage(this@MainActivity, msg)) {
                     AlertDialog.Builder(this@MainActivity)
@@ -811,6 +824,22 @@ class MainActivity : AppCompatActivity() {
                 showForcedUpdateGate(state.minSupportedMessage)
             }
         }
+    }
+
+    /** The global kill-switch gate: not cancelable, no action to offer (not
+     *  even the forced-update gate's "check now" button — there's nothing
+     *  for the person themselves to do about it). Lifts only when a super
+     *  admin flips the switch back off from the dashboard, picked up on
+     *  this device's next successful check. */
+    private fun showKillSwitchGate(message: String?) {
+        if (killSwitchGateDialog?.isShowing == true) return
+        killSwitchGateDialog = AlertDialog.Builder(this)
+            .setTitle(R.string.kill_switch_gate_title)
+            .setMessage(message ?: getString(R.string.kill_switch_gate_default_message))
+            .setCancelable(false)
+            .create()
+        killSwitchGateDialog?.setCanceledOnTouchOutside(false)
+        killSwitchGateDialog?.show()
     }
 
     /** The hard update gate itself: not cancelable, no way to reach the UI

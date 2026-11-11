@@ -8,7 +8,7 @@
  */
 
 require __DIR__ . '/auth.php';
-requireAdminLogin();
+$admin = requireAdminLogin();
 require __DIR__ . '/../schema.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -42,5 +42,6 @@ ensureSchema($pdo);
 
 $stmt = $pdo->prepare('UPDATE registrations SET blocked = ? WHERE device_id = ?');
 $stmt->execute([$action === 'block' ? 1 : 0, $deviceId]);
+logAdminAction($pdo, $admin, $action === 'block' ? 'block_user' : 'unblock_user', $deviceId);
 
 header('Location: index.php');

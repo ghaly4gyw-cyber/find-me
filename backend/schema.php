@@ -74,6 +74,11 @@ function ensureSchema(PDO $pdo): void
         // installs actually start locked. See activate-with-code.php /
         // activate-request.php / activation-decide.php.
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS activated TINYINT(1) NOT NULL DEFAULT 1",
+        // The panel's global "turn everything off" switch — see app_control
+        // below for why this lives there instead of its own table, and
+        // admin/kill-switch-save.php for the only place that ever writes it.
+        "ALTER TABLE app_control ADD COLUMN IF NOT EXISTS kill_switch TINYINT(1) NOT NULL DEFAULT 0",
+        "ALTER TABLE app_control ADD COLUMN IF NOT EXISTS kill_switch_message VARCHAR(500) NULL",
     ] as $sql) {
         try {
             $pdo->exec($sql);
@@ -204,6 +209,46 @@ function ensureSchema(PDO $pdo): void
             decided_at TIMESTAMP NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     );
+
+    // Who can log into the WEB panel (separate from ADMIN_PHONES below,
+    // which is about the Android app recognizing Ghaly's/Osama's own
+    // registered phone). role is 'super_admin' (Ghaly — full control,
+    // including the kill switch and managing other admins) or 'admin'
+    // (Osama and anyone Ghaly later adds — can see everything, block/
+    // unblock, and approve/reject activations, but not the kill switch or
+    // app-control message, and can only change their own password, not
+    // anyone else's). Starts empty; admin/auth.php's ensureInitialAdmin()
+    // seeds exactly one row (Ghaly, from the ADMIN_PASSWORD secret) the
+    // very first time the panel is ever logged into against a fresh
+    // database — from then on, the DB row is what's actually checked, so
+    // changing a password from the panel itself is what takes effect, not
+    // another deploy.
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS admin_accounts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(32) NOT NULL UNIQUE,
+            name VARCHAR(100) NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            role VARCHAR(20) NOT NULL DEFAULT 'admin',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+
+    // A plain, append-only record of who did what from the panel — who
+    // blocked/unblocked a user, approved/rejected an activation, flipped
+    // the kill switch, or added/reset an admin account — so with two
+    // people sharing control there's always an answer to "who did that".
+    // Never holds a password, only that one was changed.
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS admin_audit_log (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            admin_username VARCHAR(32) NOT NULL,
+            admin_name VARCHAR(100) NOT NULL,
+            action VARCHAR(50) NOT NULL,
+            detail VARCHAR(255) NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
 }
 
 /** The two phone numbers allowed to see pending activation requests and
@@ -220,6 +265,16 @@ function isAdminPhone(string $phone): bool
 {
     return in_array($phone, ADMIN_PHONES, true);
 }
+
+/** The two offline Android-app activation codes (see ActivationCodes.kt) —
+ *  duplicated here, by panel username, ONLY so each admin can see their OWN
+ *  code on their OWN dashboard login instead of Ghaly having to relay it by
+ *  hand. Rotating one of these still means a new app release; changing it
+ *  here would just make the panel show the wrong code. */
+const ADMIN_OFFLINE_CODES = [
+    'ghaly' => 'YAKMP5MS',
+    'osama' => 'EARJB47Q',
+];
 
 /** Generates a short, human-typeable contact code (6 characters, no 0/O/1/I
  *  to avoid mix-ups when someone reads it aloud or copies it by hand) and
