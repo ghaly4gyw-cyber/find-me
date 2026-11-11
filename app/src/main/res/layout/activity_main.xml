@@ -314,61 +314,85 @@
             <Button
                 android:id="@+id/tabPeers"
                 style="@style/FindMe.Button.Tab"
-                android:layout_width="72dp"
+                android:layout_width="wrap_content"
+                android:minWidth="68dp"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="3dp"
                 android:textColor="@color/sand_300"
                 android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:paddingHorizontal="6dp"
                 android:text="@string/tab_peers" />
 
             <Button
                 android:id="@+id/tabMap"
                 style="@style/FindMe.Button.Tab"
-                android:layout_width="72dp"
+                android:layout_width="wrap_content"
+                android:minWidth="68dp"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="3dp"
                 android:textColor="@color/sand_300"
                 android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:paddingHorizontal="6dp"
                 android:text="@string/tab_map" />
 
             <Button
                 android:id="@+id/tabChat"
                 style="@style/FindMe.Button.Tab"
-                android:layout_width="72dp"
+                android:layout_width="wrap_content"
+                android:minWidth="68dp"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="3dp"
                 android:textColor="@color/sand_300"
                 android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:paddingHorizontal="6dp"
                 android:text="@string/tab_chat" />
 
             <Button
                 android:id="@+id/tabSos"
                 style="@style/FindMe.Button.Tab"
-                android:layout_width="72dp"
+                android:layout_width="wrap_content"
+                android:minWidth="68dp"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="3dp"
                 android:textColor="@color/sos_red"
                 android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:paddingHorizontal="6dp"
                 android:text="@string/tab_sos" />
 
             <Button
                 android:id="@+id/tabPosts"
                 style="@style/FindMe.Button.Tab"
-                android:layout_width="72dp"
+                android:layout_width="wrap_content"
+                android:minWidth="68dp"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="3dp"
                 android:textColor="@color/sand_300"
                 android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:paddingHorizontal="6dp"
                 android:text="@string/tab_posts" />
 
             <Button
                 android:id="@+id/tabGroups"
                 style="@style/FindMe.Button.Tab"
-                android:layout_width="72dp"
+                android:layout_width="wrap_content"
+                android:minWidth="68dp"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="3dp"
                 android:textColor="@color/sand_300"
                 android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:paddingHorizontal="6dp"
                 android:text="@string/tab_groups" />
         </LinearLayout>
     </HorizontalScrollView>

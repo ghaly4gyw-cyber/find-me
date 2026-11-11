@@ -1,9 +1,11 @@
 package com.ghaly.findme.ui
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -20,6 +22,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -203,6 +206,29 @@ class MainActivity : AppCompatActivity() {
     private val pickPhotoLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             if (uri != null) handlePickedPhoto(uri)
+        }
+
+    /** TakePicturePreview hands back a small in-memory thumbnail Bitmap
+     *  directly — no FileProvider/temp-file plumbing needed — which is all
+     *  a 128x128 profile photo needs anyway (see applyPickedBitmap). */
+    private val takePhotoLauncher =
+        registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
+            if (bitmap != null) {
+                try {
+                    applyPickedBitmap(bitmap)
+                } catch (e: Exception) {
+                    Toast.makeText(this, R.string.photo_load_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+    private val cameraPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                takePhotoLauncher.launch(null)
+            } else {
+                Toast.makeText(this, R.string.camera_permission_denied, Toast.LENGTH_SHORT).show()
+            }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1166,13 +1192,18 @@ class MainActivity : AppCompatActivity() {
         // always true, but guarded anyway for clarity/future-proofing.
         recoverLink.visibility = if (isFirstRunGate) View.VISIBLE else View.GONE
 
-        val photoClick = View.OnClickListener { pickPhotoLauncher.launch("image/*") }
+        val photoClick = View.OnClickListener { showPhotoSourceChooser() }
         photoView.setOnClickListener(photoClick)
         view.findViewById<TextView>(R.id.choosePhotoText).setOnClickListener(photoClick)
 
         val builder = AlertDialog.Builder(this)
             .setTitle(if (isFirstRunGate) R.string.registration_title else R.string.edit_profile)
-            .setMessage(if (isFirstRunGate) getString(R.string.registration_body_hint) else null)
+            // No explanatory body text here anymore — it pushed the actual
+            // input fields and buttons down far enough to clip off-screen
+            // on a short dialog (per feedback with a screenshot showing the
+            // PIN field's hint cut off). The hint text on each field below
+            // already says what it needs.
+            .setMessage(null)
             .setView(view)
             .setPositiveButton(if (isFirstRunGate) R.string.registration_continue else R.string.save, null)
             .setCancelable(!isFirstRunGate)
@@ -1388,14 +1419,49 @@ class MainActivity : AppCompatActivity() {
             val input = contentResolver.openInputStream(uri) ?: return
             val original = BitmapFactory.decodeStream(input)
             input.close()
-            val resized = Bitmap.createScaledBitmap(original, 128, 128, true)
-            val out = ByteArrayOutputStream()
-            resized.compress(Bitmap.CompressFormat.JPEG, 70, out)
-            val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
-            pendingPhotoBase64 = base64
-            pendingPhotoView?.let { applyPhotoPreview(it, base64) }
+            applyPickedBitmap(original)
         } catch (e: Exception) {
             Toast.makeText(this, R.string.photo_load_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** Shared by both photo sources (gallery pick and camera capture) —
+     *  resize to a small square thumbnail, compress, and stage it as the
+     *  pending profile photo. */
+    private fun applyPickedBitmap(original: Bitmap) {
+        val resized = Bitmap.createScaledBitmap(original, 128, 128, true)
+        val out = ByteArrayOutputStream()
+        resized.compress(Bitmap.CompressFormat.JPEG, 70, out)
+        val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+        pendingPhotoBase64 = base64
+        pendingPhotoView?.let { applyPhotoPreview(it, base64) }
+    }
+
+    /** Tapping the photo/"Choose photo" area now offers both sources instead
+     *  of jumping straight to the gallery picker. */
+    private fun showPhotoSourceChooser() {
+        val options = arrayOf(
+            getString(R.string.photo_source_camera),
+            getString(R.string.photo_source_gallery)
+        )
+        AlertDialog.Builder(this)
+            .setTitle(R.string.choose_photo)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> launchCamera()
+                    1 -> pickPhotoLauncher.launch("image/*")
+                }
+            }
+            .show()
+    }
+
+    private fun launchCamera() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            takePhotoLauncher.launch(null)
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 

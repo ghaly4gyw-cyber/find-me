@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- For the registration dialog's "Open camera" profile-photo option. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <!-- Opportunistic SMS bridge: lets a phone that regains ordinary cell signal
          (even with no mobile data) text the group's last-known status to one
          pre-set contact. Optional — only requested/used if the user sets a
@@ -49,6 +52,8 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <application
         android:name=".FindMeApplication"

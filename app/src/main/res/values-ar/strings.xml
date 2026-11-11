@@ -42,6 +42,9 @@
     <string name="joined_group_fmt">تم الانضمام إلى \"%s\" — اضغط مطولاً لإعادة التسمية</string>
     <string name="profile_photo">صورة الملف الشخصي</string>
     <string name="choose_photo">اختيار صورة</string>
+    <string name="photo_source_camera">📷 فتح الكاميرا</string>
+    <string name="photo_source_gallery">🖼️ اختيار من المعرض</string>
+    <string name="camera_permission_denied">يجب السماح بالكاميرا لالتقاط صورة</string>
     <string name="attach_photo">📷 صورة</string>
     <string name="remove_photo">إزالة الصورة</string>
     <string name="profile_name_hint">اسمك</string>

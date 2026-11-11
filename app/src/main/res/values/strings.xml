@@ -42,6 +42,9 @@
     <string name="joined_group_fmt">Joined \"%s\" — long-press it to rename</string>
     <string name="profile_photo">Profile photo</string>
     <string name="choose_photo">Choose photo</string>
+    <string name="photo_source_camera">📷 Open camera</string>
+    <string name="photo_source_gallery">🖼️ Choose from gallery</string>
+    <string name="camera_permission_denied">Camera permission is needed to take a photo</string>
     <string name="attach_photo">📷 Photo</string>
     <string name="remove_photo">Remove photo</string>
     <string name="profile_name_hint">Your name</string>
