@@ -339,7 +339,7 @@ $topFeatures = array_slice($topFeatures, 0, 10);
       <?php if ($u['last_lat'] !== null && $u['last_lng'] !== null): ?>
         <a class="map-link" href="https://maps.google.com/?q=<?= urlencode((string) $u['last_lat']) ?>,<?= urlencode((string) $u['last_lng']) ?>" target="_blank" rel="noopener">📍 Map</a>
       <?php endif; ?>
-      <button class="details-link" @click="selected = USER_DETAILS[<?= json_encode($u['device_id'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>]">👤 Details</button>
+      <button class="details-link" @click="selected = USER_DETAILS[<?= htmlspecialchars(json_encode($u['device_id']), ENT_QUOTES, 'UTF-8') ?>]">👤 Details</button>
       <form method="post" action="block-user.php" style="display:inline;" onsubmit="return confirm(<?= $u['blocked'] ? "'Unblock this person?'" : "'Block this person? They won\\'t be able to use the app anymore until you unblock them.'" ?>);">
         <input type="hidden" name="device_id" value="<?= htmlspecialchars($u['device_id']) ?>">
         <input type="hidden" name="action" value="<?= $u['blocked'] ? 'unblock' : 'block' ?>">
