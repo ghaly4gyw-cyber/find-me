@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "You" on the real map — the same orange dot the radar view already uses
+     for your own position, so the two views read as one consistent
+     language instead of switching to osmdroid's generic red map-pin. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#55F2A541" />
+            <size android:width="34dp" android:height="34dp" />
+        </shape>
+    </item>
+    <item
+        android:width="18dp"
+        android:height="18dp"
+        android:gravity="center">
+        <shape android:shape="oval">
+            <solid android:color="#F2A541" />
+            <stroke android:width="2dp" android:color="#FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

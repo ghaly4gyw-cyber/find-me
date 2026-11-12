@@ -86,7 +86,7 @@
 
         <Button
             android:id="@+id/qiblaButton"
-            android:layout_width="wrap_content"
+            android:layout_width="132dp"
             android:layout_height="wrap_content"
             android:layout_margin="4dp"
             android:minHeight="0dp"
@@ -96,11 +96,14 @@
             android:paddingVertical="6dp"
             android:textColor="@color/color_on_accent"
             android:textSize="12sp"
+            android:maxLines="2"
+            android:gravity="center"
+            android:lineSpacingExtra="-2sp"
             android:text="@string/qibla_button" />
 
         <Button
             android:id="@+id/myPlacesButton"
-            android:layout_width="wrap_content"
+            android:layout_width="132dp"
             android:layout_height="wrap_content"
             android:layout_margin="4dp"
             android:minHeight="0dp"
@@ -110,11 +113,14 @@
             android:paddingVertical="6dp"
             android:textColor="@color/color_on_accent"
             android:textSize="12sp"
+            android:maxLines="2"
+            android:gravity="center"
+            android:lineSpacingExtra="-2sp"
             android:text="@string/my_places" />
 
         <Button
             android:id="@+id/savePlaceButton"
-            android:layout_width="wrap_content"
+            android:layout_width="132dp"
             android:layout_height="wrap_content"
             android:layout_margin="4dp"
             android:minHeight="0dp"
@@ -124,11 +130,14 @@
             android:paddingVertical="6dp"
             android:textColor="@color/color_on_accent"
             android:textSize="12sp"
+            android:maxLines="2"
+            android:gravity="center"
+            android:lineSpacingExtra="-2sp"
             android:text="@string/save_this_spot" />
 
         <Button
             android:id="@+id/enterCoordinatesButton"
-            android:layout_width="wrap_content"
+            android:layout_width="132dp"
             android:layout_height="wrap_content"
             android:layout_margin="4dp"
             android:minHeight="0dp"
@@ -138,6 +147,9 @@
             android:paddingVertical="6dp"
             android:textColor="@color/color_on_accent"
             android:textSize="12sp"
+            android:maxLines="2"
+            android:gravity="center"
+            android:lineSpacingExtra="-2sp"
             android:text="@string/enter_coordinates_button" />
 
         <!-- Switches between the always-available offline radar and a real
@@ -145,7 +157,7 @@
              does while map mode is on. -->
         <Button
             android:id="@+id/mapToggleButton"
-            android:layout_width="wrap_content"
+            android:layout_width="132dp"
             android:layout_height="wrap_content"
             android:layout_margin="4dp"
             android:minHeight="0dp"
@@ -155,6 +167,9 @@
             android:paddingVertical="6dp"
             android:textColor="@color/color_on_accent"
             android:textSize="12sp"
+            android:maxLines="2"
+            android:gravity="center"
+            android:lineSpacingExtra="-2sp"
             android:text="@string/map_toggle_button" />
 
         <!-- Only shown while map mode is on — downloads the tiles for the
@@ -162,7 +177,7 @@
              afterward. -->
         <Button
             android:id="@+id/downloadAreaButton"
-            android:layout_width="wrap_content"
+            android:layout_width="132dp"
             android:layout_height="wrap_content"
             android:layout_margin="4dp"
             android:minHeight="0dp"
@@ -172,6 +187,9 @@
             android:paddingVertical="6dp"
             android:textColor="@color/color_on_accent"
             android:textSize="12sp"
+            android:maxLines="2"
+            android:gravity="center"
+            android:lineSpacingExtra="-2sp"
             android:visibility="gone"
             android:text="@string/download_area_button" />
 

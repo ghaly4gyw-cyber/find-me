@@ -310,7 +310,7 @@
     <string name="place_saved_fmt">\"%s\" enregistré</string>
     <string name="no_location_yet">Pas encore de position GPS — attendez une première position.</string>
     <string name="gps_accuracy_fmt">±%1$d m</string>
-    <string name="enter_coordinates_button">📍 Coordonnées</string>
+    <string name="enter_coordinates_button">Coordonnées</string>
     <string name="enter_coordinates_title">Entrer des coordonnées</string>
     <string name="coordinates_name_hint">Nom (facultatif)</string>
     <string name="coordinates_hint">Latitude, longitude (ex. 20.9316, -17.0466)</string>

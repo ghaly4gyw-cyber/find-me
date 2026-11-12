@@ -16,6 +16,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -366,6 +367,7 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         if (!::offlineMapView.isInitialized || location == null) return
         val marker = myLocationMarker ?: Marker(offlineMapView).also {
             it.title = getString(R.string.map_center_you)
+            it.icon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_map_marker_me)
             it.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
             offlineMapView.overlays.add(it)
             myLocationMarker = it
@@ -391,10 +393,17 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         for (peer in peers) {
             seen.add(peer.deviceId)
             val marker = peerMarkers.getOrPut(peer.deviceId) {
-                Marker(offlineMapView).also { offlineMapView.overlays.add(it) }
+                Marker(offlineMapView).also {
+                    it.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                    offlineMapView.overlays.add(it)
+                }
             }
             marker.position = GeoPoint(peer.lat, peer.lon)
             marker.title = peer.name
+            marker.icon = ContextCompat.getDrawable(
+                requireContext(),
+                if (peer.connected) R.drawable.ic_map_marker_peer else R.drawable.ic_map_marker_peer_stale
+            )
             marker.setOnMarkerClickListener { _, _ ->
                 showPeerActionMenu(radar, peer)
                 true
