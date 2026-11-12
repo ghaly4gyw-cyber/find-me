@@ -2,6 +2,14 @@
 require __DIR__ . '/auth.php';
 $admin = requireAdminLogin();
 $isSuperAdmin = ($admin['role'] ?? '') === 'super_admin';
+// Suppliers (telecom-shop partners) get their own small, scoped page —
+// not this full dashboard — so each only ever sees their own code and the
+// people they activated, never the whole user base. "This is SAS project
+// at this point. It should be SAS."
+if (($admin['role'] ?? '') === 'supplier') {
+    header('Location: supplier-panel.php');
+    exit;
+}
 require __DIR__ . '/../schema.php';
 
 /** اسم عربي مفهوم لمفتاح الشاشة (اسم كلاس Kotlin، مثل "NotesFragment") —
@@ -104,6 +112,7 @@ $auditLog = [];
 $lastKillSwitchChange = null;
 $reclaimLog = [];
 $suspiciousReclaimPhones = [];
+$supplierPhones = [];
 $ownAccount = null;
 $error = null;
 $dbConfigPath = __DIR__ . '/../db-config.php';
@@ -137,9 +146,17 @@ if (!file_exists($dbConfigPath)) {
         $pendingActivations = $pdo->query(
             "SELECT id, phone, name, device_id, requested_at FROM activation_requests WHERE status = 'pending' ORDER BY requested_at ASC"
         )->fetchAll(PDO::FETCH_ASSOC);
-        $adminAccounts = $pdo->query(
-            'SELECT username, name, role, offline_code, created_at FROM admin_accounts ORDER BY created_at ASC'
-        )->fetchAll(PDO::FETCH_ASSOC);
+        $adminAccounts = array_values(array_filter(
+            $pdo->query(
+                'SELECT username, name, role, offline_code, created_at FROM admin_accounts ORDER BY created_at ASC'
+            )->fetchAll(PDO::FETCH_ASSOC),
+            fn ($a) => $a['role'] !== 'supplier'
+        ));
+        // Phone → supplier name, so a supplier's card in "المستخدمون" below
+        // can carry a "💼 مندوب" badge like the admin-phone "👑" one does.
+        $supplierPhones = $pdo->query(
+            "SELECT phone, name FROM admin_accounts WHERE role = 'supplier' AND phone IS NOT NULL"
+        )->fetchAll(PDO::FETCH_KEY_PAIR);
         $auditLog = $pdo->query(
             'SELECT admin_name, action, detail, created_at FROM admin_audit_log ORDER BY id DESC LIMIT 30'
         )->fetchAll(PDO::FETCH_ASSOC);
@@ -452,6 +469,9 @@ $topFeatures = array_slice($topFeatures, 0, 10);
     <a class="details-link" href="https://github.com/ghaly4gyw-cyber/find-me/releases/download/latest/app-debug.apk" style="margin-top: 0;" download>⬇️ تحميل APK</a>
     <a class="details-link" href="../download/" target="_blank" rel="noopener" style="margin-top: 0;">🔗 صفحة التحميل</a>
     <a class="details-link" href="export-users.php" style="margin-top: 0;">📄 تصدير PDF</a>
+    <?php if ($isSuperAdmin): ?>
+    <a class="details-link" href="suppliers.php" style="margin-top: 0;">💼 الموردون</a>
+    <?php endif; ?>
     <a class="logout" href="logout.php">تسجيل الخروج</a>
   </div>
 </div>
@@ -480,7 +500,7 @@ $topFeatures = array_slice($topFeatures, 0, 10);
 
   <div class="section-title">حسابك</div>
   <div class="panel-box">
-    <p class="muted" style="margin: 0 0 0.6rem; font-size: 0.82rem;">رمز التفعيل الخاص بك دون إنترنت — إدخاله في التطبيق يُفعّله فورًا بدون حاجة للإنترنت. شاركه فقط مع شخص تثق به شخصيًا.</p>
+    <p class="muted" style="margin: 0 0 0.5rem; font-size: 0.8rem;">رمزك للتفعيل بدون إنترنت — شاركه فقط مع شخص تثق به.</p>
     <div style="margin-bottom: 1.1rem;">
       <?php if (!empty($ownAccount['offline_code'])): ?>
         <div class="own-code-box" style="margin-bottom: 0.7rem;"><bdi class="code"><?= htmlspecialchars($ownAccount['offline_code']) ?></bdi></div>
@@ -508,16 +528,17 @@ $topFeatures = array_slice($topFeatures, 0, 10);
     <p class="kill-status <?= !empty($appControl['kill_switch']) ? 'on' : 'off' ?>">
       <?= !empty($appControl['kill_switch']) ? '🔴 التطبيق مُتوقف عن الجميع' : '🟢 التطبيق يعمل بشكل طبيعي' ?>
     </p>
-    <p class="muted" style="font-size: 0.82rem; margin: 4px 0 0.9rem;">
-      تفعيل هذا يُقفل كل هاتف متصل بالإنترنت — بما في ذلك الاستغاثة والخريطة والمراسلة — خلف شاشة قفل كاملة عند
-      اتصاله القادم. الهاتف الذي لا تصله أي إشارة لن يعرف إلا بعد عودة الاتصال، ولا يمكن تفادي ذلك. هذا مفتاح تبديل
-      وليس إجراءً دائمًا — أعده لإيقافه فورًا متى شئت.
-      <?php if ($lastKillSwitchChange): ?>
-        <br>آخر تغيير بواسطة <?= htmlspecialchars($lastKillSwitchChange['admin_name']) ?>
-        (<?= $lastKillSwitchChange['action'] === 'kill_switch_on' ? 'أوقف التطبيق' : 'أعاد تشغيل التطبيق' ?>)
-        · <bdi><?= htmlspecialchars($lastKillSwitchChange['created_at']) ?></bdi>
-      <?php endif; ?>
-    </p>
+    <details style="margin: 4px 0 0.7rem;">
+      <summary class="muted" style="font-size: 0.78rem; cursor: pointer;">ما الذي يفعله هذا؟<?php if ($lastKillSwitchChange): ?> · آخر تغيير: <?= htmlspecialchars($lastKillSwitchChange['admin_name']) ?><?php endif; ?></summary>
+      <p class="muted" style="font-size: 0.8rem; margin: 6px 0 0;">
+        يُقفل كل هاتف متصل بالإنترنت — بما في ذلك الاستغاثة والخريطة والمراسلة — خلف شاشة قفل كاملة عند اتصاله
+        القادم. مفتاح تبديل وليس إجراءً دائمًا — أعده لإيقافه فورًا متى شئت.
+        <?php if ($lastKillSwitchChange): ?>
+          <br>(<?= $lastKillSwitchChange['action'] === 'kill_switch_on' ? 'أوقف التطبيق' : 'أعاد تشغيل التطبيق' ?>)
+          · <bdi><?= htmlspecialchars($lastKillSwitchChange['created_at']) ?></bdi>
+        <?php endif; ?>
+      </p>
+    </details>
     <form method="post" action="kill-switch-save.php">
       <div style="margin-bottom: 0.9rem;">
         <label style="display:block; font-size:0.82rem; color: var(--muted); margin-bottom: 4px;">الرسالة المعروضة على شاشة القفل (اختياري)</label>
@@ -538,12 +559,12 @@ $topFeatures = array_slice($topFeatures, 0, 10);
 
   <div class="section-title">التحكم في التطبيق</div>
   <div class="panel-box">
-    <p class="muted" style="margin: 0 0 0.9rem; font-size: 0.82rem;">
+    <p class="muted" style="margin: 0 0 0.7rem; font-size: 0.82rem;">
       <?php if ($publishedVersion): ?>
         الإصدار المنشور حاليًا: <bdi><?= htmlspecialchars((string) ($publishedVersion['versionName'] ?? '?')) ?></bdi>
-        (الكود <bdi><?= htmlspecialchars((string) ($publishedVersion['versionCode'] ?? '?')) ?></bdi>).
+        (الكود <bdi><?= htmlspecialchars((string) ($publishedVersion['versionCode'] ?? '?')) ?></bdi>)
       <?php endif; ?>
-      هذا يُغني عن تعديل control.json في GitHub — أي شيء يُحفظ هنا يصل لكل نسخة مثبّتة عند اتصالها القادم بالإنترنت.
+      — يصل لكل نسخة مثبّتة عند اتصالها القادم.
     </p>
     <form method="post" action="control-save.php">
       <div style="margin-bottom: 0.9rem;">
@@ -690,6 +711,7 @@ $topFeatures = array_slice($topFeatures, 0, 10);
         <?= htmlspecialchars($u['name']) ?>
         <?php if ($u['blocked']): ?><span class="blocked-badge">🚫 محظور</span><?php endif; ?>
         <?php if (isAdminPhone((string) $u['phone'])): ?><span class="role-badge super">👑 مشرف</span>
+        <?php elseif (isset($supplierPhones[$u['phone']])): ?><span class="role-badge admin">💼 مندوب</span>
         <?php elseif ($u['activated']): ?><span class="activated-badge">✅ مُفعّل</span>
         <?php else: ?><span class="pending-badge">⏳ غير مُفعّل</span><?php endif; ?>
       </div>

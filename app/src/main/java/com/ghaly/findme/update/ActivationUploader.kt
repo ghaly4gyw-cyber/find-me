@@ -22,9 +22,13 @@ object ActivationUploader {
     fun uploadIfPending(context: Context, phone: String, deviceId: String) {
         if (!ProfileStore.hasPendingActivationConfirm(context)) return
         try {
+            val code = ProfileStore.pendingActivationCode(context)
             val body = JSONObject()
                 .put("phone", phone)
                 .put("device_id", deviceId)
+            if (code.isNotEmpty()) {
+                body.put("code", code)
+            }
             val connection = (URL(ENDPOINT_URL).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 10_000

@@ -30,6 +30,11 @@ object ProfileStore {
     private const val KEY_ACTIVATED = "activated"
     private const val KEY_IS_ADMIN = "is_admin"
     private const val KEY_PENDING_ACTIVATION_CONFIRM = "pending_activation_confirm"
+    // The exact code string that was typed in, kept only long enough for
+    // ActivationUploader to report it alongside the pending confirm above —
+    // lets the server credit whichever supplier/admin owns that code (see
+    // activation-confirm.php). Never used for anything else on-device.
+    private const val KEY_PENDING_ACTIVATION_CODE = "pending_activation_code"
 
     fun get(context: Context): Profile {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -150,11 +155,14 @@ object ProfileStore {
     /** Called the moment someone enters a valid offline activation code
      *  (ActivationCodes.isValid) — unlocks the app on this device instantly,
      *  with no network involved, and leaves a marker for ActivationUploader
-     *  to tell the server too, next time this phone happens to be online. */
-    fun markActivatedLocally(context: Context) {
+     *  to tell the server too, next time this phone happens to be online.
+     *  [code] is the exact string they typed, so the server can credit
+     *  whichever supplier/admin owns it. */
+    fun markActivatedLocally(context: Context, code: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_ACTIVATED, true)
             .putBoolean(KEY_PENDING_ACTIVATION_CONFIRM, true)
+            .putString(KEY_PENDING_ACTIVATION_CODE, code.trim().uppercase())
             .apply()
     }
 
@@ -163,6 +171,12 @@ object ProfileStore {
      *  never activated by code in the first place (e.g. admin-approved). */
     fun hasPendingActivationConfirm(context: Context): Boolean {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_PENDING_ACTIVATION_CONFIRM, false)
+    }
+
+    /** The code ActivationUploader should report alongside the pending
+     *  confirm — empty if this account was never activated by a typed code. */
+    fun pendingActivationCode(context: Context): String {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_PENDING_ACTIVATION_CODE, "") ?: ""
     }
 
     fun clearPendingActivationConfirm(context: Context) {

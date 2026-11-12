@@ -10,6 +10,11 @@
  * phone already unlocked for itself. If this call never succeeds (the phone
  * never gets online again), the app stays unlocked regardless — that's the
  * whole point of the code path.
+ *
+ * Also carries the actual code that was typed (optional — an old app
+ * build won't send it) so it can be credited to whichever supplier/admin
+ * owns that code — "activated by his code, his card upper on him" — the
+ * same attribution admin/activation-decide.php records for an approval.
  */
 
 header('Content-Type: application/json');
@@ -31,6 +36,7 @@ if (!is_array($body)) {
 
 $phone = isset($body['phone']) ? trim((string) $body['phone']) : '';
 $deviceId = isset($body['device_id']) ? trim((string) $body['device_id']) : '';
+$code = isset($body['code']) ? trim((string) $body['code']) : '';
 
 if ($phone === '' || $deviceId === '' || !isValidMauritanianPhone($phone) || mb_strlen($deviceId) > 64) {
     http_response_code(400);
@@ -60,7 +66,14 @@ if (!requireOwnerDevice($pdo, $phone, $deviceId)) {
     exit;
 }
 
-$pdo->prepare('UPDATE registrations SET activated = 1 WHERE phone = ?')->execute([$phone]);
+$owner = $code !== '' ? matchActivationCodeOwner($pdo, $code) : null;
+if ($owner) {
+    $pdo->prepare(
+        "UPDATE registrations SET activated = 1, activated_by_username = ?, activated_via = 'code' WHERE phone = ?"
+    )->execute([$owner['username'], $phone]);
+} else {
+    $pdo->prepare('UPDATE registrations SET activated = 1 WHERE phone = ?')->execute([$phone]);
+}
 // Close out any pending request this account had — it already activated
 // itself by code, so it shouldn't still show up waiting on Osama/Ghaly.
 $pdo->prepare(

@@ -48,6 +48,7 @@ if ($action === 'add_admin') {
     $name = trim((string) ($_POST['name'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
     $role = (string) ($_POST['role'] ?? 'admin');
+    $phone = trim((string) ($_POST['phone'] ?? ''));
 
     if (!preg_match('/^[a-z0-9_]{3,32}$/', $username)) {
         header('Location: index.php?admin_error=' . rawurlencode('اسم المستخدم يجب أن يكون 3-32 حرفًا إنجليزيًا صغيرًا أو رقمًا أو شرطة سفلية.'));
@@ -61,8 +62,21 @@ if ($action === 'add_admin') {
         header('Location: index.php?admin_error=' . rawurlencode('كلمة المرور يجب ألا تقل عن 8 أحرف.'));
         exit;
     }
-    if (!in_array($role, ['admin', 'super_admin'], true)) {
+    if (!in_array($role, ['admin', 'super_admin', 'supplier'], true)) {
         $role = 'admin';
+    }
+
+    // A supplier's phone is how their panel account links to their Find Me
+    // user card (photo/name) and to the "💼 مندوب" badge in the users list —
+    // required for that role; optional (and rarely used) for admin/super_admin,
+    // who are already recognized in-app via the separate ADMIN_PHONES list.
+    if ($role === 'supplier' && ($phone === '' || !isValidMauritanianPhone($phone))) {
+        header('Location: index.php?admin_error=' . rawurlencode('أدخل رقم هاتف موريتاني صحيح للمورّد.'));
+        exit;
+    }
+    if ($phone !== '' && !isValidMauritanianPhone($phone)) {
+        header('Location: index.php?admin_error=' . rawurlencode('رقم الهاتف غير صحيح.'));
+        exit;
     }
 
     $exists = $pdo->prepare('SELECT 1 FROM admin_accounts WHERE username = ?');
@@ -89,10 +103,10 @@ if ($action === 'add_admin') {
     }
 
     $hash = password_hash($password, PASSWORD_DEFAULT);
-    $pdo->prepare('INSERT INTO admin_accounts (username, name, password_hash, role, offline_code) VALUES (?, ?, ?, ?, ?)')
-        ->execute([$username, $name, $hash, $role, $code !== '' ? $code : null]);
+    $pdo->prepare('INSERT INTO admin_accounts (username, name, password_hash, role, offline_code, phone) VALUES (?, ?, ?, ?, ?, ?)')
+        ->execute([$username, $name, $hash, $role, $code !== '' ? $code : null, $phone !== '' ? $phone : null]);
     logAdminAction($pdo, $admin, 'add_admin', "{$username} ({$role})");
-    header('Location: index.php?control_saved=1');
+    header('Location: ' . ($role === 'supplier' ? 'suppliers.php?control_saved=1' : 'index.php?control_saved=1'));
     exit;
 }
 

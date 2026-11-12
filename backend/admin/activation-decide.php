@@ -50,7 +50,13 @@ if ($row) {
     $pdo->prepare('UPDATE activation_requests SET status = ?, decided_at = NOW() WHERE id = ?')
         ->execute([$newStatus, $requestId]);
     if ($decision === 'approve') {
-        $pdo->prepare('UPDATE registrations SET activated = 1 WHERE phone = ?')->execute([$row['phone']]);
+        // Credits whoever approved it — Ghaly, Osama, or a supplier — same
+        // attribution a self-activation-by-code gets (see activation-
+        // confirm.php), so a supplier's "people I activated" list and count
+        // include approvals too, not just codes.
+        $pdo->prepare(
+            "UPDATE registrations SET activated = 1, activated_by_username = ?, activated_via = 'approval' WHERE phone = ?"
+        )->execute([$admin['username'] ?? '', $row['phone']]);
     }
     logAdminAction($pdo, $admin, 'activation_' . $newStatus, $row['phone']);
 }

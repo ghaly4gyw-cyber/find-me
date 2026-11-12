@@ -365,6 +365,12 @@ jobs:
             echo "::error::Dashboard page is missing the account-recovery log section"
             exit 1
           fi
+          status=$(curl -sS -b /tmp/cookies.txt -o /tmp/suppliers_page.html -w "%{http_code}" \
+            https://patrons.digital/findme-api/admin/suppliers.php)
+          if [ "$status" != "200" ] || ! grep -q "الموردون" /tmp/suppliers_page.html; then
+            echo "::error::The suppliers management page didn't load for the super admin"
+            exit 1
+          fi
           if ! grep -q "CI Canary Water Point" /tmp/admin_page.html; then
             echo "::error::Public place from public-place-upload.php isn't showing up on the admin dashboard"
             exit 1
@@ -684,14 +690,14 @@ jobs:
             echo "::error::activation-decide.php let a non-admin account decide a request"; exit 1
           fi
 
-          echo "--- a local code activation's opportunistic server sync works ---"
+          echo "--- a local code activation's opportunistic server sync works, and credits whoever owns the code ---"
           response=$(curl -sS -o /tmp/r.json -w "%{http_code}" \
             -X POST -H "Content-Type: application/json" \
-            -d "{\"phone\":\"$PHONE\",\"device_id\":\"$DEV\"}" \
+            -d "{\"phone\":\"$PHONE\",\"device_id\":\"$DEV\",\"code\":\"YAKMP5MS\"}" \
             https://patrons.digital/findme-api/activation-confirm.php)
           cat /tmp/r.json; echo
           if [ "$response" != "200" ] || ! grep -q '"status":"ok"' /tmp/r.json; then
-            echo "::error::activation-confirm.php failed"; exit 1
+            echo "::error::activation-confirm.php failed (with a code attached)"; exit 1
           fi
           response=$(curl -sS "https://patrons.digital/findme-api/status-check.php?device_id=$DEV")
           echo "$response"

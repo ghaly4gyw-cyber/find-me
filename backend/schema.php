@@ -74,6 +74,14 @@ function ensureSchema(PDO $pdo): void
         // installs actually start locked. See activate-with-code.php /
         // activate-request.php / activation-decide.php.
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS activated TINYINT(1) NOT NULL DEFAULT 1",
+        // Who gets credit for this person's activation, and how — a
+        // "supplier" (telecom-shop partner) account's username, and whether
+        // it was via their offline code (typed on the device, see
+        // activation-confirm.php) or them approving a pending request (see
+        // admin/activation-decide.php). NULL for anyone activated neither
+        // way (an admin phone, or activated before this existed).
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS activated_by_username VARCHAR(32) NULL",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS activated_via VARCHAR(16) NULL",
         // The panel's global "turn everything off" switch — see app_control
         // below for why this lives there instead of its own table, and
         // admin/kill-switch-save.php for the only place that ever writes it.
@@ -85,6 +93,11 @@ function ensureSchema(PDO $pdo): void
         // ActivationCodes.kt for how a device still checks a code with no
         // network call, using whatever list it last synced.
         "ALTER TABLE admin_accounts ADD COLUMN IF NOT EXISTS offline_code VARCHAR(16) NULL UNIQUE",
+        // A supplier's (or any admin's) own phone number — lets their panel
+        // account be tied to their actual Find Me user card (so their photo/
+        // name shows up, and so their card in "المستخدمون" can be marked
+        // specially), separate from the hardcoded ADMIN_PHONES list below.
+        "ALTER TABLE admin_accounts ADD COLUMN IF NOT EXISTS phone VARCHAR(32) NULL",
     ] as $sql) {
         try {
             $pdo->exec($sql);
@@ -324,6 +337,23 @@ function currentActivationCodes(PDO $pdo): array
 function isAdminPhone(string $phone): bool
 {
     return in_array($phone, ADMIN_PHONES, true);
+}
+
+/** Which admin/supplier account owns a given offline activation code, if
+ *  any — used to credit a self-activation (someone typing the code on
+ *  their device, see activation-confirm.php) to the right supplier, the
+ *  same way admin/activation-decide.php credits an approval. Case-
+ *  insensitive, same normalization as ActivationCodes.kt. */
+function matchActivationCodeOwner(PDO $pdo, string $code): ?array
+{
+    $normalized = strtoupper(trim($code));
+    if ($normalized === '') {
+        return null;
+    }
+    $stmt = $pdo->prepare('SELECT username, name, role FROM admin_accounts WHERE offline_code = ?');
+    $stmt->execute([$normalized]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
 }
 
 /** Generates a short, human-typeable contact code (6 characters, no 0/O/1/I
