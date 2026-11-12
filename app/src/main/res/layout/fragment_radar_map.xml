@@ -62,56 +62,95 @@
         android:text="@string/no_peers"
         android:textColor="@color/sand_300" />
 
-    <LinearLayout
+    <!-- Smaller and in a 2x2 grid now instead of a tall single column of
+         full-size buttons — "make them more small", and a grid leaves more
+         of the radar itself visible above/beside it rather than a column
+         running most of the way up one edge. -->
+    <GridLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:orientation="vertical">
+        android:layout_margin="12dp"
+        android:columnCount="2"
+        android:rowCount="2">
 
         <Button
             android:id="@+id/qiblaButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
+            android:layout_margin="4dp"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
             android:background="@drawable/bg_button_pill"
-            android:paddingStart="18dp"
-            android:paddingEnd="18dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
             android:textColor="@color/color_on_accent"
+            android:textSize="12sp"
             android:text="@string/qibla_button" />
 
         <Button
             android:id="@+id/myPlacesButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
+            android:layout_margin="4dp"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
             android:background="@drawable/bg_button_pill"
-            android:paddingStart="18dp"
-            android:paddingEnd="18dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
             android:textColor="@color/color_on_accent"
+            android:textSize="12sp"
             android:text="@string/my_places" />
 
         <Button
             android:id="@+id/savePlaceButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
+            android:layout_margin="4dp"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
             android:background="@drawable/bg_button_pill"
-            android:paddingStart="18dp"
-            android:paddingEnd="18dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
             android:textColor="@color/color_on_accent"
+            android:textSize="12sp"
             android:text="@string/save_this_spot" />
 
         <Button
             android:id="@+id/enterCoordinatesButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_margin="4dp"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
             android:background="@drawable/bg_button_pill"
-            android:paddingStart="18dp"
-            android:paddingEnd="18dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
             android:textColor="@color/color_on_accent"
+            android:textSize="12sp"
             android:text="@string/enter_coordinates_button" />
 
-    </LinearLayout>
+    </GridLayout>
+
+    <!-- Re-center on "me" — the one thing missing once pan/zoom exist at
+         all: after dragging the map around to look at something far off,
+         there was no quick way back to center except pinching/dragging
+         back by feel. Small, out of the way, top-end corner. -->
+    <Button
+        android:id="@+id/recenterButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:minHeight="0dp"
+        android:minWidth="0dp"
+        android:background="@drawable/bg_button_pill"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp"
+        android:textColor="@color/color_on_accent"
+        android:textSize="14sp"
+        android:contentDescription="@string/recenter_map"
+        android:text="⊙" />
 
 </FrameLayout>

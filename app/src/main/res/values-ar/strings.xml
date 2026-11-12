@@ -75,6 +75,7 @@
     <string name="compass_label_east">شرق</string>
     <string name="compass_label_west">غرب</string>
     <string name="qibla_button">القبلة</string>
+    <string name="recenter_map">توسيط على موقعي</string>
     <string name="qibla_map_label">القبلة</string>
     <string name="peer_action_view_profile">عرض الملف الشخصي</string>
     <string name="peer_action_follow">تتبّع (خط يوضح الاتجاه)</string>

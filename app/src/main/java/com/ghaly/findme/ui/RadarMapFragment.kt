@@ -94,6 +94,9 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         view.findViewById<Button>(R.id.enterCoordinatesButton).setOnClickListener {
             showEnterCoordinatesDialog(radar)
         }
+        view.findViewById<Button>(R.id.recenterButton).setOnClickListener {
+            radar.resetView()
+        }
         // Long-press is deliberately the only way to clear the trail — this is
         // the one way back for someone who's actually lost, so it shouldn't be
         // a single careless tap away from being wiped.

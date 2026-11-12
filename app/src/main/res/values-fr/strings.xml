@@ -75,6 +75,7 @@
     <string name="compass_label_east">E</string>
     <string name="compass_label_west">O</string>
     <string name="qibla_button">Qibla</string>
+    <string name="recenter_map">Me recentrer</string>
     <string name="qibla_map_label">Qibla</string>
     <string name="peer_action_view_profile">Voir le profil</string>
     <string name="peer_action_follow">Suivre (ligne de direction)</string>

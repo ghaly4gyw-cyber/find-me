@@ -50,8 +50,8 @@ if ($action === 'add_admin') {
     $role = (string) ($_POST['role'] ?? 'admin');
     $phone = trim((string) ($_POST['phone'] ?? ''));
 
-    if (!preg_match('/^[a-z0-9_]{3,32}$/', $username)) {
-        header('Location: index.php?admin_error=' . rawurlencode('اسم المستخدم يجب أن يكون 3-32 حرفًا إنجليزيًا صغيرًا أو رقمًا أو شرطة سفلية.'));
+    if (mb_strlen($username) < 2 || mb_strlen($username) > 32 || !preg_match('/^[\p{L}\p{N}_ ]+$/u', $username)) {
+        header('Location: index.php?admin_error=' . rawurlencode('اسم المستخدم يجب أن يكون حرفين على الأقل، عربيًا أو إنجليزيًا.'));
         exit;
     }
     if ($name === '' || mb_strlen($name) > 100) {

@@ -264,13 +264,20 @@ class RadarMapView @JvmOverloads constructor(
     })
     private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDoubleTap(e: MotionEvent): Boolean {
-            scaleFactor = 1f
-            panX = 0f
-            panY = 0f
-            invalidate()
+            resetView()
             return true
         }
     })
+
+    /** Back to centered-on-me, no zoom — same as the double-tap gesture,
+     *  exposed for the small "⊙" re-center button (less discoverable than
+     *  a gesture, so it's there as the obvious equivalent). */
+    fun resetView() {
+        scaleFactor = 1f
+        panX = 0f
+        panY = 0f
+        invalidate()
+    }
     private var lastTouchX = 0f
     private var lastTouchY = 0f
     private var downX = 0f

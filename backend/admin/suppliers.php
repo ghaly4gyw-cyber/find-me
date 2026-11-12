@@ -220,7 +220,7 @@ if (!file_exists($configPath)) {
   <form method="post" action="admin-save.php" class="add-form">
     <input type="hidden" name="action" value="add_admin">
     <input type="hidden" name="role" value="supplier">
-    <input type="text" name="username" placeholder="اسم المستخدم (إنجليزي)" pattern="[a-z0-9_]{3,32}" required style="direction: ltr; text-align: right;">
+    <input type="text" name="username" placeholder="اسم المستخدم (أي اسم، عربي يكفي حرفان)" minlength="2" maxlength="32" required>
     <input type="text" name="name" placeholder="الاسم الكامل" maxlength="100" required>
     <input type="text" name="phone" placeholder="رقم الهاتف" required style="direction: ltr; text-align: right;">
     <input type="password" name="password" placeholder="كلمة المرور (8 أحرف على الأقل)" minlength="8" required>

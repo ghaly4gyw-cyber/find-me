@@ -238,28 +238,53 @@
     </HorizontalScrollView>
     </LinearLayout>
 
+    <!-- These three were each a full padded paragraph-plus-button block,
+         which on the map tab in particular (the one screen that most needs
+         its vertical space) could add up to nearly half the screen before
+         a single permission was even granted — "make this a full screen...
+         make it more big". Compacted to one slim row each: a warning icon,
+         the explanation capped to 2 lines instead of wrapping freely, and
+         a small inline button at the end instead of a full-width one below
+         it. Still exactly as readable, just no longer fighting the map for
+         space. -->
     <LinearLayout
         android:id="@+id/permissionBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:background="@color/night_panel"
-        android:padding="16dp"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="8dp"
         android:visibility="gone">
 
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="⚠️"
+            android:textSize="15sp"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="@string/permissions_needed"
-            android:textColor="@color/white" />
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:maxLines="2"
+            android:ellipsize="end" />
 
         <Button
             android:id="@+id/grantPermissionsButton"
             style="@style/FindMe.Button.Pill"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="20dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginStart="10dp"
+            android:minHeight="0dp"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="6dp"
+            android:textSize="12sp"
             android:text="@string/grant_permissions" />
     </LinearLayout>
 
@@ -267,24 +292,40 @@
         android:id="@+id/locationServicesBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:background="@color/night_panel"
-        android:padding="16dp"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="8dp"
         android:visibility="gone">
 
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="⚠️"
+            android:textSize="15sp"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="@string/location_services_needed"
-            android:textColor="@color/white" />
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:maxLines="2"
+            android:ellipsize="end" />
 
         <Button
             android:id="@+id/enableLocationButton"
             style="@style/FindMe.Button.Pill"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="20dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginStart="10dp"
+            android:minHeight="0dp"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="6dp"
+            android:textSize="12sp"
             android:text="@string/enable_location" />
     </LinearLayout>
 
@@ -292,24 +333,40 @@
         android:id="@+id/batteryBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:background="@color/night_panel"
-        android:padding="16dp"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="8dp"
         android:visibility="gone">
 
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="🔋"
+            android:textSize="15sp"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="@string/battery_optimization_needed"
-            android:textColor="@color/white" />
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:maxLines="2"
+            android:ellipsize="end" />
 
         <Button
             android:id="@+id/allowBatteryButton"
             style="@style/FindMe.Button.Pill"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="20dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginStart="10dp"
+            android:minHeight="0dp"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="6dp"
+            android:textSize="12sp"
             android:text="@string/allow_battery" />
     </LinearLayout>
 
