@@ -76,6 +76,15 @@
     <string name="compass_label_west">O</string>
     <string name="qibla_button">Qibla</string>
     <string name="recenter_map">Me recentrer</string>
+    <string name="map_toggle_button">Carte réelle</string>
+    <string name="download_area_button">Télécharger cette zone</string>
+    <string name="downloading_area_title">Téléchargement des tuiles…</string>
+    <string name="downloading_area_message">Laissez cet écran ouvert et restez connecté jusqu\'à la fin. Ensuite, cette zone fonctionnera sans aucune connexion.</string>
+    <string name="download_area_done_fmt">Enregistré — %1$d tuiles téléchargées pour une utilisation hors ligne.</string>
+    <string name="download_area_failed">Échec du téléchargement des tuiles. Vérifiez votre connexion et réessayez.</string>
+    <string name="download_area_need_connection">Connectez-vous à Internet ou au Wi-Fi avant de télécharger cette zone.</string>
+    <string name="map_no_cached_tiles">Aucune carte enregistrée pour cette zone. Connectez-vous une fois et appuyez sur \"Télécharger cette zone\" pour l\'utiliser hors ligne plus tard.</string>
+    <string name="map_mode_offline_notice">Hors ligne — seules les tuiles déjà téléchargées sont affichées.</string>
     <string name="qibla_map_label">Qibla</string>
     <string name="peer_action_view_profile">Voir le profil</string>
     <string name="peer_action_follow">Suivre (ligne de direction)</string>

@@ -76,6 +76,15 @@
     <string name="compass_label_west">W</string>
     <string name="qibla_button">Qibla</string>
     <string name="recenter_map">Re-center on me</string>
+    <string name="map_toggle_button">Real map</string>
+    <string name="download_area_button">Download this area</string>
+    <string name="downloading_area_title">Downloading map tiles…</string>
+    <string name="downloading_area_message">Keep this screen open and stay connected until this finishes. Once done, this area works with no connection at all.</string>
+    <string name="download_area_done_fmt">Saved — %1$d map tiles downloaded for offline use.</string>
+    <string name="download_area_failed">Couldn\'t download map tiles. Check your connection and try again.</string>
+    <string name="download_area_need_connection">Connect to the internet or Wi-Fi first to download this area.</string>
+    <string name="map_no_cached_tiles">No map saved for this area yet. Connect once and tap \"Download this area\" to use it offline later.</string>
+    <string name="map_mode_offline_notice">Offline — showing only previously downloaded tiles.</string>
     <string name="qibla_map_label">Qibla</string>
     <string name="peer_action_view_profile">View profile</string>
     <string name="peer_action_follow">Follow (show direction line)</string>

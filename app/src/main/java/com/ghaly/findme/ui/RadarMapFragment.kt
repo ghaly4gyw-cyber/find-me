@@ -6,10 +6,13 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -25,6 +28,12 @@ import com.ghaly.findme.repo.SavedPlaceRepository
 import com.ghaly.findme.repo.TrailRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.osmdroid.tileprovider.cachemanager.CacheManager
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import java.util.Locale
 
 class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListener {
 
@@ -46,6 +55,16 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
     private var rotationSensor: Sensor? = null
     private val rotationMatrix = FloatArray(9)
     private val orientationAngles = FloatArray(3)
+
+    // "Real map" mode (osmdroid/OpenStreetMap) — off by default; the radar
+    // above is the always-available, zero-data safety view, and this is an
+    // opt-in extra for whoever has downloaded their area ahead of time.
+    private lateinit var offlineMapView: MapView
+    private lateinit var mapToggleButton: Button
+    private lateinit var downloadAreaButton: Button
+    private var mapMode = false
+    private var myLocationMarker: Marker? = null
+    private val peerMarkers = mutableMapOf<String, Marker>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -97,6 +116,19 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         view.findViewById<Button>(R.id.recenterButton).setOnClickListener {
             radar.resetView()
         }
+
+        offlineMapView = view.findViewById(R.id.offlineMapView)
+        offlineMapView.setTileSource(TileSourceFactory.MAPNIK)
+        offlineMapView.setMultiTouchControls(true)
+        offlineMapView.setUseDataConnection(true)
+        offlineMapView.minZoomLevel = 3.0
+        offlineMapView.maxZoomLevel = 19.0
+        offlineMapView.controller.setZoom(14.0)
+
+        mapToggleButton = view.findViewById(R.id.mapToggleButton)
+        downloadAreaButton = view.findViewById(R.id.downloadAreaButton)
+        mapToggleButton.setOnClickListener { setMapMode(!mapMode) }
+        downloadAreaButton.setOnClickListener { downloadCurrentArea() }
         // Long-press is deliberately the only way to clear the trail — this is
         // the one way back for someone who's actually lost, so it shouldn't be
         // a single careless tap away from being wiped.
@@ -112,6 +144,7 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                     radar.peers = values
                     emptyText.visibility = if (values.isEmpty()) View.VISIBLE else View.GONE
                     updateNavigationHint()
+                    updatePeerMarkers(values)
                 }
             }
         }
@@ -133,6 +166,7 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                     radar.myLocation = mine
                     updateNavigationHint()
                     updateAccuracyPill(mesh?.myAccuracyM())
+                    updateMyLocationMarker(mine)
                     // The service itself is asked (in onResume/onPause below) to take
                     // GPS fixes every 5s while this screen is up, instead of its normal
                     // battery-saving 30-120s — poll in step with that so a fresh fix
@@ -267,12 +301,132 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         // of jumping once every 30-120s. Reverted in onPause so an idle phone
         // goes right back to the battery-aware schedule.
         (requireActivity() as? MainActivity)?.mesh?.setLiveLocationBoost(true)
+        offlineMapView.onResume()
     }
 
     override fun onPause() {
         super.onPause()
         sensorManager?.unregisterListener(this)
         (requireActivity() as? MainActivity)?.mesh?.setLiveLocationBoost(false)
+        offlineMapView.onPause()
+    }
+
+    /** Switches between the always-available offline radar and the real
+     *  (OpenStreetMap) map. Centers on the last known fix the first time map
+     *  mode turns on so it doesn't open on a random patch of ocean. */
+    private fun setMapMode(enabled: Boolean) {
+        mapMode = enabled
+        radar.visibility = if (enabled) View.GONE else View.VISIBLE
+        offlineMapView.visibility = if (enabled) View.VISIBLE else View.GONE
+        downloadAreaButton.visibility = if (enabled) View.VISIBLE else View.GONE
+        mapToggleButton.backgroundTintList = if (enabled) {
+            android.content.res.ColorStateList.valueOf(resources.getColor(R.color.teal_400, null))
+        } else {
+            null
+        }
+        if (enabled) {
+            radar.myLocation?.let { (lat, lon) -> offlineMapView.controller.setCenter(GeoPoint(lat, lon)) }
+        }
+    }
+
+    /** Keeps a single reusable marker for "you" in sync with every fresh GPS
+     *  fix, same data the radar dot already uses. */
+    private fun updateMyLocationMarker(location: Pair<Double, Double>?) {
+        if (!::offlineMapView.isInitialized || location == null) return
+        val marker = myLocationMarker ?: Marker(offlineMapView).also {
+            it.title = getString(R.string.map_center_you)
+            it.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            offlineMapView.overlays.add(it)
+            myLocationMarker = it
+        }
+        marker.position = GeoPoint(location.first, location.second)
+        if (mapMode) offlineMapView.invalidate()
+    }
+
+    /** Mirrors the radar's teammate dots onto the real-map markers, reusing
+     *  the exact same tap menu (profile / follow / ring) either view is in. */
+    private fun updatePeerMarkers(peers: List<PeerPosition>) {
+        if (!::offlineMapView.isInitialized) return
+        val seen = mutableSetOf<String>()
+        for (peer in peers) {
+            seen.add(peer.deviceId)
+            val marker = peerMarkers.getOrPut(peer.deviceId) {
+                Marker(offlineMapView).also { offlineMapView.overlays.add(it) }
+            }
+            marker.position = GeoPoint(peer.lat, peer.lon)
+            marker.title = peer.name
+            marker.setOnMarkerClickListener { _, _ ->
+                showPeerActionMenu(radar, peer)
+                true
+            }
+        }
+        val stale = peerMarkers.keys - seen
+        for (deviceId in stale) {
+            val marker = peerMarkers.remove(deviceId)
+            if (marker != null) offlineMapView.overlays.remove(marker)
+        }
+        if (mapMode) offlineMapView.invalidate()
+    }
+
+    /** Downloads every tile in the area currently on screen, a couple of
+     *  zoom levels either side of the current one, so this same area keeps
+     *  working with no connection at all afterward — the actual point of a
+     *  "download this area" button for people who may be headed somewhere
+     *  with no signal. Needs a connection only for this one step. */
+    private fun downloadCurrentArea() {
+        val connectivity = requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        val network = connectivity?.activeNetwork
+        val caps = network?.let { connectivity.getNetworkCapabilities(it) }
+        val online = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+        if (!online) {
+            Toast.makeText(requireContext(), R.string.download_area_need_connection, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val boundingBox = offlineMapView.boundingBox
+        val currentZoom = offlineMapView.zoomLevelDouble.toInt()
+        val zoomMin = (currentZoom - 2).coerceAtLeast(offlineMapView.minZoomLevel.toInt())
+        val zoomMax = (currentZoom + 3).coerceAtMost(offlineMapView.maxZoomLevel.toInt())
+
+        val progressBar = ProgressBar(requireContext(), null, android.R.attr.progressBarStyleHorizontal).apply {
+            isIndeterminate = false
+            max = 100
+        }
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        progressBar.setPadding(padding, padding, padding, padding)
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle(R.string.downloading_area_title)
+            .setMessage(R.string.downloading_area_message)
+            .setView(progressBar)
+            .setCancelable(false)
+            .show()
+
+        val cacheManager = CacheManager(offlineMapView)
+        cacheManager.downloadAreaAsync(requireContext(), boundingBox, zoomMin, zoomMax, object : CacheManager.CacheManagerCallback {
+            override fun onTaskComplete() {
+                dialog.dismiss()
+                Toast.makeText(
+                    requireContext(),
+                    String.format(Locale.US, getString(R.string.download_area_done_fmt), progressBar.max),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+
+            override fun onTaskFailed(errors: Int) {
+                dialog.dismiss()
+                Toast.makeText(requireContext(), R.string.download_area_failed, Toast.LENGTH_LONG).show()
+            }
+
+            override fun downloadStarted() {}
+
+            override fun setPossibleTilesInArea(total: Int) {
+                activity?.runOnUiThread { progressBar.max = total }
+            }
+
+            override fun updateProgress(progress: Int, currentZoomLevel: Int, zoomMin: Int, zoomMax: Int) {
+                activity?.runOnUiThread { progressBar.progress = progress }
+            }
+        })
     }
 
     override fun onSensorChanged(event: SensorEvent) {

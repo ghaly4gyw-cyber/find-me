@@ -7,6 +7,7 @@ import com.ghaly.findme.util.AnrWatchdog
 import com.ghaly.findme.util.AppLog
 import com.ghaly.findme.util.CrashLog
 import com.ghaly.findme.util.ThemePrefs
+import org.osmdroid.config.Configuration
 
 /** Most of the people who will ever install this app read Arabic first, so the
  *  app should open in Arabic out of the box — not whatever language the phone's
@@ -31,6 +32,15 @@ class FindMeApplication : Application() {
         ThemePrefs.applyStored(this)
         if (AppCompatDelegate.getApplicationLocales().isEmpty) {
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("ar"))
+        }
+        // osmdroid refuses to fetch tiles without a user agent (OSM's tile
+        // usage policy), and defaults to a public-storage cache path that
+        // needs a permission this app doesn't otherwise request — point it
+        // at this app's own private storage instead, which needs none.
+        Configuration.getInstance().apply {
+            userAgentValue = packageName
+            osmdroidBasePath = getDir("osmdroid", MODE_PRIVATE)
+            osmdroidTileCache = java.io.File(osmdroidBasePath, "tiles")
         }
     }
 }

@@ -17,8 +17,8 @@ android {
         // com.ghaly.findme.update.UpdateChecker) and offers to install it
         // in-app, instead of someone having to go back to GitHub and
         // download the APK by hand every time.
-        versionCode = 36
-        versionName = "0.36.0"
+        versionCode = 37
+        versionName = "0.37.0"
     }
 
     // Without this, every CI build gets signed with a throwaway key that
@@ -82,4 +82,12 @@ dependencies {
     // matters here since a wrong hand-rolled formula would be actively
     // dangerous in a desert-safety context.
     implementation("org.shredzone.commons:commons-suncalc:3.11")
+
+    // Real map tiles (OpenStreetMap) for the map screen's "satellite/real map"
+    // mode — free and open, unlike true satellite imagery which generally
+    // isn't available at app scale without a paid license. Tiles are only
+    // ever fetched when explicitly downloaded for an area while online; once
+    // cached on-device, osmdroid serves them from its local SQLite cache with
+    // zero network, matching this app's offline-first design.
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
 }
