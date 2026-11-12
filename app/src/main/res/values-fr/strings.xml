@@ -78,6 +78,8 @@
     <string name="recenter_map">Me recentrer</string>
     <string name="map_toggle_button">Carte réelle</string>
     <string name="download_area_button">Télécharger cette zone</string>
+    <string name="satellite_toggle_button">Vue satellite</string>
+    <string name="satellite_attribution">Esri, Maxar, Earthstar Geographics</string>
     <string name="downloading_area_title">Téléchargement des tuiles…</string>
     <string name="downloading_area_message">Laissez cet écran ouvert et restez connecté jusqu\'à la fin. Ensuite, cette zone fonctionnera sans aucune connexion.</string>
     <string name="download_area_done_fmt">Enregistré — %1$d tuiles téléchargées pour une utilisation hors ligne.</string>

@@ -78,6 +78,8 @@
     <string name="recenter_map">توسيط على موقعي</string>
     <string name="map_toggle_button">خريطة حقيقية</string>
     <string name="download_area_button">تنزيل هذه المنطقة</string>
+    <string name="satellite_toggle_button">صور الأقمار الصناعية</string>
+    <string name="satellite_attribution">Esri, Maxar, Earthstar Geographics</string>
     <string name="downloading_area_title">جارٍ تنزيل بلاطات الخريطة…</string>
     <string name="downloading_area_message">اترك هذه الشاشة مفتوحة وابقَ متصلاً بالإنترنت حتى ينتهي التنزيل. بعد ذلك تعمل هذه المنطقة بدون أي اتصال.</string>
     <string name="download_area_done_fmt">تم الحفظ — تم تنزيل %1$d بلاطة خريطة للاستخدام بدون إنترنت.</string>

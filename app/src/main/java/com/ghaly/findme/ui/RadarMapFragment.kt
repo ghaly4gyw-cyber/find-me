@@ -31,7 +31,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.osmdroid.tileprovider.cachemanager.CacheManager
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.util.MapTileIndex
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import java.util.Locale
@@ -52,6 +54,26 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
          *  point before the first GPS fix arrives, so the view frames the
          *  country instead of osmdroid's default (0,0), which is open ocean. */
         private val MAURITANIA_FALLBACK_CENTER = GeoPoint(20.0, -10.5)
+
+        /** Real satellite/aerial photography — Esri's free "World Imagery"
+         *  basemap — for "the map is not true, I want the true map": MAPNIK
+         *  is a drawn street map, this is an actual picture of the ground.
+         *  Usable without an API key for light, non-cached use. Esri's own
+         *  tile path orders coordinates z/y/x, unlike every other source
+         *  here (z/x/y), so this overrides the URL builder instead of
+         *  relying on XYTileSource's default. */
+        private val ESRI_WORLD_IMAGERY: XYTileSource = object : XYTileSource(
+            "EsriWorldImagery",
+            0, 19, 256, "",
+            arrayOf("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/")
+        ) {
+            override fun getTileURLString(pMapTileIndex: Long): String {
+                return baseUrl +
+                    MapTileIndex.getZoom(pMapTileIndex) + "/" +
+                    MapTileIndex.getY(pMapTileIndex) + "/" +
+                    MapTileIndex.getX(pMapTileIndex)
+            }
+        }
     }
 
     private lateinit var radar: RadarMapView
@@ -69,7 +91,10 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
     private lateinit var offlineMapView: MapView
     private lateinit var mapToggleButton: Button
     private lateinit var downloadAreaButton: Button
+    private lateinit var satelliteToggleButton: Button
+    private lateinit var satelliteAttribution: View
     private var mapMode = false
+    private var satelliteMode = false
     private var myLocationMarker: Marker? = null
     private val peerMarkers = mutableMapOf<String, Marker>()
     private var mapCenteredOnFix = false
@@ -146,8 +171,11 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
 
         mapToggleButton = view.findViewById(R.id.mapToggleButton)
         downloadAreaButton = view.findViewById(R.id.downloadAreaButton)
+        satelliteToggleButton = view.findViewById(R.id.satelliteToggleButton)
+        satelliteAttribution = view.findViewById(R.id.satelliteAttribution)
         mapToggleButton.setOnClickListener { setMapMode(!mapMode) }
         downloadAreaButton.setOnClickListener { downloadCurrentArea() }
+        satelliteToggleButton.setOnClickListener { setSatelliteMode(!satelliteMode) }
         // Long-press is deliberately the only way to clear the trail — this is
         // the one way back for someone who's actually lost, so it shouldn't be
         // a single careless tap away from being wiped.
@@ -341,6 +369,8 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         radar.visibility = if (enabled) View.GONE else View.VISIBLE
         offlineMapView.visibility = if (enabled) View.VISIBLE else View.GONE
         downloadAreaButton.visibility = if (enabled) View.VISIBLE else View.GONE
+        satelliteToggleButton.visibility = if (enabled) View.VISIBLE else View.GONE
+        satelliteAttribution.visibility = if (enabled && satelliteMode) View.VISIBLE else View.GONE
         emptyText.visibility = if (!enabled && lastKnownPeersEmpty) View.VISIBLE else View.GONE
         mapToggleButton.backgroundTintList = if (enabled) {
             android.content.res.ColorStateList.valueOf(resources.getColor(R.color.teal_400, null))
@@ -359,6 +389,23 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                 Toast.makeText(requireContext(), R.string.no_location_yet, Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    /** Swaps the drawn street map for real satellite/aerial photography, or
+     *  back — "the map is not true, I want the true map". Whichever tile
+     *  source is active when "download this area" is pressed is the one
+     *  CacheManager actually caches, so switching here before downloading
+     *  downloads satellite imagery instead of street tiles. */
+    private fun setSatelliteMode(enabled: Boolean) {
+        satelliteMode = enabled
+        offlineMapView.setTileSource(if (enabled) ESRI_WORLD_IMAGERY else TileSourceFactory.MAPNIK)
+        satelliteAttribution.visibility = if (enabled) View.VISIBLE else View.GONE
+        satelliteToggleButton.backgroundTintList = if (enabled) {
+            android.content.res.ColorStateList.valueOf(resources.getColor(R.color.teal_400, null))
+        } else {
+            null
+        }
+        offlineMapView.invalidate()
     }
 
     /** Keeps a single reusable marker for "you" in sync with every fresh GPS

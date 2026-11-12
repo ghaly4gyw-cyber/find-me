@@ -78,6 +78,8 @@
     <string name="recenter_map">Re-center on me</string>
     <string name="map_toggle_button">Real map</string>
     <string name="download_area_button">Download this area</string>
+    <string name="satellite_toggle_button">Satellite view</string>
+    <string name="satellite_attribution">Esri, Maxar, Earthstar Geographics</string>
     <string name="downloading_area_title">Downloading map tiles…</string>
     <string name="downloading_area_message">Keep this screen open and stay connected until this finishes. Once done, this area works with no connection at all.</string>
     <string name="download_area_done_fmt">Saved — %1$d map tiles downloaded for offline use.</string>

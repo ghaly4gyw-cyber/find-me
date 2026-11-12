@@ -19,6 +19,25 @@
         android:layout_height="match_parent"
         android:visibility="gone" />
 
+    <!-- Required credit line for the satellite layer (Esri/Maxar/Earthstar
+         Geographics) — only visible while that layer is actually showing. -->
+    <TextView
+        android:id="@+id/satelliteAttribution"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="4dp"
+        android:background="#66000000"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:text="@string/satellite_attribution"
+        android:textColor="#CCFFFFFF"
+        android:textSize="9sp"
+        android:visibility="gone" />
+
     <TextView
         android:id="@+id/navigationHint"
         android:layout_width="wrap_content"
@@ -82,7 +101,7 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="12dp"
         android:columnCount="2"
-        android:rowCount="3">
+        android:rowCount="4">
 
         <Button
             android:id="@+id/qiblaButton"
@@ -192,6 +211,27 @@
             android:lineSpacingExtra="-2sp"
             android:visibility="gone"
             android:text="@string/download_area_button" />
+
+        <!-- Only shown while map mode is on — swaps the street map for real
+             satellite/aerial photos (Esri World Imagery), the "true" map
+             picture of the ground rather than a drawn street map. -->
+        <Button
+            android:id="@+id/satelliteToggleButton"
+            android:layout_width="132dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="4dp"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:background="@drawable/bg_button_pill"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:textColor="@color/color_on_accent"
+            android:textSize="12sp"
+            android:maxLines="2"
+            android:gravity="center"
+            android:lineSpacingExtra="-2sp"
+            android:visibility="gone"
+            android:text="@string/satellite_toggle_button" />
 
     </GridLayout>
 
