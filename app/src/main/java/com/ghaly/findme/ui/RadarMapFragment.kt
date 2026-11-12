@@ -46,11 +46,17 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         fun newInstance(followDeviceId: String): RadarMapFragment = RadarMapFragment().apply {
             arguments = Bundle().apply { putString(ARG_FOLLOW_DEVICE_ID, followDeviceId) }
         }
+
+        /** Roughly the middle of Mauritania — used only as a map-mode starting
+         *  point before the first GPS fix arrives, so the view frames the
+         *  country instead of osmdroid's default (0,0), which is open ocean. */
+        private val MAURITANIA_FALLBACK_CENTER = GeoPoint(20.0, -10.5)
     }
 
     private lateinit var radar: RadarMapView
     private lateinit var navigationHint: TextView
     private lateinit var accuracyPill: TextView
+    private lateinit var emptyText: View
     private var sensorManager: SensorManager? = null
     private var rotationSensor: Sensor? = null
     private val rotationMatrix = FloatArray(9)
@@ -65,13 +71,15 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
     private var mapMode = false
     private var myLocationMarker: Marker? = null
     private val peerMarkers = mutableMapOf<String, Marker>()
+    private var mapCenteredOnFix = false
+    private var lastKnownPeersEmpty = true
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         radar = view.findViewById(R.id.radarView)
         navigationHint = view.findViewById(R.id.navigationHint)
         accuracyPill = view.findViewById(R.id.accuracyPill)
-        val emptyText = view.findViewById<View>(R.id.mapEmptyText)
+        emptyText = view.findViewById(R.id.mapEmptyText)
 
         sensorManager = requireContext().getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         rotationSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
@@ -114,7 +122,17 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
             showEnterCoordinatesDialog(radar)
         }
         view.findViewById<Button>(R.id.recenterButton).setOnClickListener {
-            radar.resetView()
+            if (mapMode) {
+                val mine = radar.myLocation
+                if (mine != null) {
+                    offlineMapView.controller.setZoom(15.0)
+                    offlineMapView.controller.animateTo(GeoPoint(mine.first, mine.second))
+                } else {
+                    Toast.makeText(requireContext(), R.string.no_location_yet, Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                radar.resetView()
+            }
         }
 
         offlineMapView = view.findViewById(R.id.offlineMapView)
@@ -142,7 +160,8 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                 PeerRepository.peers.collect { map ->
                     val values = map.values.toList()
                     radar.peers = values
-                    emptyText.visibility = if (values.isEmpty()) View.VISIBLE else View.GONE
+                    lastKnownPeersEmpty = values.isEmpty()
+                    emptyText.visibility = if (lastKnownPeersEmpty && !mapMode) View.VISIBLE else View.GONE
                     updateNavigationHint()
                     updatePeerMarkers(values)
                 }
@@ -313,19 +332,31 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
 
     /** Switches between the always-available offline radar and the real
      *  (OpenStreetMap) map. Centers on the last known fix the first time map
-     *  mode turns on so it doesn't open on a random patch of ocean. */
+     *  mode turns on; with no fix yet, it still frames the whole country at a
+     *  wide zoom rather than osmdroid's default (0,0) — open ocean off the
+     *  African coast — which otherwise just looks like a blank screen. */
     private fun setMapMode(enabled: Boolean) {
         mapMode = enabled
         radar.visibility = if (enabled) View.GONE else View.VISIBLE
         offlineMapView.visibility = if (enabled) View.VISIBLE else View.GONE
         downloadAreaButton.visibility = if (enabled) View.VISIBLE else View.GONE
+        emptyText.visibility = if (!enabled && lastKnownPeersEmpty) View.VISIBLE else View.GONE
         mapToggleButton.backgroundTintList = if (enabled) {
             android.content.res.ColorStateList.valueOf(resources.getColor(R.color.teal_400, null))
         } else {
             null
         }
         if (enabled) {
-            radar.myLocation?.let { (lat, lon) -> offlineMapView.controller.setCenter(GeoPoint(lat, lon)) }
+            val mine = radar.myLocation
+            if (mine != null) {
+                offlineMapView.controller.setZoom(15.0)
+                offlineMapView.controller.setCenter(GeoPoint(mine.first, mine.second))
+                mapCenteredOnFix = true
+            } else if (!mapCenteredOnFix) {
+                offlineMapView.controller.setZoom(6.0)
+                offlineMapView.controller.setCenter(MAURITANIA_FALLBACK_CENTER)
+                Toast.makeText(requireContext(), R.string.no_location_yet, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -340,6 +371,15 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
             myLocationMarker = it
         }
         marker.position = GeoPoint(location.first, location.second)
+        if (mapMode && !mapCenteredOnFix) {
+            // First real fix arriving while map mode is already open (it
+            // wasn't available yet when the mode was turned on) — snap to it
+            // once rather than leaving the view parked on the country-wide
+            // fallback view.
+            offlineMapView.controller.setZoom(15.0)
+            offlineMapView.controller.animateTo(GeoPoint(location.first, location.second))
+            mapCenteredOnFix = true
+        }
         if (mapMode) offlineMapView.invalidate()
     }
 
