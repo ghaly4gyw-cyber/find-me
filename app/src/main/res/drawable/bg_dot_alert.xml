@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Small dot on the tools-menu icon flagging that a permission/location/
+     battery banner inside the collapsed panel needs attention. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/sos_red" />
+</shape>

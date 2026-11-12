@@ -85,6 +85,7 @@
     <string name="download_area_need_connection">اتصل بالإنترنت أو الواي فاي أولاً لتنزيل هذه المنطقة.</string>
     <string name="map_no_cached_tiles">لا توجد خريطة محفوظة لهذه المنطقة بعد. اتصل مرة واحدة واضغط \"تنزيل هذه المنطقة\" لاستخدامها لاحقًا بدون إنترنت.</string>
     <string name="map_mode_offline_notice">بدون اتصال — تُعرض فقط البلاطات المنزّلة مسبقًا.</string>
+    <string name="open_tools_menu">الأدوات والإعدادات</string>
     <string name="qibla_map_label">القبلة</string>
     <string name="peer_action_view_profile">عرض الملف الشخصي</string>
     <string name="peer_action_follow">تتبّع (خط يوضح الاتجاه)</string>

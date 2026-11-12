@@ -114,6 +114,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var permissionBar: android.view.View
     private lateinit var batteryBar: android.view.View
     private lateinit var locationServicesBar: android.view.View
+    // Collapsed by default so every tab gets the full screen — "does not
+    // have anything... make it so it opens when someone clicks it" — opened
+    // with menuToggleButton. Auto-opened once if there's something in it that
+    // actually needs attention on first launch, so new-user setup doesn't
+    // hide behind a tap nobody's told about yet.
+    private lateinit var toolsPanel: android.view.View
+    private lateinit var menuAlertDot: android.view.View
+    private var toolsPanelAutoOpenedOnce = false
     // The permission/battery/location banners are important but not urgent —
     // on a shorter screen they can eat enough fixed vertical space that a
     // fragment's own input row (the chat box, say) gets squeezed down to
@@ -273,6 +281,15 @@ class MainActivity : AppCompatActivity() {
         permissionBar = findViewById(R.id.permissionBar)
         batteryBar = findViewById(R.id.batteryBar)
         locationServicesBar = findViewById(R.id.locationServicesBar)
+        toolsPanel = findViewById(R.id.toolsPanel)
+        menuAlertDot = findViewById(R.id.menuAlertDot)
+        findViewById<TextView>(R.id.menuToggleButton).setOnClickListener {
+            toolsPanel.visibility = if (toolsPanel.visibility == android.view.View.VISIBLE) {
+                android.view.View.GONE
+            } else {
+                android.view.View.VISIBLE
+            }
+        }
         findViewById<Button>(R.id.grantPermissionsButton).setOnClickListener {
             permissionLauncher.launch(Permissions.required())
         }
@@ -613,6 +630,23 @@ class MainActivity : AppCompatActivity() {
         AppLog.log("MainActivity", "refreshPermissionState — granted=$granted")
         permissionBar.visibility = if (granted) android.view.View.GONE else android.view.View.VISIBLE
         if (granted) startMesh()
+        updateMenuAlertBadge()
+    }
+
+    /** Lights the small dot on the collapsed tools menu whenever any of the
+     *  three banners inside it actually needs attention, and opens the panel
+     *  itself the first time that happens so initial setup isn't hidden
+     *  behind a tap nobody's been told about yet. After that first time, the
+     *  person's own open/close choice is left alone. */
+    private fun updateMenuAlertBadge() {
+        val needsAttention = permissionBar.visibility == android.view.View.VISIBLE ||
+            batteryBar.visibility == android.view.View.VISIBLE ||
+            locationServicesBar.visibility == android.view.View.VISIBLE
+        menuAlertDot.visibility = if (needsAttention) android.view.View.VISIBLE else android.view.View.GONE
+        if (needsAttention && !toolsPanelAutoOpenedOnce) {
+            toolsPanelAutoOpenedOnce = true
+            toolsPanel.visibility = android.view.View.VISIBLE
+        }
     }
 
     /** Android aggressively kills background work unless the app is exempted from
@@ -623,6 +657,7 @@ class MainActivity : AppCompatActivity() {
         val ignoring = powerManager?.isIgnoringBatteryOptimizations(packageName) ?: true
         AppLog.log("MainActivity", "refreshBatteryState — ignoringOptimizations=$ignoring")
         batteryBar.visibility = if (ignoring) android.view.View.GONE else android.view.View.VISIBLE
+        updateMenuAlertBadge()
     }
 
     /** Android's system Location toggle is a DIFFERENT thing from the
@@ -638,6 +673,7 @@ class MainActivity : AppCompatActivity() {
         } ?: true
         AppLog.log("MainActivity", "refreshLocationServicesState — enabled=$enabled")
         locationServicesBar.visibility = if (enabled) android.view.View.GONE else android.view.View.VISIBLE
+        updateMenuAlertBadge()
     }
 
     private fun requestIgnoreBatteryOptimizations() {

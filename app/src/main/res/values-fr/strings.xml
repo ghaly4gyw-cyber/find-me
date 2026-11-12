@@ -85,6 +85,7 @@
     <string name="download_area_need_connection">Connectez-vous à Internet ou au Wi-Fi avant de télécharger cette zone.</string>
     <string name="map_no_cached_tiles">Aucune carte enregistrée pour cette zone. Connectez-vous une fois et appuyez sur \"Télécharger cette zone\" pour l\'utiliser hors ligne plus tard.</string>
     <string name="map_mode_offline_notice">Hors ligne — seules les tuiles déjà téléchargées sont affichées.</string>
+    <string name="open_tools_menu">Outils et paramètres</string>
     <string name="qibla_map_label">Qibla</string>
     <string name="peer_action_view_profile">Voir le profil</string>
     <string name="peer_action_follow">Suivre (ligne de direction)</string>

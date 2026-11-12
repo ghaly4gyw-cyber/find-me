@@ -7,10 +7,11 @@
     android:orientation="vertical"
     android:background="@color/sand_900">
 
-    <!-- Header + quick-tools row, unified into one "nav dock" surface
-         (bg_nav_dock_top) with a soft bottom edge and elevation, so the
-         title bar and the tool icons read as one connected block instead
-         of two separate rows sitting on the plain page background. -->
+    <!-- Title bar only — kept to one slim row on every screen. Everything
+         that used to always sit below it (the tool-icon row and the
+         permission/location/battery banners) now lives in the collapsible
+         toolsPanel below, opened with menuToggleButton — "does not have
+         anything... make it so it opens when someone clicks it". -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -82,20 +83,59 @@
             android:maxLines="1"
             android:ellipsize="end"
             tools:text="☼ 5h 15m" />
+
+        <!-- Opens/closes toolsPanel below. The small red dot overlaps its
+             corner only when a permission/location/battery banner actually
+             needs attention, so the icon stays meaningful even collapsed. -->
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp">
+
+            <TextView
+                android:id="@+id/menuToggleButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="☰"
+                android:textSize="20sp"
+                android:textColor="@color/white"
+                android:padding="8dp"
+                android:background="@drawable/bg_tab_item"
+                android:contentDescription="@string/open_tools_menu" />
+
+            <View
+                android:id="@+id/menuAlertDot"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="4dp"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/bg_dot_alert"
+                android:visibility="gone" />
+        </FrameLayout>
+    </LinearLayout>
     </LinearLayout>
 
-    <!-- Every quick-access tool lives here now, as one scrollable row instead
-         of being buried behind the wrench icon — "all the buttons in the top
-         nav bar... show them there all", per Ghaly's request. Dynamic in two
-         senses: it scrolls rather than clipping on narrow screens or long
-         Arabic/French labels, and a new tool just appends to the row rather
-         than needing a layout redesign. layoutAnimation makes the whole row
-         stagger in (fade + rise) the moment this screen first lays out. -->
+    <!-- Collapsed by default so every tab — the map most of all — gets the
+         full screen; opened with menuToggleButton above. Every quick-access
+         tool plus the three status banners live here now instead of always
+         sitting between the title bar and the content, "eating space that
+         does not have anything" when there's nothing to act on. -->
+    <LinearLayout
+        android:id="@+id/toolsPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_nav_dock_top"
+        android:elevation="4dp"
+        android:visibility="gone">
+
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:scrollbars="none"
         android:overScrollMode="ifContentScrolls"
+        android:paddingTop="8dp"
         android:paddingBottom="8dp">
 
         <LinearLayout
@@ -236,7 +276,6 @@
                 tools:text="Miner-3F2A ✎" />
         </LinearLayout>
     </HorizontalScrollView>
-    </LinearLayout>
 
     <!-- These three were each a full padded paragraph-plus-button block,
          which on the map tab in particular (the one screen that most needs
@@ -368,6 +407,7 @@
             android:paddingVertical="6dp"
             android:textSize="12sp"
             android:text="@string/allow_battery" />
+    </LinearLayout>
     </LinearLayout>
 
     <FrameLayout

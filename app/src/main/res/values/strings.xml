@@ -85,6 +85,7 @@
     <string name="download_area_need_connection">Connect to the internet or Wi-Fi first to download this area.</string>
     <string name="map_no_cached_tiles">No map saved for this area yet. Connect once and tap \"Download this area\" to use it offline later.</string>
     <string name="map_mode_offline_notice">Offline — showing only previously downloaded tiles.</string>
+    <string name="open_tools_menu">Tools and settings</string>
     <string name="qibla_map_label">Qibla</string>
     <string name="peer_action_view_profile">View profile</string>
     <string name="peer_action_follow">Follow (show direction line)</string>
