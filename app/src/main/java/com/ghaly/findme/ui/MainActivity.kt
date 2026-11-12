@@ -1,6 +1,7 @@
 package com.ghaly.findme.ui
 
 import android.Manifest
+import android.animation.ObjectAnimator
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -16,6 +17,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -77,6 +79,10 @@ class MainActivity : AppCompatActivity() {
     /** Set only while waiting on the "allow installs from this app" settings
      *  screen the person was just sent to; picked back up in onStart(). */
     private var pendingUpdate: UpdateChecker.UpdateInfo? = null
+    // Whether the pending update (above) should resume through the quiet
+    // auto-update path once "allow installs from this source" is granted,
+    // rather than popping the normal progress dialog — see startUpdateDownload.
+    private var pendingUpdateSilent: Boolean = false
 
     /** The non-dismissible "this device has been blocked" gate — tracked so
      *  it can be dismissed again automatically if a later check confirms
@@ -557,7 +563,9 @@ class MainActivity : AppCompatActivity() {
         pendingUpdate?.let { update ->
             if (!UpdateInstaller.needsInstallPermission(this)) {
                 pendingUpdate = null
-                startUpdateDownload(update)
+                val silent = pendingUpdateSilent
+                pendingUpdateSilent = false
+                startUpdateDownload(update, silent)
             }
         }
 
@@ -797,7 +805,20 @@ class MainActivity : AppCompatActivity() {
      *  person tapped "Check for updates" themselves — it's the only case
      *  that talks back with a "you're up to date" / "no internet" message;
      *  the quiet startup check stays silent unless it actually finds
-     *  something. */
+     *  something.
+     *
+     *  Three kinds of update, same as Ghaly described: a plain optional one
+     *  (this dialog — Install now or Later), the hard gate for a build too
+     *  old to keep using (see checkRemoteControl/showForcedUpdateGate,
+     *  unaffected by any of this), and — new here — a quiet "auto" update:
+     *  once this phone has already granted "install from this source" once,
+     *  there's nothing left for the person to decide on a routine newer
+     *  build, so the quiet startup check (manual == false) skips straight to
+     *  downloading instead of popping yet another "Install/Later" dialog
+     *  they've already answered the spirit of before. A MANUAL check still
+     *  always asks first, even with permission already granted — tapping
+     *  "Check for updates" is itself asking "what's new", and the answer
+     *  shouldn't be the app just doing something before they've seen it. */
     private fun checkForUpdates(manual: Boolean) {
         if (!hasActiveNetwork()) {
             if (manual) Toast.makeText(this, R.string.update_no_internet, Toast.LENGTH_SHORT).show()
@@ -807,6 +828,10 @@ class MainActivity : AppCompatActivity() {
             val update = withContext(Dispatchers.IO) { UpdateChecker.check(this@MainActivity) }
             if (update == null) {
                 if (manual) Toast.makeText(this@MainActivity, R.string.update_up_to_date, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            if (!manual && !UpdateInstaller.needsInstallPermission(this@MainActivity)) {
+                startUpdateDownload(update, silent = true)
                 return@launch
             }
             AlertDialog.Builder(this@MainActivity)
@@ -1272,10 +1297,20 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun startUpdateDownload(update: UpdateChecker.UpdateInfo) {
+    /** [silent] is the "auto update" tier — see checkForUpdates. It skips
+     *  this app's own progress dialog entirely (a short toast instead) but
+     *  never skips the one thing Android itself requires: the system's own
+     *  "install this update?" confirmation when UpdateInstaller.install
+     *  hands it the APK. That part was never this app's dialog to remove —
+     *  it's the OS's own install confirmation, shown for every app without
+     *  exception, and nothing here tries to get around it. */
+    private fun startUpdateDownload(update: UpdateChecker.UpdateInfo, silent: Boolean = false) {
         if (UpdateInstaller.needsInstallPermission(this)) {
             pendingUpdate = update
-            Toast.makeText(this, R.string.update_allow_install_toast, Toast.LENGTH_LONG).show()
+            pendingUpdateSilent = silent
+            if (!silent) {
+                Toast.makeText(this, R.string.update_allow_install_toast, Toast.LENGTH_LONG).show()
+            }
             try {
                 startActivity(UpdateInstaller.requestInstallPermissionIntent(this))
             } catch (e: Exception) {
@@ -1283,15 +1318,66 @@ class MainActivity : AppCompatActivity() {
             }
             return
         }
+
+        if (silent) {
+            Toast.makeText(
+                this,
+                getString(R.string.update_installing_toast_fmt, update.versionName),
+                Toast.LENGTH_SHORT
+            ).show()
+            lifecycleScope.launch {
+                try {
+                    val apkFile = withContext(Dispatchers.IO) {
+                        UpdateChecker.downloadApk(this@MainActivity, update.apkUrl)
+                    }
+                    UpdateInstaller.install(this@MainActivity, apkFile)
+                } catch (e: Exception) {
+                    // The person never asked for this one — staying quiet on
+                    // failure too is the whole point of "auto". A manual
+                    // check or the next forced-gate tick will surface it with
+                    // the normal, visible flow if the update is still needed.
+                }
+            }
+            return
+        }
+
+        val progressView = layoutInflater.inflate(R.layout.dialog_update_progress, null)
+        val progressBar = progressView.findViewById<ProgressBar>(R.id.updateProgressBar)
+        val percentText = progressView.findViewById<TextView>(R.id.updateProgressPercent)
+        val pulseDot = progressView.findViewById<View>(R.id.updateProgressPulseDot)
+        val pulseX = ObjectAnimator.ofFloat(pulseDot, "scaleX", 1f, 1.6f, 1f).apply {
+            duration = 900
+            repeatCount = ObjectAnimator.INFINITE
+        }
+        val pulseY = ObjectAnimator.ofFloat(pulseDot, "scaleY", 1f, 1.6f, 1f).apply {
+            duration = 900
+            repeatCount = ObjectAnimator.INFINITE
+        }
+        pulseX.start()
+        pulseY.start()
         val progressDialog = AlertDialog.Builder(this)
-            .setTitle(R.string.update_downloading_title)
-            .setMessage(R.string.update_downloading_message)
+            .setView(progressView)
             .setCancelable(false)
             .show()
+        progressDialog.setOnDismissListener {
+            pulseX.cancel()
+            pulseY.cancel()
+        }
         lifecycleScope.launch {
             try {
                 val apkFile = withContext(Dispatchers.IO) {
-                    UpdateChecker.downloadApk(this@MainActivity, update.apkUrl)
+                    UpdateChecker.downloadApk(this@MainActivity, update.apkUrl) { percent ->
+                        runOnUiThread {
+                            if (percent < 0) {
+                                progressBar.isIndeterminate = true
+                                percentText.text = ""
+                            } else {
+                                progressBar.isIndeterminate = false
+                                progressBar.progress = percent
+                                percentText.text = getString(R.string.update_downloading_percent_fmt, percent)
+                            }
+                        }
+                    }
                 }
                 progressDialog.dismiss()
                 UpdateInstaller.install(this@MainActivity, apkFile)

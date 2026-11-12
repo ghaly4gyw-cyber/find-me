@@ -209,6 +209,8 @@
     <string name="update_downloading_message">This won\'t take long. The app will ask you to install once it\'s done.</string>
     <string name="update_download_failed">Couldn\'t download the update. Check your connection and try again.</string>
     <string name="update_allow_install_toast">Turn on \"Allow from this source\" for Find Me, then come back.</string>
+    <string name="update_downloading_percent_fmt">%1$d%%</string>
+    <string name="update_installing_toast_fmt">Updating Find Me to %1$s…</string>
     <string name="tools_about">ℹ️ About</string>
     <string name="about_dialog_title">About Find Me</string>
     <string name="about_dialog_body">Version %s\n\nMade by GYW\nmd-ghaly.com</string>

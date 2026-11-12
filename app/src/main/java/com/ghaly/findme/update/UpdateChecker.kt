@@ -72,9 +72,17 @@ object UpdateChecker {
 
     /** Downloads the APK to this app's own cache dir, overwriting any
      *  previous attempt. Blocking — call off the main thread. Throws on
-     *  failure so the caller can tell the person it didn't work. */
+     *  failure so the caller can tell the person it didn't work.
+     *
+     *  [onProgress], if given, is called from this same background thread
+     *  with a 0-100 percentage as bytes arrive — the caller is responsible
+     *  for hopping back to the main thread before touching any UI with it.
+     *  When the server doesn't report a Content-Length, there's no way to
+     *  know the real percentage; it's called with -1 once instead so the
+     *  caller can fall back to an indeterminate spinner rather than a
+     *  progress bar stuck at a wrong number. */
     @Throws(IOException::class)
-    fun downloadApk(context: Context, apkUrl: String): File {
+    fun downloadApk(context: Context, apkUrl: String, onProgress: ((Int) -> Unit)? = null): File {
         val outFile = File(context.cacheDir, "update.apk")
         val connection = (URL(apkUrl).openConnection() as HttpURLConnection).apply {
             instanceFollowRedirects = true
@@ -86,9 +94,28 @@ object UpdateChecker {
         if (code !in 200..299) {
             throw IOException("HTTP $code")
         }
+        val totalBytes = connection.contentLength
+        if (totalBytes <= 0) onProgress?.invoke(-1)
         BufferedInputStream(connection.inputStream).use { input ->
             FileOutputStream(outFile).use { output ->
-                input.copyTo(output)
+                if (totalBytes > 0 && onProgress != null) {
+                    val buffer = ByteArray(8 * 1024)
+                    var readSoFar = 0L
+                    var lastReportedPercent = -1
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read == -1) break
+                        output.write(buffer, 0, read)
+                        readSoFar += read
+                        val percent = (readSoFar * 100 / totalBytes).toInt().coerceIn(0, 100)
+                        if (percent != lastReportedPercent) {
+                            lastReportedPercent = percent
+                            onProgress(percent)
+                        }
+                    }
+                } else {
+                    input.copyTo(output)
+                }
             }
         }
         return outFile

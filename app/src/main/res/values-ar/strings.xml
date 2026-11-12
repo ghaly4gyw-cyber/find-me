@@ -206,6 +206,8 @@
     <string name="update_downloading_message">لن يستغرق هذا وقتًا طويلاً. سيطلب منك التطبيق تثبيته بعد انتهاء التحميل.</string>
     <string name="update_download_failed">تعذّر تحميل التحديث. تحقق من اتصالك وحاول مرة أخرى.</string>
     <string name="update_allow_install_toast">فعّل \"السماح من هذا المصدر\" لتطبيق إيجادني، ثم عد إلى هنا.</string>
+    <string name="update_downloading_percent_fmt">%1$d%%</string>
+    <string name="update_installing_toast_fmt">يتم تحديث إيجادني إلى %1$s…</string>
     <string name="tools_about">ℹ️ حول التطبيق</string>
     <string name="about_dialog_title">حول إيجادني</string>
     <string name="about_dialog_body">الإصدار %s\n\nصُنع بواسطة GYW\nmd-ghaly.com</string>

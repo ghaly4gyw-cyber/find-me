@@ -206,6 +206,8 @@
     <string name="update_downloading_message">Ça ne prendra pas longtemps. L\'application vous proposera de l\'installer une fois terminé.</string>
     <string name="update_download_failed">Impossible de télécharger la mise à jour. Vérifiez votre connexion et réessayez.</string>
     <string name="update_allow_install_toast">Activez \"Autoriser depuis cette source\" pour Trouve-Moi, puis revenez.</string>
+    <string name="update_downloading_percent_fmt">%1$d%%</string>
+    <string name="update_installing_toast_fmt">Mise à jour de Trouve-Moi vers %1$s…</string>
     <string name="tools_about">ℹ️ À propos</string>
     <string name="about_dialog_title">À propos de Trouve-Moi</string>
     <string name="about_dialog_body">Version %s\n\nCréé par GYW\nmd-ghaly.com</string>

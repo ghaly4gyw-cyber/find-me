@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Replaces the old plain "Downloading update…" static-text dialog — a
+     real progress bar fed from UpdateChecker.downloadApk's byte count, plus
+     a gently pulsing dot so the screen doesn't look frozen while nothing
+     else on it changes (the "more animation for the installation" ask). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="24dp">
+
+    <View
+        android:id="@+id/updateProgressPulseDot"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_update_pulse_dot" />
+
+    <TextView
+        android:id="@+id/updateProgressTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:text="@string/update_downloading_title" />
+
+    <TextView
+        android:id="@+id/updateProgressSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textSize="13sp"
+        android:text="@string/update_downloading_message" />
+
+    <ProgressBar
+        android:id="@+id/updateProgressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:max="100"
+        android:progress="0"
+        android:indeterminate="true" />
+
+    <TextView
+        android:id="@+id/updateProgressPercent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textSize="13sp"
+        android:textColor="@color/sand_300"
+        tools:text="42%" />
+
+</LinearLayout>
