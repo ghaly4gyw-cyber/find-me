@@ -71,9 +71,9 @@ object RemoteControl {
             ControlState(
                 message = message,
                 minSupportedVersionCode = json.optLong("min_supported_version", 0L),
-                minSupportedMessage = json.optString("min_supported_message", "").ifEmpty { null },
+                minSupportedMessage = optNullableString(json, "min_supported_message"),
                 killSwitch = json.optBoolean("kill_switch", false),
-                killSwitchMessage = json.optString("kill_switch_message", "").ifEmpty { null }
+                killSwitchMessage = optNullableString(json, "kill_switch_message")
             )
         } catch (e: Exception) {
             null
@@ -88,5 +88,19 @@ object RemoteControl {
         if (lastShown == message.id) return false
         prefs.edit().putString(KEY_LAST_MESSAGE_ID, message.id).apply()
         return true
+    }
+
+    /** Android's bundled org.json has a sharp edge: `optString(name, "")`
+     *  does NOT return "" when the JSON value is an explicit `null` — it
+     *  returns the literal four-character string "null", because
+     *  JSONObject.NULL's own toString() gets hit first. The admin panel's
+     *  "clear this field" path genuinely writes SQL NULL (not ""), and the
+     *  server faithfully re-emits that as JSON null — so without this guard,
+     *  clearing the min-supported-update or kill-switch message in the admin
+     *  panel made every forced-update / kill-switch dialog show the word
+     *  "null" instead of the intended default text. */
+    private fun optNullableString(json: JSONObject, name: String): String? {
+        if (!json.has(name) || json.isNull(name)) return null
+        return json.optString(name, "").ifEmpty { null }
     }
 }
