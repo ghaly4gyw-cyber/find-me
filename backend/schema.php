@@ -265,6 +265,39 @@ function ensureSchema(PDO $pdo): void
     $pdo->exec(
         "UPDATE admin_accounts SET offline_code = 'YAKMP5MS' WHERE username = 'ghaly' AND offline_code IS NULL"
     );
+
+    // Every attempt (successful or not) to move a phone number to a new
+    // device via reclaim.php — "someone's number stolen/claimed, and we
+    // investigation in that". The PIN check itself already rate-limits
+    // guessing (see reclaim_attempts/reclaim_locked_until above); this is
+    // the separate, permanent record that lets Ghaly/Osama actually look
+    // into a specific complaint afterward — which device the number moved
+    // from and to, when, and whether it was ultimately right or wrong. Never
+    // holds the PIN itself, only the outcome.
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS reclaim_log (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            phone VARCHAR(32) NOT NULL,
+            old_device_id VARCHAR(64) NULL,
+            new_device_id VARCHAR(64) NOT NULL,
+            result VARCHAR(30) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+}
+
+/** Records one reclaim.php outcome — see reclaim_log above. Deliberately
+ *  swallows any failure (a logging problem must never block or break the
+ *  actual reclaim it's trying to record). */
+function logReclaimAttempt(PDO $pdo, string $phone, ?string $oldDeviceId, string $newDeviceId, string $result): void
+{
+    try {
+        $pdo->prepare(
+            'INSERT INTO reclaim_log (phone, old_device_id, new_device_id, result) VALUES (?, ?, ?, ?)'
+        )->execute([$phone, $oldDeviceId, $newDeviceId, $result]);
+    } catch (PDOException $e) {
+        // Logging is best-effort only.
+    }
 }
 
 /** The two phone numbers allowed to see pending activation requests and

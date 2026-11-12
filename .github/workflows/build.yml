@@ -361,6 +361,10 @@ jobs:
             echo "::error::Dashboard page is missing the Public places section"
             exit 1
           fi
+          if ! grep -q "سجل استعادة الحسابات" /tmp/admin_page.html; then
+            echo "::error::Dashboard page is missing the account-recovery log section"
+            exit 1
+          fi
           if ! grep -q "CI Canary Water Point" /tmp/admin_page.html; then
             echo "::error::Public place from public-place-upload.php isn't showing up on the admin dashboard"
             exit 1

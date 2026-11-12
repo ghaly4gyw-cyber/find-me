@@ -16,6 +16,11 @@
  * Rate-limited against PIN guessing (a 4-digit PIN is only 10,000
  * combinations): 5 wrong attempts locks reclaiming that number for 15
  * minutes, reset on the next correct attempt.
+ *
+ * Every attempt — success or failure — is also recorded in reclaim_log
+ * (see schema.php), so a specific complaint ("my number got taken") can
+ * actually be looked into from the admin panel: which device it moved
+ * from/to and when, not just that it's rate-limited against brute force.
  */
 
 header('Content-Type: application/json');
@@ -72,16 +77,19 @@ $stmt->execute([$phone]);
 $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$row) {
+    logReclaimAttempt($pdo, $phone, null, $deviceId, 'no_such_account');
     http_response_code(404);
     echo json_encode(['status' => 'error', 'reason' => 'no_such_account']);
     exit;
 }
 if (empty($row['pin_hash'])) {
+    logReclaimAttempt($pdo, $phone, $row['device_id'], $deviceId, 'no_pin_set');
     http_response_code(400);
     echo json_encode(['status' => 'error', 'reason' => 'no_pin_set']);
     exit;
 }
 if (!empty($row['reclaim_locked_until']) && strtotime($row['reclaim_locked_until']) > time()) {
+    logReclaimAttempt($pdo, $phone, $row['device_id'], $deviceId, 'locked_retry');
     http_response_code(423);
     echo json_encode([
         'status' => 'error',
@@ -98,9 +106,11 @@ if (!password_verify($pin, $row['pin_hash'])) {
             'UPDATE registrations SET reclaim_attempts = ?, reclaim_locked_until = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE phone = ?'
         );
         $stmt->execute([$attempts, $phone]);
+        logReclaimAttempt($pdo, $phone, $row['device_id'], $deviceId, 'wrong_pin_locked');
     } else {
         $stmt = $pdo->prepare('UPDATE registrations SET reclaim_attempts = ? WHERE phone = ?');
         $stmt->execute([$attempts, $phone]);
+        logReclaimAttempt($pdo, $phone, $row['device_id'], $deviceId, 'wrong_pin');
     }
     http_response_code(401);
     echo json_encode(['status' => 'error', 'reason' => 'wrong_pin', 'attempts_remaining' => max(0, 5 - $attempts)]);
@@ -119,10 +129,13 @@ try {
     // a DIFFERENT phone number's row. Deliberately not auto-resolved (that
     // would mean silently stealing this device away from its other
     // account) — surfaced plainly instead.
+    logReclaimAttempt($pdo, $phone, $row['device_id'], $deviceId, 'device_conflict');
     http_response_code(409);
     echo json_encode(['status' => 'error', 'reason' => 'device_already_registered_to_another_number']);
     exit;
 }
+
+logReclaimAttempt($pdo, $phone, $row['device_id'], $deviceId, 'success');
 
 echo json_encode([
     'status' => 'ok',

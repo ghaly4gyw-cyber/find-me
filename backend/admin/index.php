@@ -79,6 +79,21 @@ function friendlyAuditAction(string $action): string
     return $map[$action] ?? str_replace('_', ' ', $action);
 }
 
+/** Arabic label for one reclaim_log.result value — see schema.php. */
+function friendlyReclaimResult(string $result): string
+{
+    $map = [
+        'success' => '✅ نجحت الاستعادة',
+        'no_such_account' => 'الرقم غير مسجّل',
+        'no_pin_set' => 'لا يوجد رمز استعادة (PIN) لهذا الحساب',
+        'locked_retry' => 'محاولة وهو مقفل مؤقتًا',
+        'wrong_pin' => '⚠️ رمز استعادة خاطئ',
+        'wrong_pin_locked' => '⚠️ رمز خاطئ — تم القفل 15 دقيقة',
+        'device_conflict' => 'الجهاز الجديد مرتبط بحساب آخر أصلًا',
+    ];
+    return $map[$result] ?? str_replace('_', ' ', $result);
+}
+
 $users = [];
 $feedback = [];
 $publicPlaces = [];
@@ -87,6 +102,8 @@ $pendingActivations = [];
 $adminAccounts = [];
 $auditLog = [];
 $lastKillSwitchChange = null;
+$reclaimLog = [];
+$suspiciousReclaimPhones = [];
 $ownAccount = null;
 $error = null;
 $dbConfigPath = __DIR__ . '/../db-config.php';
@@ -129,6 +146,21 @@ if (!file_exists($dbConfigPath)) {
         $lastKillSwitchChange = $pdo->query(
             "SELECT admin_name, action, created_at FROM admin_audit_log WHERE action IN ('kill_switch_on', 'kill_switch_off') ORDER BY id DESC LIMIT 1"
         )->fetch(PDO::FETCH_ASSOC);
+        // "Someone stole his phone number, and we investigation in that" —
+        // every reclaim.php outcome (not just successes) so a specific
+        // complaint can actually be traced: which device the number moved
+        // from/to and when.
+        $reclaimLog = $pdo->query(
+            'SELECT phone, old_device_id, new_device_id, result, created_at FROM reclaim_log ORDER BY id DESC LIMIT 50'
+        )->fetchAll(PDO::FETCH_ASSOC);
+        // A phone with 3+ non-success attempts in the last 24 hours is
+        // flagged — repeated wrong-PIN tries are exactly what someone
+        // guessing at a stolen number would produce.
+        $suspiciousReclaimPhones = $pdo->query(
+            "SELECT phone, COUNT(*) AS failures FROM reclaim_log
+             WHERE result != 'success' AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+             GROUP BY phone HAVING COUNT(*) >= 3"
+        )->fetchAll(PDO::FETCH_KEY_PAIR);
         $ownAccount = null;
         foreach ($adminAccounts as $a) {
             if ($a['username'] === ($admin['username'] ?? '')) {
@@ -756,6 +788,35 @@ $topFeatures = array_slice($topFeatures, 0, 10);
         <div class="audit-row">
           <span><span class="who"><?= htmlspecialchars($log['admin_name']) ?></span> — <?= htmlspecialchars(friendlyAuditAction($log['action'])) ?><?= $log['detail'] ? ' · ' . htmlspecialchars($log['detail']) : '' ?></span>
           <bdi class="when"><?= htmlspecialchars($log['created_at']) ?></bdi>
+        </div>
+      <?php endforeach; endif; ?>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary><div class="section-title">سجل استعادة الحسابات <?php if ($reclaimLog): ?><span class="count-badge"><?= count($reclaimLog) ?></span><?php endif; ?></div></summary>
+    <div class="panel-box">
+      <?php if (!empty($suspiciousReclaimPhones)): ?>
+        <p class="error-banner" style="margin-bottom: 0.6rem;">
+          ⚠️ محاولات استعادة متكررة وفاشلة خلال 24 ساعة على:
+          <?php $i = 0; foreach ($suspiciousReclaimPhones as $sPhone => $sCount): if ($i++) echo '، '; ?>
+            <bdi><?= htmlspecialchars((string) $sPhone) ?></bdi> (<?= (int) $sCount ?>)
+          <?php endforeach; ?>
+          — قد يكون شخص يحاول تخمين رمز PIN رقم ليس رقمه.
+        </p>
+      <?php endif; ?>
+      <?php if (empty($reclaimLog)): ?>
+        <p class="empty" style="padding: 0.4rem 0;">لا توجد محاولات استعادة مسجّلة بعد.</p>
+      <?php else: foreach ($reclaimLog as $r): ?>
+        <div class="audit-row">
+          <span>
+            <bdi style="font-family:monospace;"><?= htmlspecialchars($r['phone']) ?></bdi>
+            — <?= htmlspecialchars(friendlyReclaimResult($r['result'])) ?>
+            <?php if ($r['old_device_id']): ?>
+              <br><span class="muted" style="font-size:0.78rem;">من <bdi style="word-break:break-all;"><?= htmlspecialchars($r['old_device_id']) ?></bdi> إلى <bdi style="word-break:break-all;"><?= htmlspecialchars($r['new_device_id']) ?></bdi></span>
+            <?php endif; ?>
+          </span>
+          <bdi class="when"><?= htmlspecialchars($r['created_at']) ?></bdi>
         </div>
       <?php endforeach; endif; ?>
     </div>
