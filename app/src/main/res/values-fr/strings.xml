@@ -308,6 +308,9 @@
     <string name="save_this_spot">Enregistrer cet endroit</string>
     <string name="my_places">Mes endroits</string>
     <string name="save_place_dialog_title">Enregistrer cette position comme…</string>
+    <string name="save_tapped_point_dialog_title">Enregistrer cet endroit comme…</string>
+    <string name="save_tapped_point_coords_fmt">%1$.5f, %2$.5f</string>
+    <string name="saved_spot_default_name">Lieu</string>
     <string name="save_place_dialog_hint">Nom (ex. campement de Zouérat, point d\'eau)</string>
     <string name="place_saved_fmt">\"%s\" enregistré</string>
     <string name="no_location_yet">Pas encore de position GPS — attendez une première position.</string>

@@ -311,6 +311,9 @@
     <string name="save_this_spot">Save this spot</string>
     <string name="my_places">My places</string>
     <string name="save_place_dialog_title">Save this position as…</string>
+    <string name="save_tapped_point_dialog_title">Save this spot as…</string>
+    <string name="save_tapped_point_coords_fmt">%1$.5f, %2$.5f</string>
+    <string name="saved_spot_default_name">Spot</string>
     <string name="save_place_dialog_hint">Name (e.g. Zouérat camp, water point)</string>
     <string name="place_saved_fmt">Saved \"%s\"</string>
     <string name="no_location_yet">No GPS fix yet — wait for a position first.</string>

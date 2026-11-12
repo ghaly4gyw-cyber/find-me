@@ -29,6 +29,7 @@ import com.ghaly.findme.repo.SavedPlaceRepository
 import com.ghaly.findme.repo.TrailRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.cachemanager.CacheManager
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.tileprovider.tilesource.XYTileSource
@@ -36,6 +37,7 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.util.MapTileIndex
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.MapEventsOverlay
 import java.util.Locale
 
 class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListener {
@@ -168,6 +170,18 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
         offlineMapView.minZoomLevel = 3.0
         offlineMapView.maxZoomLevel = 19.0
         offlineMapView.controller.setZoom(14.0)
+        // Long-press anywhere on the real map to save that exact point as a
+        // spot — the same "drop a pin" gesture people already know from other
+        // map apps. Inserted at index 0 so marker taps (teammates, places)
+        // still get first chance at a tap; this only fires when nothing else
+        // under the finger claimed it.
+        offlineMapView.overlays.add(0, MapEventsOverlay(object : MapEventsReceiver {
+            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean = false
+            override fun longPressHelper(p: GeoPoint?): Boolean {
+                if (p != null) showSaveTappedPointDialog(p.latitude, p.longitude)
+                return true
+            }
+        }))
 
         mapToggleButton = view.findViewById(R.id.mapToggleButton)
         downloadAreaButton = view.findViewById(R.id.downloadAreaButton)
@@ -651,6 +665,44 @@ class RadarMapFragment : Fragment(R.layout.fragment_radar_map), SensorEventListe
                 val sharedByName = if (shareCheckbox.isChecked)
                     com.ghaly.findme.mesh.DeviceIdentity.name(requireContext()) else null
                 val place = SavedPlaceRepository.add(name, location.first, location.second, sharedByName)
+                if (sharedByName != null) mesh?.sharePlace(place)
+                Toast.makeText(requireContext(), getString(R.string.place_saved_fmt, name), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** Saves an arbitrary point the user long-pressed on the real map — not
+     *  their own GPS fix, so no "no location yet" check: the tapped point
+     *  itself is already all the location this needs. */
+    private fun showSaveTappedPointDialog(lat: Double, lon: Double) {
+        val input = EditText(requireContext())
+        input.hint = getString(R.string.save_place_dialog_hint)
+        val shareCheckbox = android.widget.CheckBox(requireContext())
+        shareCheckbox.text = getString(R.string.share_with_team)
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        val container = android.widget.LinearLayout(requireContext())
+        container.orientation = android.widget.LinearLayout.VERTICAL
+        container.setPadding(padding, padding / 2, padding, 0)
+        container.addView(input)
+        container.addView(shareCheckbox)
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.save_tapped_point_dialog_title)
+            .setMessage(
+                String.format(
+                    Locale.US,
+                    getString(R.string.save_tapped_point_coords_fmt),
+                    lat, lon
+                )
+            )
+            .setView(container)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val name = input.text?.toString()?.trim().orEmpty()
+                    .ifEmpty { getString(R.string.saved_spot_default_name) }
+                val mesh = (requireActivity() as? MainActivity)?.mesh
+                val sharedByName = if (shareCheckbox.isChecked)
+                    com.ghaly.findme.mesh.DeviceIdentity.name(requireContext()) else null
+                val place = SavedPlaceRepository.add(name, lat, lon, sharedByName)
                 if (sharedByName != null) mesh?.sharePlace(place)
                 Toast.makeText(requireContext(), getString(R.string.place_saved_fmt, name), Toast.LENGTH_SHORT).show()
             }
