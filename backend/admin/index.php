@@ -83,6 +83,8 @@ function friendlyAuditAction(string $action): string
         'set_offline_code' => 'تغيير رمز بدون إنترنت',
         'activation_approve' => 'قبول طلب تفعيل',
         'activation_reject' => 'رفض طلب تفعيل',
+        'delete_user' => 'حذف حساب',
+        'delete_ci_canaries' => 'حذف حسابات اختبار CI',
     ];
     return $map[$action] ?? str_replace('_', ' ', $action);
 }
@@ -113,6 +115,7 @@ $lastKillSwitchChange = null;
 $reclaimLog = [];
 $suspiciousReclaimPhones = [];
 $supplierPhones = [];
+$adminNamesByUsername = [];
 $ownAccount = null;
 $error = null;
 $dbConfigPath = __DIR__ . '/../db-config.php';
@@ -128,11 +131,18 @@ if (!file_exists($dbConfigPath)) {
             'SELECT r.name, r.phone, r.device_id, r.last_lat, r.last_lng, r.last_location_at,
                     r.description, r.photo_base64, r.blocked, r.activated, r.created_at,
                     r.device_model, r.android_version, r.app_version, r.network_type, r.network_name,
+                    r.activated_by_username, r.activated_via,
                     u.app_opens, u.total_ms, u.feature_usage
              FROM registrations r
              LEFT JOIN usage_stats u ON u.device_id = r.device_id
              ORDER BY r.updated_at DESC'
         )->fetchAll(PDO::FETCH_ASSOC);
+        // Who gets credit for an activation (see suppliers.php) — username
+        // → display name, so "من فعّله" on a user's own profile shows a
+        // real name instead of a raw login username.
+        $adminNamesByUsername = $pdo->query(
+            'SELECT username, name FROM admin_accounts'
+        )->fetchAll(PDO::FETCH_KEY_PAIR);
         $feedback = $pdo->query(
             'SELECT device_id, name, message, created_at FROM feedback ORDER BY created_at DESC LIMIT 200'
         )->fetchAll(PDO::FETCH_ASSOC);
@@ -211,6 +221,14 @@ $notActivatedCount = 0;
 $blockedCount = 0;
 $aggregateFeatures = []; // key => ['opens' => n, 'ms' => n]
 $detailsByDevice = [];
+// Phone → name, so the activity log below can show "قبول طلب تفعيل · تقي
+// (47xxxxxx)" instead of a bare phone number nobody can place by memory —
+// "who approved Taqi" should be answerable by reading the log, not just by
+// knowing his number.
+$nameByPhone = [];
+foreach ($users as $u) {
+    $nameByPhone[$u['phone']] = $u['name'];
+}
 
 foreach ($users as $u) {
     if ($u['last_location_at'] !== null && strtotime($u['last_location_at']) >= $onlineCutoff) {
@@ -273,6 +291,10 @@ foreach ($users as $u) {
         'android_version' => $u['android_version'] ?: null,
         'app_version' => $u['app_version'] ?: null,
         'network' => friendlyNetwork($u['network_type'] ?: null, $u['network_name'] ?: null),
+        'activated_by' => $u['activated_by_username']
+            ? ($adminNamesByUsername[$u['activated_by_username']] ?? $u['activated_by_username'])
+            : null,
+        'activated_via' => $u['activated_via'] === 'code' ? 'بالرمز بدون إنترنت' : ($u['activated_via'] === 'approval' ? 'بموافقة طلب تفعيل' : null),
     ];
 }
 
@@ -471,6 +493,10 @@ $topFeatures = array_slice($topFeatures, 0, 10);
     <a class="details-link" href="export-users.php" style="margin-top: 0;">📄 تصدير PDF</a>
     <?php if ($isSuperAdmin): ?>
     <a class="details-link" href="suppliers.php" style="margin-top: 0;">💼 الموردون</a>
+    <form method="post" action="delete-user.php" style="display:inline;" onsubmit="return confirm('حذف كل حسابات اختبار CI من هذا الموقع الحقيقي؟ هذا لا يمسّ أي حساب حقيقي — فقط الحسابات التي أنشأها الاختبار الآلي.');">
+      <input type="hidden" name="action" value="delete_ci_canaries">
+      <button type="submit" class="details-link" style="margin-top: 0; cursor: pointer; font-family: inherit;">🧹 حذف حسابات الاختبار</button>
+    </form>
     <?php endif; ?>
     <a class="logout" href="logout.php">تسجيل الخروج</a>
   </div>
@@ -806,9 +832,20 @@ $topFeatures = array_slice($topFeatures, 0, 10);
     <div class="panel-box">
       <?php if (empty($auditLog)): ?>
         <p class="empty" style="padding: 0.4rem 0;">لا يوجد نشاط مسجّل بعد.</p>
-      <?php else: foreach ($auditLog as $log): ?>
+      <?php else: foreach ($auditLog as $log):
+          $detail = $log['detail'];
+          $isPhoneAction = in_array($log['action'], ['activation_approve', 'activation_reject', 'block_user', 'unblock_user'], true);
+          $detailName = $isPhoneAction ? ($nameByPhone[$detail] ?? null) : null;
+      ?>
         <div class="audit-row">
-          <span><span class="who"><?= htmlspecialchars($log['admin_name']) ?></span> — <?= htmlspecialchars(friendlyAuditAction($log['action'])) ?><?= $log['detail'] ? ' · ' . htmlspecialchars($log['detail']) : '' ?></span>
+          <span>
+            <span class="who"><?= htmlspecialchars($log['admin_name']) ?></span> — <?= htmlspecialchars(friendlyAuditAction($log['action'])) ?>
+            <?php if ($detailName): ?>
+              · <?= htmlspecialchars($detailName) ?> (<bdi><?= htmlspecialchars((string) $detail) ?></bdi>)
+            <?php elseif ($detail): ?>
+              · <bdi><?= htmlspecialchars((string) $detail) ?></bdi>
+            <?php endif; ?>
+          </span>
           <bdi class="when"><?= htmlspecialchars($log['created_at']) ?></bdi>
         </div>
       <?php endforeach; endif; ?>
@@ -832,7 +869,7 @@ $topFeatures = array_slice($topFeatures, 0, 10);
       <?php else: foreach ($reclaimLog as $r): ?>
         <div class="audit-row">
           <span>
-            <bdi style="font-family:monospace;"><?= htmlspecialchars($r['phone']) ?></bdi>
+            <?php if (!empty($nameByPhone[$r['phone']])): ?><?= htmlspecialchars($nameByPhone[$r['phone']]) ?> (<?php endif; ?><bdi style="font-family:monospace;"><?= htmlspecialchars($r['phone']) ?></bdi><?php if (!empty($nameByPhone[$r['phone']])): ?>)<?php endif; ?>
             — <?= htmlspecialchars(friendlyReclaimResult($r['result'])) ?>
             <?php if ($r['old_device_id']): ?>
               <br><span class="muted" style="font-size:0.78rem;">من <bdi style="word-break:break-all;"><?= htmlspecialchars($r['old_device_id']) ?></bdi> إلى <bdi style="word-break:break-all;"><?= htmlspecialchars($r['new_device_id']) ?></bdi></span>
@@ -864,6 +901,15 @@ $topFeatures = array_slice($topFeatures, 0, 10);
           <div class="modal-detail-row" x-show="selected.blocked"><span class="muted">الحالة</span><span style="color: var(--danger);">🚫 محظور</span></div>
           <div class="modal-detail-row" x-show="selected.is_admin"><span class="muted">الصلاحية</span><span>👑 مشرف</span></div>
           <div class="modal-detail-row" x-show="!selected.is_admin"><span class="muted">مُفعّل</span><span x-text="selected.activated ? '✅ نعم' : '⏳ ليس بعد'"></span></div>
+          <div class="modal-detail-row" x-show="selected.activated_by"><span class="muted">من فعّله</span><span><span x-text="selected.activated_by"></span> <span class="muted" style="font-size:0.75rem;" x-text="'· ' + selected.activated_via"></span></span></div>
+          <div class="modal-detail-row" x-show="!selected.is_admin && selected.activated && !selected.activated_by"><span class="muted">من فعّله</span><span class="muted">غير معروف (قبل تتبّع هذا)</span></div>
+          <?php if ($isSuperAdmin): ?>
+          <form method="post" action="delete-user.php" style="margin-top: 1rem;"
+                onsubmit="return confirm('حذف هذا الحساب نهائيًا — لا يمكن التراجع عن هذا. متابعة؟');">
+            <input type="hidden" name="device_id" :value="selected.device_id">
+            <button type="submit" class="reject-btn" style="width:100%;">🗑️ حذف هذا الحساب نهائيًا</button>
+          </form>
+          <?php endif; ?>
           <template x-if="selected.features && selected.features.length">
             <div style="margin-top:1rem;">
               <div class="muted" style="font-size:0.76rem;margin-bottom:6px;">الأكثر استخدامًا لدى هذا الشخص</div>

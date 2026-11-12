@@ -371,6 +371,13 @@ jobs:
             echo "::error::The suppliers management page didn't load for the super admin"
             exit 1
           fi
+          status=$(curl -sS -o /dev/null -w "%{http_code}" \
+            -X POST --data-urlencode "action=delete_ci_canaries" \
+            https://patrons.digital/findme-api/admin/delete-user.php)
+          if [ "$status" != "302" ]; then
+            echo "::error::delete-user.php didn't require login (got $status with no session)"
+            exit 1
+          fi
           if ! grep -q "CI Canary Water Point" /tmp/admin_page.html; then
             echo "::error::Public place from public-place-upload.php isn't showing up on the admin dashboard"
             exit 1
@@ -706,6 +713,11 @@ jobs:
           fi
 
           echo "Activation gate round-trip confirmed working."
+
+          echo "--- clean up this run's own canary so it doesn't pile up forever ---"
+          curl -sS -b /tmp/cookies.txt -o /dev/null \
+            -X POST --data-urlencode "device_id=$DEV" \
+            https://patrons.digital/findme-api/admin/delete-user.php
 
       # Ghaly's standing instruction: every release from here on forces
       # every older install to update — "force all the clients and people to
