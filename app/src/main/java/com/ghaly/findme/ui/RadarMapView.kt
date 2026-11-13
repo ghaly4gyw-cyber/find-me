@@ -197,7 +197,12 @@ class RadarMapView @JvmOverloads constructor(
         color = Color.parseColor("#F2A541")
         style = Paint.Style.STROKE
         strokeWidth = 4f
-        pathEffect = android.graphics.DashPathEffect(floatArrayOf(18f, 14f), 0f)
+        // phase is set per-frame in onDraw from trackLineDashScroll, so the
+        // dashes crawl toward the destination instead of sitting static.
+    }
+    private val followArrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#F2A541")
+        style = Paint.Style.FILL
     }
     /** Solid (not dashed) line to a linked peer — "solid" is deliberate here
      *  too, same reasoning as the Qibla line: a link doesn't come and go the
@@ -227,7 +232,12 @@ class RadarMapView @JvmOverloads constructor(
         color = Color.parseColor("#39C5BB")
         style = Paint.Style.STROKE
         strokeWidth = 4f
-        pathEffect = android.graphics.DashPathEffect(floatArrayOf(18f, 14f), 0f)
+        // phase is set per-frame in onDraw from trackLineDashScroll, so the
+        // dashes crawl toward the destination instead of sitting static.
+    }
+    private val placeArrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#39C5BB")
+        style = Paint.Style.FILL
     }
     private val placePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#D8C3A5") // a fixed-spot marker, distinct from a person's dot
@@ -289,11 +299,18 @@ class RadarMapView @JvmOverloads constructor(
     // actually on screen.
     private var sweepAngle = 0f
     private var pulsePhase = 0f
+    // How far the dash pattern on a "follow"/tracking line has scrolled, in
+    // pixels, since the view was created. Advancing this each tick and
+    // feeding it into DashPathEffect's phase makes the dashes crawl from you
+    // toward the destination — the plain static dashes read as just a
+    // decoration, a moving line reads as "this is pointing you somewhere".
+    private var trackLineDashScroll = 0f
     private val uiHandler = Handler(Looper.getMainLooper())
     private val tickRunnable = object : Runnable {
         override fun run() {
             sweepAngle = (sweepAngle + 2.2f) % 360f
             pulsePhase = (pulsePhase + 0.07f) % (2f * Math.PI.toFloat())
+            trackLineDashScroll -= 1.4f
             invalidate()
             uiHandler.postDelayed(this, 40L)
         }
@@ -495,12 +512,23 @@ class RadarMapView @JvmOverloads constructor(
             canvas.drawLine(ccx, ccy, lx, ly, linkedLinePaint)
         }
 
-        // the "follow"/"navigate to" lines — drawn before the center dot so it sits on top
+        // the "follow"/"navigate to" lines — drawn before the center dot so it
+        // sits on top. The dash phase scrolls every frame (trackLineDashScroll)
+        // so the line visibly "flows" toward the destination, and a small
+        // arrowhead near the destination end makes the direction unambiguous
+        // at a glance — a plain static dashed line doesn't say which way is
+        // "forward" on it.
+        val dashPattern = floatArrayOf(18f, 14f)
+        val dashPhase = trackLineDashScroll.mod(dashPattern[0] + dashPattern[1])
         if (followPx != null && followPy != null) {
+            followLinePaint.pathEffect = android.graphics.DashPathEffect(dashPattern, dashPhase)
             canvas.drawLine(ccx, ccy, followPx, followPy, followLinePaint)
+            drawTrackArrow(canvas, ccx, ccy, followPx, followPy, followArrowPaint)
         }
         if (followPlacePx != null && followPlacePy != null) {
+            placeLinePaint.pathEffect = android.graphics.DashPathEffect(dashPattern, dashPhase)
             canvas.drawLine(ccx, ccy, followPlacePx, followPlacePy, placeLinePaint)
+            drawTrackArrow(canvas, ccx, ccy, followPlacePx, followPlacePy, placeArrowPaint)
         }
 
         // me, in the middle — a soft breathing glow behind a solid dot
@@ -530,6 +558,34 @@ class RadarMapView @JvmOverloads constructor(
         val headAngle2 = angleRad - Math.toRadians(150.0)
         canvas.drawLine(ex, ey, ex + (cos(headAngle1) * 10).toFloat(), ey + (sin(headAngle1) * 10).toFloat(), headingPaint)
         canvas.drawLine(ex, ey, ex + (cos(headAngle2) * 10).toFloat(), ey + (sin(headAngle2) * 10).toFloat(), headingPaint)
+    }
+
+    /** Draws a small filled arrowhead partway along a "follow"/tracking line
+     *  (from you, at [fromX]/[fromY], toward a peer or place at [toX]/[toY]),
+     *  pointing at the destination. Placed at 55% of the way there rather
+     *  than right at the tip, so it stays clear of the destination's own dot
+     *  and label and reads as "this way", not just a decorated line end. */
+    private fun drawTrackArrow(canvas: Canvas, fromX: Float, fromY: Float, toX: Float, toY: Float, paint: Paint) {
+        val dx = toX - fromX
+        val dy = toY - fromY
+        val len = kotlin.math.hypot(dx.toDouble(), dy.toDouble()).toFloat()
+        if (len < 40f) return // too short for an arrowhead to read cleanly
+        val ux = dx / len
+        val uy = dy / len
+        val tipX = fromX + ux * (len * 0.55f)
+        val tipY = fromY + uy * (len * 0.55f)
+        val backX = tipX - ux * 16f
+        val backY = tipY - uy * 16f
+        // perpendicular to the line direction, for the arrowhead's two base corners
+        val px = -uy
+        val py = ux
+        val path = android.graphics.Path().apply {
+            moveTo(tipX, tipY)
+            lineTo(backX + px * 8f, backY + py * 8f)
+            lineTo(backX - px * 8f, backY - py * 8f)
+            close()
+        }
+        canvas.drawPath(path, paint)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

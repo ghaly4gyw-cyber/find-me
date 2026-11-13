@@ -34,6 +34,24 @@ object AccountReclaimer {
         object NetworkError : Result()
     }
 
+    /** Android's bundled org.json has a sharp edge: `optString(name, "")`
+     *  does NOT return "" when the JSON value is an explicit `null` — it
+     *  returns the literal four-character string "null", because
+     *  JSONObject.NULL's own toString() gets hit first. reclaim.php's
+     *  `description`, `photo_base64` and `backup_json` columns are all
+     *  nullable (a fresh registration with no description/photo yet, or
+     *  one that never backed anything up), and PHP's json_encode of a
+     *  real SQL NULL is the JSON literal null — so without this guard, a
+     *  perfectly successful reclaim on an account that never set those
+     *  fields quietly wrote the literal string "null" into the profile's
+     *  description/photo instead of leaving them blank, which is exactly
+     *  the kind of "it looks like nothing came back" result that reads as
+     *  a failed recovery even though the reclaim itself succeeded. */
+    private fun optNullableString(json: JSONObject, name: String): String? {
+        if (!json.has(name) || json.isNull(name)) return null
+        return json.optString(name, "").ifEmpty { null }
+    }
+
     /** Call off the main thread. */
     fun reclaim(context: Context, phone: String, pin: String, deviceId: String): Result {
         try {
@@ -56,8 +74,8 @@ object AccountReclaimer {
 
             if (responseCode in 200..299 && json.optString("status") == "ok") {
                 val name = json.optString("name", "")
-                val description = json.optString("description", "").ifEmpty { null }
-                val photoBase64 = json.optString("photo_base64", "").ifEmpty { null }
+                val description = optNullableString(json, "description")
+                val photoBase64 = optNullableString(json, "photo_base64")
                 ProfileStore.save(context, phone = phone, description = description, photoBase64 = photoBase64)
                 if (name.isNotEmpty()) {
                     com.ghaly.findme.mesh.DeviceIdentity.setName(context, name)
@@ -74,7 +92,7 @@ object AccountReclaimer {
                 json.optJSONArray("activation_codes")?.let { codes ->
                     com.ghaly.findme.util.ActivationCodes.updateKnownCodes(context, (0 until codes.length()).map { codes.optString(it, "") })
                 }
-                restoreBackup(json.optString("backup_json", "").ifEmpty { null })
+                restoreBackup(optNullableString(json, "backup_json"))
                 return Result.Success(name, phone)
             }
 
