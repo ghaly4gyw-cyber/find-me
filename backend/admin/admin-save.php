@@ -90,8 +90,8 @@ if ($action === 'add_admin') {
     // checked the same way so a duplicate can't slip in through this form.
     $code = strtoupper(trim((string) ($_POST['code'] ?? '')));
     if ($code !== '') {
-        if (!preg_match('/^[A-Z0-9]{6,16}$/', $code)) {
-            header('Location: index.php?admin_error=' . rawurlencode('الرمز غير المتصل يجب أن يكون 6-16 حرفًا/رقمًا، أو يُترك فارغًا.'));
+        if (!preg_match('/^[A-Z0-9]{4,16}$/', $code)) {
+            header('Location: index.php?admin_error=' . rawurlencode('الرمز غير المتصل يجب أن يكون 4-16 حرفًا/رقمًا، أو يُترك فارغًا.'));
             exit;
         }
         $codeTaken = $pdo->prepare('SELECT 1 FROM admin_accounts WHERE offline_code = ?');

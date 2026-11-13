@@ -198,7 +198,7 @@ if (!file_exists($configPath)) {
       <form method="post" action="code-save.php" class="code-form"
             onsubmit="return confirm('تغيير هذا الرمز لن يصل لأي جهاز إلا عند اتصاله القادم بالإنترنت. هل تريد المتابعة؟');">
         <input type="hidden" name="username" value="<?= htmlspecialchars($s['username']) ?>">
-        <input type="text" name="code" placeholder="رمز جديد" pattern="[A-Za-z0-9]{6,16}" required style="text-transform:uppercase; direction: ltr; text-align: right;">
+        <input type="text" name="code" placeholder="رمز جديد" pattern="[A-Za-z0-9]{4,16}" required autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="text-transform:uppercase; direction: ltr; text-align: right;">
         <button type="submit">تغيير الرمز</button>
       </form>
       <form method="post" action="admin-save.php" class="pw-form">
@@ -224,7 +224,7 @@ if (!file_exists($configPath)) {
     <input type="text" name="name" placeholder="الاسم الكامل" maxlength="100" required>
     <input type="text" name="phone" placeholder="رقم الهاتف" required style="direction: ltr; text-align: right;">
     <input type="password" name="password" placeholder="كلمة المرور (8 أحرف على الأقل)" minlength="8" required>
-    <input type="text" name="code" placeholder="رمز بدون إنترنت (اختياري)" pattern="[A-Za-z0-9]{6,16}" style="text-transform:uppercase; direction: ltr; text-align: right;">
+    <input type="text" name="code" placeholder="رمز بدون إنترنت (اختياري، 4-16 حرفًا/رقمًا)" pattern="[A-Za-z0-9]{4,16}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="text-transform:uppercase; direction: ltr; text-align: right;">
     <button type="submit">إضافة مورّد</button>
   </form>
 </div>

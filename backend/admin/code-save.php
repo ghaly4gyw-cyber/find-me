@@ -45,8 +45,8 @@ if (!$isSelf && !$isSuperAdmin) {
     die('يمكنك فقط تغيير رمزك أنت.');
 }
 
-if (!preg_match('/^[A-Z0-9]{6,16}$/', $code)) {
-    header('Location: index.php?admin_error=' . rawurlencode('الرمز يجب أن يكون 6-16 حرفًا/رقمًا.'));
+if (!preg_match('/^[A-Z0-9]{4,16}$/', $code)) {
+    header('Location: index.php?admin_error=' . rawurlencode('الرمز يجب أن يكون 4-16 حرفًا/رقمًا.'));
     exit;
 }
 
