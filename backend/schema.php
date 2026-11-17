@@ -356,6 +356,52 @@ function matchActivationCodeOwner(PDO $pdo, string $code): ?array
     return $row ?: null;
 }
 
+/** The admin_accounts row (any role) whose own phone matches, or null —
+ *  suppliers.php links a supplier's account to their own phone precisely
+ *  so this lookup works; Ghaly/Osama's rows can carry a phone too. Lets an
+ *  in-app action (an approval from the phone, not the web session) credit
+ *  the right username the same way the web panel's session already does,
+ *  and lets the app itself know "is this phone a supplier, and what's
+ *  their own code" without a web login. */
+function adminAccountForPhone(PDO $pdo, string $phone): ?array
+{
+    $stmt = $pdo->prepare('SELECT username, name, role, offline_code FROM admin_accounts WHERE phone = ?');
+    $stmt->execute([$phone]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row !== false ? $row : null;
+}
+
+function isSupplierPhone(PDO $pdo, string $phone): bool
+{
+    $account = adminAccountForPhone($pdo, $phone);
+    return $account !== null && $account['role'] === 'supplier';
+}
+
+/** Either a hardcoded Ghaly/Osama phone, or a supplier's own linked phone
+ *  — the broader "can this phone act on the shared activation queue"
+ *  check, now that a supplier gets their own in-app panel instead of only
+ *  the web's supplier-panel.php. */
+function canManageActivations(PDO $pdo, string $phone): bool
+{
+    return isAdminPhone($phone) || isSupplierPhone($pdo, $phone);
+}
+
+/** One line in admin_audit_log per action that changes something — never a
+ *  password or offline code value itself, just that one changed. $detail is
+ *  a short, already-safe-to-display string (a phone number, a username, a
+ *  message snippet) — callers truncate/sanitize before passing it in.
+ *  $admin is either a web session's ['username','name','role'] (see
+ *  admin/auth.php's currentAdmin()) or a phone-authenticated
+ *  adminAccountForPhone() result — both shapes carry the two keys this
+ *  needs. */
+function logAdminAction(PDO $pdo, array $admin, string $action, ?string $detail = null): void
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO admin_audit_log (admin_username, admin_name, action, detail) VALUES (?, ?, ?, ?)'
+    );
+    $stmt->execute([$admin['username'] ?? '', $admin['name'] ?? '', $action, $detail]);
+}
+
 /** Generates a short, human-typeable contact code (6 characters, no 0/O/1/I
  *  to avoid mix-ups when someone reads it aloud or copies it by hand) and
  *  retries on the astronomically unlikely chance of a collision. Called once

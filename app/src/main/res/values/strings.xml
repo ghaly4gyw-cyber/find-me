@@ -424,4 +424,20 @@
     <string name="activation_rejected_toast">%1$s rejected</string>
     <string name="kill_switch_gate_title">App Temporarily Off</string>
     <string name="kill_switch_gate_default_message">The app has been temporarily turned off. Contact the admins for more information.</string>
+    <string name="supplier_panel_title">My panel</string>
+    <string name="supplier_my_code_label">Your offline code</string>
+    <string name="supplier_change_code_button">Change code</string>
+    <string name="supplier_new_code_hint">New code (4–16 letters/numbers)</string>
+    <string name="supplier_stat_total">Total activated</string>
+    <string name="supplier_stat_approval">By approval</string>
+    <string name="supplier_stat_code">By code</string>
+    <string name="supplier_activated_list_title">People you\'ve activated</string>
+    <string name="supplier_activated_list_empty">No one yet</string>
+    <string name="supplier_activated_via_code">by code</string>
+    <string name="supplier_activated_via_approval">by approval</string>
+    <string name="supplier_code_saved_toast">Your new code is active</string>
+    <string name="supplier_code_taken_toast">That code is already in use — pick another</string>
+    <string name="supplier_code_save_failed_toast">Couldn\'t save — check your connection and try again</string>
+    <string name="supplier_code_invalid_toast">Code must be 4–16 letters/numbers</string>
+    <string name="supplier_panel_load_failed">Couldn\'t load your panel — check your connection and try again</string>
 </resources>

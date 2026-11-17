@@ -1,13 +1,17 @@
 <?php
 /**
- * Find Me — admin-only: approve or reject a pending activation request.
+ * Find Me — admin/supplier-only: approve or reject a pending activation
+ * request.
  *
  * Approving sets registrations.activated = 1 for that phone — the one thing
  * that actually unlocks the app on the requester's device (see
  * status-check.php, polled periodically, and MainActivity.enforceActivation
  * State). Rejecting just closes out the request; the account stays locked,
  * and the person can always request again later (activate-request.php's
- * upsert puts it straight back to pending).
+ * upsert puts it straight back to pending). An approval is credited to
+ * whichever admin_accounts row matches the calling phone (same as the web
+ * panel's own session-based activation-decide.php) so it counts toward a
+ * supplier's own "من فعّلهم" stats in SupplierPanelFragment.kt.
  */
 
 header('Content-Type: application/json');
@@ -39,12 +43,6 @@ if ($phone === '' || $deviceId === '' || !isValidMauritanianPhone($phone)
     exit;
 }
 
-if (!isAdminPhone($phone)) {
-    http_response_code(403);
-    echo json_encode(['status' => 'error', 'reason' => 'not_an_admin']);
-    exit;
-}
-
 $configPath = __DIR__ . '/db-config.php';
 if (!file_exists($configPath)) {
     http_response_code(500);
@@ -62,6 +60,12 @@ try {
 }
 
 ensureSchema($pdo);
+
+if (!canManageActivations($pdo, $phone)) {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'reason' => 'not_an_admin']);
+    exit;
+}
 
 if (!requireOwnerDevice($pdo, $phone, $deviceId)) {
     exit;
@@ -82,7 +86,10 @@ $pdo->prepare('UPDATE activation_requests SET status = ?, decided_at = NOW() WHE
     ->execute([$newStatus, $requestId]);
 
 if ($decision === 'approve') {
-    $pdo->prepare('UPDATE registrations SET activated = 1 WHERE phone = ?')->execute([$targetPhone]);
+    $account = adminAccountForPhone($pdo, $phone);
+    $pdo->prepare(
+        "UPDATE registrations SET activated = 1, activated_by_username = ?, activated_via = 'approval' WHERE phone = ?"
+    )->execute([$account['username'] ?? '', $targetPhone]);
 }
 
 echo json_encode(['status' => 'ok']);

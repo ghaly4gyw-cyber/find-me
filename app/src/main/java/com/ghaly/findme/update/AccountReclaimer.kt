@@ -87,7 +87,9 @@ object AccountReclaimer {
                 ProfileStore.applyActivationStatus(
                     context,
                     activated = json.optBoolean("activated", false),
-                    isAdmin = json.optBoolean("is_admin", false)
+                    isAdmin = json.optBoolean("is_admin", false),
+                    isSupplier = json.optBoolean("is_supplier", false),
+                    supplierCode = optNullableString(json, "supplier_code")
                 )
                 json.optJSONArray("activation_codes")?.let { codes ->
                     com.ghaly.findme.util.ActivationCodes.updateKnownCodes(context, (0 until codes.length()).map { codes.optString(it, "") })

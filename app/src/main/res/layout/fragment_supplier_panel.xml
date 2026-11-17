@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Own offline code -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/supplier_my_code_label"
+            android:textColor="@color/sand_300"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/supplierCodeText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/white"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            tools:text="YAKMP5MS" />
+
+        <TextView
+            android:id="@+id/supplierChangeCodeToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/supplier_change_code_button"
+            android:textColor="@color/teal_400"
+            android:textSize="13sp"
+            android:padding="4dp" />
+
+        <LinearLayout
+            android:id="@+id/supplierChangeCodeRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp"
+            android:visibility="gone">
+
+            <EditText
+                android:id="@+id/supplierNewCodeInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="@string/supplier_new_code_hint"
+                android:maxLength="16"
+                android:inputType="textCapCharacters" />
+
+            <Button
+                android:id="@+id/supplierSaveCodeButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/save" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="16dp"
+            android:background="@color/divider" />
+
+        <!-- Stats row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="3">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:id="@+id/supplierTotalCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    tools:text="0" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/supplier_stat_total"
+                    android:textColor="@color/sand_300"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:id="@+id/supplierApprovalCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    tools:text="0" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/supplier_stat_approval"
+                    android:textColor="@color/sand_300"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:id="@+id/supplierCodeCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    tools:text="0" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/supplier_stat_code"
+                    android:textColor="@color/sand_300"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="16dp"
+            android:background="@color/divider" />
+
+        <!-- Shared pending queue -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/activation_pending_title"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/supplierPendingEmptyText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:padding="16dp"
+            android:text="@string/activation_pending_empty"
+            android:textColor="@color/sand_300"
+            android:visibility="gone" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/supplierPendingList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false"
+            android:clipToPadding="false"
+            android:paddingVertical="8dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginVertical="16dp"
+            android:background="@color/divider" />
+
+        <!-- People this supplier has personally activated -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/supplier_activated_list_title"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/supplierActivatedEmptyText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:padding="16dp"
+            android:text="@string/supplier_activated_list_empty"
+            android:textColor="@color/sand_300"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/supplierActivatedList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingVertical="4dp" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

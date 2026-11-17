@@ -416,4 +416,20 @@
     <string name="activation_rejected_toast">%1$s rejeté</string>
     <string name="kill_switch_gate_title">Application temporairement désactivée</string>
     <string name="kill_switch_gate_default_message">L\'application a été temporairement désactivée. Contactez les administrateurs pour plus d\'informations.</string>
+    <string name="supplier_panel_title">Mon panneau</string>
+    <string name="supplier_my_code_label">Votre code hors ligne</string>
+    <string name="supplier_change_code_button">Changer le code</string>
+    <string name="supplier_new_code_hint">Nouveau code (4 à 16 lettres/chiffres)</string>
+    <string name="supplier_stat_total">Total activé</string>
+    <string name="supplier_stat_approval">Par approbation</string>
+    <string name="supplier_stat_code">Par code</string>
+    <string name="supplier_activated_list_title">Personnes que vous avez activées</string>
+    <string name="supplier_activated_list_empty">Personne pour l\'instant</string>
+    <string name="supplier_activated_via_code">par code</string>
+    <string name="supplier_activated_via_approval">par approbation</string>
+    <string name="supplier_code_saved_toast">Votre nouveau code est actif</string>
+    <string name="supplier_code_taken_toast">Ce code est déjà utilisé — choisissez-en un autre</string>
+    <string name="supplier_code_save_failed_toast">Échec de l\'enregistrement — vérifiez votre connexion et réessayez</string>
+    <string name="supplier_code_invalid_toast">Le code doit comporter 4 à 16 lettres/chiffres</string>
+    <string name="supplier_panel_load_failed">Impossible de charger votre panneau — vérifiez votre connexion et réessayez</string>
 </resources>

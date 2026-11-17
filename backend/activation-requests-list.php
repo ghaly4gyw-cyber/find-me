@@ -1,12 +1,15 @@
 <?php
 /**
- * Find Me — admin-only: list every pending activation request.
+ * Find Me — admin/supplier-only: list every pending activation request.
  *
  * "He will be has a list there of the requests" — Osama (or Ghaly) opens
- * the in-app admin screen, this is what fills it. Only a phone in
- * ADMIN_PHONES (see schema.php) can call this; anyone else gets 403, same
- * as requireOwnerDevice's own check still has to pass first (an admin can
- * only act from their own actual registered device).
+ * the in-app admin screen, this is what fills it. A supplier's own
+ * in-app panel (SupplierPanelFragment.kt) shares this same shared queue,
+ * same as the web's supplier-panel.php always did — approving one credits
+ * whichever account did it. Only a phone canManageActivations() recognizes
+ * (see schema.php) can call this; anyone else gets 403, same as
+ * requireOwnerDevice's own check still has to pass first (an admin/
+ * supplier can only act from their own actual registered device).
  */
 
 header('Content-Type: application/json');
@@ -35,12 +38,6 @@ if ($phone === '' || $deviceId === '' || !isValidMauritanianPhone($phone) || mb_
     exit;
 }
 
-if (!isAdminPhone($phone)) {
-    http_response_code(403);
-    echo json_encode(['status' => 'error', 'reason' => 'not_an_admin']);
-    exit;
-}
-
 $configPath = __DIR__ . '/db-config.php';
 if (!file_exists($configPath)) {
     http_response_code(500);
@@ -58,6 +55,12 @@ try {
 }
 
 ensureSchema($pdo);
+
+if (!canManageActivations($pdo, $phone)) {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'reason' => 'not_an_admin']);
+    exit;
+}
 
 if (!requireOwnerDevice($pdo, $phone, $deviceId)) {
     exit;

@@ -90,7 +90,9 @@ object RegistrationUploader {
                     ProfileStore.applyActivationStatus(
                         context,
                         activated = json.optBoolean("activated", false),
-                        isAdmin = json.optBoolean("is_admin", false)
+                        isAdmin = json.optBoolean("is_admin", false),
+                        isSupplier = json.optBoolean("is_supplier", false),
+                        supplierCode = if (json.isNull("supplier_code")) null else json.optString("supplier_code", "").ifEmpty { null }
                     )
                     json.optJSONArray("activation_codes")?.let { codes ->
                         ActivationCodes.updateKnownCodes(context, (0 until codes.length()).map { codes.optString(it, "") })

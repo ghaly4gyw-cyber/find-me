@@ -29,6 +29,8 @@ object ProfileStore {
     // see that class's doc comment for why the gate itself never waits on it.
     private const val KEY_ACTIVATED = "activated"
     private const val KEY_IS_ADMIN = "is_admin"
+    private const val KEY_IS_SUPPLIER = "is_supplier"
+    private const val KEY_SUPPLIER_CODE = "supplier_code"
     private const val KEY_PENDING_ACTIVATION_CONFIRM = "pending_activation_confirm"
     // The exact code string that was typed in, kept only long enough for
     // ActivationUploader to report it alongside the pending confirm above —
@@ -135,20 +137,45 @@ object ProfileStore {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_IS_ADMIN, false)
     }
 
-    /** Applied from a server response (register.php or status-check.php).
-     *  Deliberately monotonic on [activated]: an account this phone already
-     *  unlocked for itself by entering a code (see ActivationCodes.kt) must
-     *  never be re-locked just because a particular sync happened to run
-     *  before ActivationUploader's own confirm call reached the server —
-     *  only ever OR's in a true from the server, never clears a true that's
-     *  already set locally. [isAdmin] has no such concern (it only ever
-     *  reflects the server's own ADMIN_PHONES check) so it's just applied
-     *  directly. */
-    fun applyActivationStatus(context: Context, activated: Boolean, isAdmin: Boolean) {
+    /** True only for a phone the server's admin_accounts table has on file
+     *  with role='supplier' (see schema.php's isSupplierPhone) — shows the
+     *  in-app "My Panel" screen (SupplierPanelFragment), the same "own
+     *  code + stats + pending queue" the web's supplier-panel.php already
+     *  gave them, right inside the app. */
+    fun isSupplier(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_IS_SUPPLIER, false)
+    }
+
+    /** This supplier's own offline activation code, or null if [isSupplier]
+     *  is false. Display-only here — SupplierPanelFragment fetches the full
+     *  picture (stats, activated list) itself via supplier-info.php; this
+     *  cached copy just lets the entry point show something immediately. */
+    fun supplierCode(context: Context): String? {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_SUPPLIER_CODE, null)
+    }
+
+    /** Applied from a server response (register.php, status-check.php or
+     *  reclaim.php). Deliberately monotonic on [activated]: an account this
+     *  phone already unlocked for itself by entering a code (see
+     *  ActivationCodes.kt) must never be re-locked just because a
+     *  particular sync happened to run before ActivationUploader's own
+     *  confirm call reached the server — only ever OR's in a true from the
+     *  server, never clears a true that's already set locally. [isAdmin]
+     *  and [isSupplier] have no such concern (they only ever reflect the
+     *  server's own current say-so) so they're just applied directly. */
+    fun applyActivationStatus(
+        context: Context,
+        activated: Boolean,
+        isAdmin: Boolean,
+        isSupplier: Boolean = false,
+        supplierCode: String? = null
+    ) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         prefs.edit()
             .putBoolean(KEY_ACTIVATED, prefs.getBoolean(KEY_ACTIVATED, false) || activated)
             .putBoolean(KEY_IS_ADMIN, isAdmin)
+            .putBoolean(KEY_IS_SUPPLIER, isSupplier)
+            .putString(KEY_SUPPLIER_CODE, supplierCode)
             .apply()
     }
 

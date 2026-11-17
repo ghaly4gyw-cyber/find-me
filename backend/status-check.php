@@ -22,6 +22,11 @@
  * since the app already checks in here periodically. A device that isn't
  * registered at all reads as activated: false, is_admin: false (nothing to
  * unlock yet).
+ *
+ * Also reports "is_supplier" and "supplier_code" — a supplier (telecom-shop
+ * partner, see admin/suppliers.php) only ever had a web login before; this
+ * is how the app itself learns to show them their own in-app panel
+ * (SupplierPanelFragment.kt) instead of only the web's supplier-panel.php.
  */
 
 header('Content-Type: application/json');
@@ -62,6 +67,9 @@ $stmt = $pdo->prepare('SELECT blocked, phone, activated FROM registrations WHERE
 $stmt->execute([$deviceId]);
 $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
+$supplierAccount = $row !== false ? adminAccountForPhone($pdo, $row['phone']) : null;
+$isSupplier = $supplierAccount !== null && $supplierAccount['role'] === 'supplier';
+
 // A device that was reclaimed away never had "registered" turn false for an
 // id that was never registered in the first place — only once it HAD a row
 // and that row's device_id moved on to someone else. We can't tell those two
@@ -74,5 +82,7 @@ echo json_encode([
     'still_registered' => $row !== false,
     'activated' => $row !== false && (bool) $row['activated'],
     'is_admin' => $row !== false && isAdminPhone($row['phone']),
+    'is_supplier' => $isSupplier,
+    'supplier_code' => $isSupplier ? $supplierAccount['offline_code'] : null,
     'activation_codes' => currentActivationCodes($pdo),
 ]);

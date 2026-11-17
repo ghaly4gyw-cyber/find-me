@@ -137,6 +137,9 @@ try {
 
 logReclaimAttempt($pdo, $phone, $row['device_id'], $deviceId, 'success');
 
+$supplierAccount = adminAccountForPhone($pdo, $phone);
+$isSupplier = $supplierAccount !== null && $supplierAccount['role'] === 'supplier';
+
 echo json_encode([
     'status' => 'ok',
     'name' => $row['name'],
@@ -149,5 +152,7 @@ echo json_encode([
     // Osama/Ghaly again. See ProfileStore.applyActivationStatus.
     'activated' => (bool) $row['activated'],
     'is_admin' => isAdminPhone($phone),
+    'is_supplier' => $isSupplier,
+    'supplier_code' => $isSupplier ? $supplierAccount['offline_code'] : null,
     'activation_codes' => currentActivationCodes($pdo),
 ]);

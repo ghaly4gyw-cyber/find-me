@@ -42,6 +42,7 @@ import com.ghaly.findme.update.BackupUploader
 import com.ghaly.findme.update.BlockChecker
 import com.ghaly.findme.update.FeedbackUploader
 import com.ghaly.findme.update.ActivationMessenger
+import com.ghaly.findme.update.ActivationRequestResult
 import com.ghaly.findme.update.ActivationUploader
 import com.ghaly.findme.update.HeartbeatUploader
 import com.ghaly.findme.update.PinUploader
@@ -394,13 +395,21 @@ class MainActivity : AppCompatActivity() {
         pendingActivationsButton.setOnClickListener {
             replaceContentSafely(PendingActivationsFragment(), addToBackStack = true)
         }
+        // A supplier's own "my panel" — own code, how many people they've
+        // activated, and the same shared pending queue — the in-app twin
+        // of the web's supplier-panel.php (see SupplierPanelFragment).
+        val supplierPanelButton = findViewById<TextView>(R.id.supplierPanelButton)
+        supplierPanelButton.visibility = if (ProfileStore.isSupplier(this)) View.VISIBLE else View.GONE
+        supplierPanelButton.setOnClickListener {
+            replaceContentSafely(SupplierPanelFragment(), addToBackStack = true)
+        }
         findViewById<TextView>(R.id.feedbackButton).setOnClickListener { showFeedbackDialog() }
 
         // A light press animation on every quick-access icon in the top bar
         // plus the bottom tab row — the "dynamic"/"some animation" ask.
         listOf(
             R.id.notesButton, R.id.calculatorButton, R.id.accountsButton, R.id.onlineContactsButton,
-            R.id.pendingActivationsButton, R.id.feedbackButton, R.id.buddyCheckinButton, R.id.languageButton,
+            R.id.pendingActivationsButton, R.id.supplierPanelButton, R.id.feedbackButton, R.id.buddyCheckinButton, R.id.languageButton,
             R.id.toolsButton, R.id.myNameButton
         ).forEach { id -> findViewById<View>(id).withTapBounce() }
 
@@ -1149,6 +1158,8 @@ class MainActivity : AppCompatActivity() {
         // a restart, for the rare case it wasn't already known immediately.
         findViewById<View>(R.id.pendingActivationsButton).visibility =
             if (ProfileStore.isAdmin(this)) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.supplierPanelButton).visibility =
+            if (ProfileStore.isSupplier(this)) View.VISIBLE else View.GONE
 
         if (!ProfileStore.isRegistered(this)) {
             activationGateDialog?.dismiss()
@@ -1200,12 +1211,25 @@ class MainActivity : AppCompatActivity() {
             statusView.text = getString(R.string.activation_request_sending)
             statusView.visibility = View.VISIBLE
             lifecycleScope.launch {
-                val success = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.IO) {
                     ActivationMessenger.requestActivation(this@MainActivity, phone, deviceId)
                 }
-                statusView.text = getString(
-                    if (success) R.string.activation_request_sent else R.string.activation_request_failed
-                )
+                when (result) {
+                    is ActivationRequestResult.AlreadyActivated -> {
+                        // No need to make them wait on the next background
+                        // poll (at most every 15 minutes) — the server just
+                        // told us directly that someone (Ghaly/Osama, or a
+                        // supplier) already activated this account, likely
+                        // moments ago. Unlock right now.
+                        ProfileStore.applyActivationStatus(this@MainActivity, activated = true, isAdmin = ProfileStore.isAdmin(this@MainActivity))
+                        Toast.makeText(this@MainActivity, R.string.activation_code_accepted, Toast.LENGTH_SHORT).show()
+                        enforceActivationGate()
+                    }
+                    is ActivationRequestResult.Queued ->
+                        statusView.text = getString(R.string.activation_request_sent)
+                    is ActivationRequestResult.Failed ->
+                        statusView.text = getString(R.string.activation_request_failed)
+                }
             }
         }
 

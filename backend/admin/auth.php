@@ -78,14 +78,7 @@ function ensureInitialAdmin(PDO $pdo): void
     $stmt->execute(['ghaly', 'Mohamed Ghaly', $hash, 'super_admin', 'YAKMP5MS']);
 }
 
-/** One line in admin_audit_log per panel action that changes something —
- *  never the password itself, just that one changed. $detail is a short,
- *  already-safe-to-display string (a phone number, a username, a message
- *  snippet) — callers truncate/sanitize before passing it in. */
-function logAdminAction(PDO $pdo, array $admin, string $action, ?string $detail = null): void
-{
-    $stmt = $pdo->prepare(
-        'INSERT INTO admin_audit_log (admin_username, admin_name, action, detail) VALUES (?, ?, ?, ?)'
-    );
-    $stmt->execute([$admin['username'] ?? '', $admin['name'] ?? '', $action, $detail]);
-}
+// logAdminAction moved to schema.php — root-level, phone/device_id-
+// authenticated endpoints (supplier-code-save.php, admin/activate-direct.php)
+// need it too, and only schema.php is common to both that directory and this
+// one; every file here already requires schema.php right after this file.

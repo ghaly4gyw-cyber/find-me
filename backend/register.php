@@ -130,10 +130,15 @@ $stmt = $pdo->prepare('SELECT activated FROM registrations WHERE phone = ?');
 $stmt->execute([$phone]);
 $activated = (bool) $stmt->fetchColumn();
 
+$supplierAccount = adminAccountForPhone($pdo, $phone);
+$isSupplier = $supplierAccount !== null && $supplierAccount['role'] === 'supplier';
+
 echo json_encode([
     'status' => 'ok',
     'contact_code' => $contactCode,
     'activated' => $activated,
     'is_admin' => isAdminPhone($phone),
+    'is_supplier' => $isSupplier,
+    'supplier_code' => $isSupplier ? $supplierAccount['offline_code'] : null,
     'activation_codes' => currentActivationCodes($pdo),
 ]);
