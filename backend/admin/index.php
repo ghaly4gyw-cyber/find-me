@@ -83,6 +83,7 @@ function friendlyAuditAction(string $action): string
         'set_offline_code' => 'تغيير رمز بدون إنترنت',
         'activation_approve' => 'قبول طلب تفعيل',
         'activation_reject' => 'رفض طلب تفعيل',
+        'activation_direct' => 'تفعيل مباشر من لوحة التحكم',
         'delete_user' => 'حذف حساب',
         'delete_ci_canaries' => 'حذف حسابات اختبار CI',
     ];
@@ -294,7 +295,7 @@ foreach ($users as $u) {
         'activated_by' => $u['activated_by_username']
             ? ($adminNamesByUsername[$u['activated_by_username']] ?? $u['activated_by_username'])
             : null,
-        'activated_via' => $u['activated_via'] === 'code' ? 'بالرمز بدون إنترنت' : ($u['activated_via'] === 'approval' ? 'بموافقة طلب تفعيل' : null),
+        'activated_via' => $u['activated_via'] === 'code' ? 'بالرمز بدون إنترنت' : ($u['activated_via'] === 'approval' ? 'بموافقة طلب تفعيل' : ($u['activated_via'] === 'direct' ? 'تفعيل مباشر من اللوحة' : null)),
     ];
 }
 
@@ -903,6 +904,12 @@ $topFeatures = array_slice($topFeatures, 0, 10);
           <div class="modal-detail-row" x-show="!selected.is_admin"><span class="muted">مُفعّل</span><span x-text="selected.activated ? '✅ نعم' : '⏳ ليس بعد'"></span></div>
           <div class="modal-detail-row" x-show="selected.activated_by"><span class="muted">من فعّله</span><span><span x-text="selected.activated_by"></span> <span class="muted" style="font-size:0.75rem;" x-text="'· ' + selected.activated_via"></span></span></div>
           <div class="modal-detail-row" x-show="!selected.is_admin && selected.activated && !selected.activated_by"><span class="muted">من فعّله</span><span class="muted">غير معروف (قبل تتبّع هذا)</span></div>
+          <form method="post" action="activate-direct.php" style="margin-top: 1rem;"
+                x-show="!selected.is_admin && !selected.activated"
+                onsubmit="return confirm('تفعيل هذا الحساب مباشرة، حتى لو لم يُرسل طلب تفعيل؟');">
+            <input type="hidden" name="device_id" :value="selected.device_id">
+            <button type="submit" class="approve-btn" style="width:100%;">✅ تفعيل مباشر — بدون انتظار طلب</button>
+          </form>
           <?php if ($isSuperAdmin): ?>
           <form method="post" action="delete-user.php" style="margin-top: 1rem;"
                 onsubmit="return confirm('حذف هذا الحساب نهائيًا — لا يمكن التراجع عن هذا. متابعة؟');">
